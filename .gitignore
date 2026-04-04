@@ -1,0 +1,24 @@
+# Flutter/Dart tool directories
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+
+# Build outputs
+/build/
+
+# Generated files
+*.lock
+!pubspec.lock
+
+# Logs
+*.log
+
+# IDE/editor
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
