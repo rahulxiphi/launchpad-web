@@ -56,13 +56,23 @@ class _StageSelectorPageState extends State<StageSelectorPage> {
     });
 
     try {
-      final conversationToken = await _service.getVoiceToken(stageBucket);
+      // 1. Create prospect identity
+      final prospectId = await _service.createProspect(stageBucket);
+
+      // 2. Get voice token with prospect context
+      final result = await _service.getVoiceToken(
+        stageBucket,
+        prospectId: prospectId,
+      );
+
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => ConversationIntroPage(
-            conversationToken: conversationToken,
+            conversationToken: result.conversationToken,
             stageBucket: stageBucket,
+            prospectId: prospectId,
+            dynamicVariables: result.dynamicVariables,
           ),
         ),
       );

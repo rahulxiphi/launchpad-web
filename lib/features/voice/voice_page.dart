@@ -1,5 +1,6 @@
 ﻿import 'package:elevenlabs_agents/elevenlabs_agents.dart';
 import 'package:flutter/material.dart';
+import '../../tools/client_tools.dart';
 
 // ---------------------------------------------------------------------------
 // Data model for a single transcript entry
@@ -22,11 +23,15 @@ class _TranscriptEntry {
 class VoicePage extends StatefulWidget {
   final String conversationToken;
   final String stageBucket;
+  final String? prospectId;
+  final Map<String, dynamic> dynamicVariables;
 
   const VoicePage({
     super.key,
     required this.conversationToken,
     required this.stageBucket,
+    this.prospectId,
+    this.dynamicVariables = const {},
   });
 
   @override
@@ -49,6 +54,11 @@ class _VoicePageState extends State<VoicePage> {
   void initState() {
     super.initState();
     _client = ConversationClient(
+      clientTools: {
+        'capture_need': CaptureNeedTool(prospectId: widget.prospectId),
+        'search_products': SearchProductsTool(prospectId: widget.prospectId),
+        'record_off_ramp': RecordOffRampTool(prospectId: widget.prospectId),
+      },
       callbacks: ConversationCallbacks(
         onConnect: ({required conversationId}) {
           if (!mounted) return;
@@ -165,6 +175,9 @@ class _VoicePageState extends State<VoicePage> {
     try {
       await _client.startSession(
         conversationToken: widget.conversationToken,
+        dynamicVariables: widget.dynamicVariables.isNotEmpty
+            ? widget.dynamicVariables
+            : null,
       );
     } catch (e) {
       if (!mounted) return;
@@ -193,6 +206,16 @@ class _VoicePageState extends State<VoicePage> {
         );
       }
     });
+  }
+
+  void _sendTextMessage(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
+    _client.sendUserMessage(trimmed);
+    setState(() {
+      _transcript.add(_TranscriptEntry(isUser: true, text: trimmed));
+    });
+    _scrollToBottom();
   }
 
   // ---------------------------------------------------------------------------
@@ -279,6 +302,7 @@ class _VoicePageState extends State<VoicePage> {
             isConnected: isConnected,
             isMuted: _client.isMuted,
             onToggleMute: () => _client.toggleMute(),
+            onSend: _sendTextMessage,
           ),
         ],
       ),
@@ -423,159 +447,148 @@ class _BubbleRow extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Bottom control bar
+// Bottom control bar — mic toggle + text input
 // ---------------------------------------------------------------------------
-class _BottomBar extends StatelessWidget {
+class _BottomBar extends StatefulWidget {
   final bool isConnected;
   final bool isMuted;
   final VoidCallback onToggleMute;
+  final void Function(String) onSend;
 
   const _BottomBar({
     required this.isConnected,
     required this.isMuted,
     required this.onToggleMute,
+    required this.onSend,
   });
+
+  @override
+  State<_BottomBar> createState() => _BottomBarState();
+}
+
+class _BottomBarState extends State<_BottomBar> {
+  final TextEditingController _textController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final text = _textController.text.trim();
+    if (text.isEmpty || !widget.isConnected) return;
+    widget.onSend(text);
+    _textController.clear();
+    _focusNode.requestFocus();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(
           top: BorderSide(color: colorScheme.outlineVariant, width: 0.5),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton.filled(
-            onPressed: isConnected ? onToggleMute : null,
-            icon: Icon(
-              isMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
-            ),
-            style: IconButton.styleFrom(
-              backgroundColor: isMuted
-                  ? colorScheme.errorContainer
-                  : colorScheme.primaryContainer,
-              foregroundColor: isMuted
-                  ? colorScheme.onErrorContainer
-                  : colorScheme.onPrimaryContainer,
-              minimumSize: const Size(56, 56),
-            ),
-            tooltip: isMuted ? 'Unmute' : 'Mute',
-          ),
-          const SizedBox(width: 16),
-          Text(
-            isMuted ? 'Microphone off' : 'Microphone on',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-
-class VoicePage extends StatefulWidget {
-  final String agentId;
-  final String stageBucket;
-
-  const VoicePage({
-    super.key,
-    required this.agentId,
-    required this.stageBucket,
-  });
-
-  @override
-  State<VoicePage> createState() => _VoicePageState();
-}
-
-class _VoicePageState extends State<VoicePage> {
-  late final String _viewType;
-
-  @override
-  void initState() {
-    super.initState();
-    _viewType = 'elevenlabs-convai-${widget.agentId}';
-    try {
-      ui_web.platformViewRegistry.registerViewFactory(_viewType, (int viewId) {
-        final el = html.document.createElement('elevenlabs-convai') as html.HtmlElement;
-        el.setAttribute('agent-id', widget.agentId);
-        el.style.width = '100%';
-        el.style.height = '100%';
-        return el;
-      });
-    } catch (_) {
-      // Already registered on hot reload � safe to ignore.
-    }
-  }
-
-  String get _stageLabel {
-    switch (widget.stageBucket) {
-      case 'pre_seed':
-        return 'Pre-seed';
-      case 'seed':
-        return 'Seed';
-      case 'growth':
-        return 'Growth';
-      default:
-        return widget.stageBucket;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: colorScheme.surface,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Text(
-          'Alex � $_stageLabel',
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-        ),
-        actions: [
+          // ── Text input row ───────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: TextButton.icon(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.call_end_rounded, size: 18),
-              label: const Text('End'),
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.error,
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
             child: Row(
               children: [
-                Icon(Icons.info_outline_rounded,
-                    size: 15, color: colorScheme.outline),
-                const SizedBox(width: 6),
-                Text(
-                  'Click the orb in the bottom-right corner to start speaking',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.outline,
+                Expanded(
+                  child: TextField(
+                    controller: _textController,
+                    focusNode: _focusNode,
+                    enabled: widget.isConnected,
+                    onSubmitted: (_) => _submit(),
+                    textInputAction: TextInputAction.send,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    decoration: InputDecoration(
+                      hintText: widget.isConnected
+                          ? 'Type a message…'
+                          : 'Connecting…',
+                      hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerLow,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
                       ),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _textController,
+                  builder: (context, value, _) {
+                    final canSend =
+                        widget.isConnected && value.text.trim().isNotEmpty;
+                    return IconButton.filled(
+                      onPressed: canSend ? _submit : null,
+                      icon: const Icon(Icons.send_rounded, size: 20),
+                      style: IconButton.styleFrom(
+                        backgroundColor: canSend
+                            ? colorScheme.primary
+                            : colorScheme.surfaceContainerHigh,
+                        foregroundColor: canSend
+                            ? colorScheme.onPrimary
+                            : colorScheme.onSurfaceVariant,
+                        minimumSize: const Size(44, 44),
+                      ),
+                      tooltip: 'Send message',
+                    );
+                  },
                 ),
               ],
             ),
           ),
-          Expanded(
-            child: HtmlElementView(viewType: _viewType),
+          // ── Mic toggle row ───────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton.filled(
+                  onPressed: widget.isConnected ? widget.onToggleMute : null,
+                  icon: Icon(
+                    widget.isMuted
+                        ? Icons.mic_off_rounded
+                        : Icons.mic_rounded,
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: widget.isMuted
+                        ? colorScheme.errorContainer
+                        : colorScheme.primaryContainer,
+                    foregroundColor: widget.isMuted
+                        ? colorScheme.onErrorContainer
+                        : colorScheme.onPrimaryContainer,
+                    minimumSize: const Size(48, 48),
+                  ),
+                  tooltip: widget.isMuted ? 'Unmute' : 'Mute',
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  widget.isMuted ? 'Microphone off' : 'Microphone on',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

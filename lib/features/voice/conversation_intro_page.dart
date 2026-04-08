@@ -54,10 +54,16 @@ const _stageContent = {
 class ConversationIntroPage extends StatelessWidget {
   final String conversationToken;
   final String stageBucket;
+  final String? prospectId;
+  final Map<String, dynamic> dynamicVariables;
 
   const ConversationIntroPage({
     super.key,
     required this.conversationToken,
+    required this.stageBucket,
+    this.prospectId,
+    this.dynamicVariables = const {},
+  });
     required this.stageBucket,
   });
 
@@ -222,6 +228,8 @@ class ConversationIntroPage extends StatelessWidget {
                             builder: (_) => VoicePage(
                               conversationToken: conversationToken,
                               stageBucket: stageBucket,
+                              prospectId: prospectId,
+                              dynamicVariables: dynamicVariables,
                             ),
                           ),
                         );
