@@ -56,15 +56,17 @@ class ConversationIntroPage extends StatelessWidget {
   final String stageBucket;
   final String? prospectId;
   final Map<String, dynamic> dynamicVariables;
+  /// Called when the user taps "Start new session" after a conversation ends.
+  /// Handled by AppShell — fetches a fresh token and replaces the inner nav.
+  final Future<void> Function() onStartNew;
 
   const ConversationIntroPage({
     super.key,
     required this.conversationToken,
     required this.stageBucket,
+    required this.onStartNew,
     this.prospectId,
     this.dynamicVariables = const {},
-  });
-    required this.stageBucket,
   });
 
   @override
@@ -80,7 +82,11 @@ class ConversationIntroPage extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          // Pop the AppShell from the root navigator → back to StageSelectorPage.
+          // ConversationIntroPage is the initial route of the inner navigator,
+          // so a plain pop() would be a no-op here.
+          onPressed: () =>
+              Navigator.of(context, rootNavigator: true).pop(),
         ),
       ),
       body: SafeArea(
@@ -230,6 +236,7 @@ class ConversationIntroPage extends StatelessWidget {
                               stageBucket: stageBucket,
                               prospectId: prospectId,
                               dynamicVariables: dynamicVariables,
+                              onStartNew: onStartNew,
                             ),
                           ),
                         );

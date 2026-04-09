@@ -1,18 +1,57 @@
 import 'package:flutter/material.dart';
-import 'features/stage_selector/stage_selector_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'core/auth/auth_provider.dart';
+import 'router/app_router.dart';
 
 void main() {
-  runApp(const LaunchPadDemoApp());
+  runApp(const ProviderScope(child: LaunchPadApp()));
 }
 
-class LaunchPadDemoApp extends StatelessWidget {
-  const LaunchPadDemoApp({super.key});
+class LaunchPadApp extends ConsumerStatefulWidget {
+  const LaunchPadApp({super.key});
+
+  @override
+  ConsumerState<LaunchPadApp> createState() => _LaunchPadAppState();
+}
+
+class _LaunchPadAppState extends ConsumerState<LaunchPadApp> {
+  late final RouterRefreshNotifier _routerNotifier;
+  late final _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _routerNotifier = RouterRefreshNotifier();
+    _router = createRouter(
+      refreshNotifier: _routerNotifier,
+      isAuthenticated: () => ref.read(isAuthenticatedProvider),
+    );
+    // Restore session from secure storage silently on first launch
+    Future.microtask(
+      () => ref.read(authNotifierProvider.notifier).tryAutoLogin(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _routerNotifier.dispose();
+    _router.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'LaunchPad — Voice Demo',
+    // Drive GoRouter refresh whenever auth state changes.
+    // ref.listen is safe here — called during build.
+    ref.listen<bool>(isAuthenticatedProvider, (_, __) {
+      _routerNotifier.notify();
+    });
+
+    return MaterialApp.router(
+      title: 'LaunchPad',
       debugShowCheckedModeBanner: false,
+      routerConfig: _router,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF1A56DB),
@@ -20,7 +59,6 @@ class LaunchPadDemoApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const StageSelectorPage(),
     );
   }
 }

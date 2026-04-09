@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/conversation_service.dart';
-import '../voice/conversation_intro_page.dart';
+import '../../shared/widgets/app_shell.dart';
 
 class _StageOption {
   final String bucket;
@@ -68,7 +68,7 @@ class _StageSelectorPageState extends State<StageSelectorPage> {
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => ConversationIntroPage(
+          builder: (_) => AppShell(
             conversationToken: result.conversationToken,
             stageBucket: stageBucket,
             prospectId: prospectId,

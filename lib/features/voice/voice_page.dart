@@ -25,11 +25,15 @@ class VoicePage extends StatefulWidget {
   final String stageBucket;
   final String? prospectId;
   final Map<String, dynamic> dynamicVariables;
+  /// Callback owned by AppShell — fetches a fresh token and swaps in a new
+  /// ConversationIntroPage on the inner Navigator. Stays on same stage.
+  final Future<void> Function() onStartNew;
 
   const VoicePage({
     super.key,
     required this.conversationToken,
     required this.stageBucket,
+    required this.onStartNew,
     this.prospectId,
     this.dynamicVariables = const {},
   });
@@ -45,7 +49,8 @@ class _VoicePageState extends State<VoicePage> {
 
   // Status shown below the AppBar
   String _statusText = 'Connecting…';
-  bool _isEnding = false;
+  // True once the session ends — stays on this page, shows restart banner.
+  bool _conversationEnded = false;
 
   // ---------------------------------------------------------------------------
   // Lifecycle
@@ -66,7 +71,10 @@ class _VoicePageState extends State<VoicePage> {
         },
         onDisconnect: (_) {
           if (!mounted) return;
-          if (!_isEnding) Navigator.of(context).pop();
+          setState(() {
+            _conversationEnded = true;
+            _statusText = 'Conversation ended';
+          });
         },
         onModeChange: ({required mode}) {
           if (!mounted) return;
@@ -191,9 +199,19 @@ class _VoicePageState extends State<VoicePage> {
   }
 
   Future<void> _endSession() async {
-    _isEnding = true;
     await _client.endSession();
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) {
+      setState(() {
+        _conversationEnded = true;
+        _statusText = 'Conversation ended';
+      });
+    }
+  }
+
+  void _startNewSession() {
+    // Delegate to AppShell — it fetches a fresh token and replaces the inner
+    // navigator stack with a new ConversationIntroPage for the same stage.
+    widget.onStartNew();
   }
 
   void _scrollToBottom() {
@@ -253,17 +271,18 @@ class _VoicePageState extends State<VoicePage> {
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: TextButton.icon(
-              onPressed: _endSession,
-              icon: const Icon(Icons.call_end_rounded, size: 18),
-              label: const Text('End'),
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.error,
+          if (!_conversationEnded)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton.icon(
+                onPressed: _endSession,
+                icon: const Icon(Icons.call_end_rounded, size: 18),
+                label: const Text('End'),
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.error,
+                ),
               ),
             ),
-          ),
         ],
       ),
       body: Column(
@@ -301,8 +320,10 @@ class _VoicePageState extends State<VoicePage> {
           _BottomBar(
             isConnected: isConnected,
             isMuted: _client.isMuted,
+            isEnded: _conversationEnded,
             onToggleMute: () => _client.toggleMute(),
             onSend: _sendTextMessage,
+            onStartNew: _startNewSession,
           ),
         ],
       ),
@@ -452,14 +473,18 @@ class _BubbleRow extends StatelessWidget {
 class _BottomBar extends StatefulWidget {
   final bool isConnected;
   final bool isMuted;
+  final bool isEnded;
   final VoidCallback onToggleMute;
   final void Function(String) onSend;
+  final VoidCallback onStartNew;
 
   const _BottomBar({
     required this.isConnected,
     required this.isMuted,
+    required this.isEnded,
     required this.onToggleMute,
     required this.onSend,
+    required this.onStartNew,
   });
 
   @override
@@ -499,6 +524,42 @@ class _BottomBarState extends State<_BottomBar> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // ── "Start new session" banner (shown after conversation ends) ────
+          if (widget.isEnded)
+            Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: colorScheme.surfaceContainerLow,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.check_circle_outline_rounded,
+                    size: 18,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Conversation complete',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ),
+                  FilledButton.tonal(
+                    onPressed: widget.onStartNew,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      textStyle: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                    child: const Text('Start new session'),
+                  ),
+                ],
+              ),
+            ),
           // ── Text input row ───────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
@@ -508,7 +569,7 @@ class _BottomBarState extends State<_BottomBar> {
                   child: TextField(
                     controller: _textController,
                     focusNode: _focusNode,
-                    enabled: widget.isConnected,
+                    enabled: widget.isConnected && !widget.isEnded,
                     onSubmitted: (_) => _submit(),
                     textInputAction: TextInputAction.send,
                     style: Theme.of(context).textTheme.bodyMedium,
@@ -563,7 +624,9 @@ class _BottomBarState extends State<_BottomBar> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 IconButton.filled(
-                  onPressed: widget.isConnected ? widget.onToggleMute : null,
+                  onPressed: widget.isConnected && !widget.isEnded
+                      ? widget.onToggleMute
+                      : null,
                   icon: Icon(
                     widget.isMuted
                         ? Icons.mic_off_rounded

@@ -1,0 +1,68 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../features/auth/login_page.dart';
+import '../features/auth/signup_page.dart';
+import '../features/stage_selector/stage_selector_page.dart';
+
+// ── Route paths ───────────────────────────────────────────────────────────────
+
+class AppRoutes {
+  static const login = '/login';
+  static const signup = '/signup';
+  static const home = '/';
+}
+
+/// Simple [ChangeNotifier] owned by the root widget and notified whenever
+/// auth state changes. Passed to [GoRouter.refreshListenable] so redirects
+/// are re-evaluated on every login / logout.
+class RouterRefreshNotifier extends ChangeNotifier {
+  void notify() => notifyListeners();
+}
+
+// ── Router factory ────────────────────────────────────────────────────────────
+
+/// [refreshNotifier] — the [RouterRefreshNotifier] owned by the root widget.
+/// [isAuthenticated] — reads current auth state (via `ref.read`).
+GoRouter createRouter({
+  required RouterRefreshNotifier refreshNotifier,
+  required bool Function() isAuthenticated,
+}) {
+  return GoRouter(
+    initialLocation: AppRoutes.home,
+    refreshListenable: refreshNotifier,
+    redirect: (BuildContext context, GoRouterState state) {
+      final authed = isAuthenticated();
+      final isOnAuth =
+          state.matchedLocation == AppRoutes.login ||
+          state.matchedLocation == AppRoutes.signup;
+
+      // Already authenticated and on an auth page → send home.
+      // The demo flow (stage selector, conversation) is public — no redirect
+      // is applied to unauthenticated users so invite links work without login.
+      if (authed && isOnAuth) return AppRoutes.home;
+
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: AppRoutes.login,
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: LoginPage(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.signup,
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: SignupPage(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.home,
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: StageSelectorPage(),
+        ),
+      ),
+    ],
+  );
+}
