@@ -16,6 +16,7 @@ class _StageContent {
 }
 
 const _stageContent = {
+  // ── Legacy stages (kept for backward compat) ──────────────────────────────
   'pre_seed': _StageContent(
     heading: 'Early-stage financial advisory',
     description:
@@ -48,6 +49,51 @@ const _stageContent = {
       'ERP, forecasting maturity, and board-level reporting',
     ],
     duration: '8–12 min',
+  ),
+  // ── JPMC stages ───────────────────────────────────────────────────────────
+  'early_stage': _StageContent(
+    heading: 'Earl — Early-stage advisor',
+    description:
+        'Earl will explore your startup\'s vision, business model, and early financial needs to recommend the right JPMC products.',
+    topics: [
+      'Your founding story, business model, and current traction',
+      'Banking basics, payment infrastructure, and operational tools',
+      'Early compliance, funding options, and financial planning',
+    ],
+    duration: '5–8 min',
+  ),
+  'growth_stage': _StageContent(
+    heading: 'Gary — Growth-stage advisor',
+    description:
+        'Gary will discuss your scaling priorities, revenue metrics, and the financial infrastructure you need for Series A/B growth.',
+    topics: [
+      'Revenue metrics, burn rate, and runway planning',
+      'Treasury foundations, credit facilities, and venture debt',
+      'Payments, FX strategy, and multi-currency operations',
+    ],
+    duration: '7–10 min',
+  ),
+  'late_stage': _StageContent(
+    heading: 'Leena — Late-stage advisor',
+    description:
+        'Leena will explore your strategic financial priorities, capital structure, and enterprise-grade infrastructure for Series C and beyond.',
+    topics: [
+      'Debt structuring, treasury management, and cash optimisation',
+      'Cross-border payments, FX strategy, and global operations',
+      'Capital markets readiness and board-level reporting',
+    ],
+    duration: '8–12 min',
+  ),
+  'ipo_beyond': _StageContent(
+    heading: 'Irma — IPO & Beyond advisor',
+    description:
+        'Irma will discuss your capital markets strategy, public-market readiness, and institutional-grade financial infrastructure.',
+    topics: [
+      'IPO readiness, capital markets access, and investor relations',
+      'Enterprise treasury, cash concentration, and yield optimisation',
+      'Compliance, regulatory infrastructure, and global operations',
+    ],
+    duration: '10–15 min',
   ),
 };
 

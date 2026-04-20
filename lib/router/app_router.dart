@@ -59,9 +59,16 @@ GoRouter createRouter({
       ),
       GoRoute(
         path: AppRoutes.home,
-        pageBuilder: (context, state) => const NoTransitionPage(
-          child: StageSelectorPage(),
-        ),
+        pageBuilder: (context, state) {
+          final invitationCode = state.uri.queryParameters['invite'];
+          final returnProspectId = state.uri.queryParameters['p'];
+          return NoTransitionPage(
+            child: StageSelectorPage(
+              invitationCode: invitationCode,
+              returnProspectId: returnProspectId,
+            ),
+          );
+        },
       ),
     ],
   );

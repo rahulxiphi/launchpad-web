@@ -18,27 +18,40 @@ class _StageOption {
 
 const _stages = [
   _StageOption(
-    bucket: 'pre_seed',
-    label: 'Pre-seed',
-    description: 'Idea stage · no revenue yet · building MVP',
+    bucket: 'early_stage',
+    label: 'Early Stage',
+    description: 'Pre-seed to Seed · validating product-market fit',
     icon: Icons.rocket_launch_outlined,
   ),
   _StageOption(
-    bucket: 'seed',
-    label: 'Seed',
-    description: 'Early revenue · scaling team · first funding round',
+    bucket: 'growth_stage',
+    label: 'Growth Stage',
+    description: 'Series A/B · scaling revenue and team',
     icon: Icons.trending_up_outlined,
   ),
   _StageOption(
-    bucket: 'growth',
-    label: 'Growth',
-    description: 'Significant revenue · multi-market · Series A+',
+    bucket: 'late_stage',
+    label: 'Late Stage',
+    description: 'Series C+ · pre-IPO · institutional capital',
     icon: Icons.account_balance_outlined,
+  ),
+  _StageOption(
+    bucket: 'ipo_beyond',
+    label: 'IPO & Beyond',
+    description: 'IPO-ready or public · capital markets focus',
+    icon: Icons.show_chart_outlined,
   ),
 ];
 
 class StageSelectorPage extends StatefulWidget {
-  const StageSelectorPage({super.key});
+  final String? invitationCode;
+  final String? returnProspectId;
+
+  const StageSelectorPage({
+    super.key,
+    this.invitationCode,
+    this.returnProspectId,
+  });
 
   @override
   State<StageSelectorPage> createState() => _StageSelectorPageState();
@@ -48,7 +61,106 @@ class _StageSelectorPageState extends State<StageSelectorPage> {
   final _service = ConversationService();
   String? _loadingBucket;
   String? _errorMessage;
+  bool _inviteLoading = false;
+  String _agentName = 'your JPMC AI Advisor';
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.returnProspectId != null) {
+      _handleReturnVisit(widget.returnProspectId!);
+    } else if (widget.invitationCode != null) {
+      _handleInviteCode(widget.invitationCode!);
+    }
+  }
+
+  /// Return visit via /?p=<UUID> — resume existing prospect session.
+  Future<void> _handleReturnVisit(String prospectId) async {
+    setState(() {
+      _inviteLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // 1. Fetch existing prospect data
+      final prospect = await _service.getProspect(prospectId);
+
+      setState(() {
+        _agentName = prospect.agentDisplayName;
+      });
+
+      // 2. Get voice token for the existing prospect
+      final tokenResult = await _service.getVoiceToken(
+        prospect.stageBucket,
+        prospectId: prospectId,
+      );
+
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => AppShell(
+            conversationToken: tokenResult.conversationToken,
+            stageBucket: prospect.stageBucket,
+            prospectId: prospectId,
+            dynamicVariables: tokenResult.dynamicVariables,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Could not resume your session. '
+            'Select your startup stage to start a new conversation.';
+      });
+    } finally {
+      if (mounted) setState(() => _inviteLoading = false);
+    }
+  }
+
+  /// Invitation code present — resolve to stage + agent, then start session.
+  Future<void> _handleInviteCode(String invitationCode) async {
+    setState(() {
+      _inviteLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // 1. Resolve invitation code → prospect + stage + agent
+      final initResult = await _service.initProspect(invitationCode);
+
+      setState(() {
+        _agentName = initResult.agentDisplayName;
+      });
+
+      // 2. Get voice token with resolved stage
+      final tokenResult = await _service.getVoiceToken(
+        initResult.stageBucket,
+        prospectId: initResult.prospectId,
+      );
+
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => AppShell(
+            conversationToken: tokenResult.conversationToken,
+            stageBucket: initResult.stageBucket,
+            prospectId: initResult.prospectId,
+            dynamicVariables: tokenResult.dynamicVariables,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Invalid or expired invitation link. '
+            'Select your startup stage to continue.';
+      });
+    } finally {
+      if (mounted) setState(() => _inviteLoading = false);
+    }
+  }
+
+  /// Manual stage selection fallback (no invitation code).
   Future<void> _startSession(String stageBucket) async {
     setState(() {
       _loadingBucket = stageBucket;
@@ -102,7 +214,7 @@ class _StageSelectorPageState extends State<StageSelectorPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Hi, I\'m Alex',
+                  'Hi, I\'m $_agentName',
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: colorScheme.onSurface,
@@ -110,12 +222,24 @@ class _StageSelectorPageState extends State<StageSelectorPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Your LaunchPad financial advisor. Select your startup stage to begin.',
+                  widget.returnProspectId != null
+                      ? 'Welcome back. Resuming your session...'
+                      : widget.invitationCode != null
+                          ? 'Your JPMC Innovation Economy AI advisor. Setting up your session...'
+                          : 'Your JPMC Innovation Economy AI advisor. Select your startup stage to begin.',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
                 ),
                 const SizedBox(height: 40),
+                if (_inviteLoading)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                else
                 ..._stages.map((stage) => _StageCard(
                       stage: stage,
                       isLoading: _loadingBucket == stage.bucket,

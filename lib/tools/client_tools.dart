@@ -120,3 +120,117 @@ class RecordOffRampTool implements ClientTool {
     }
   }
 }
+
+// ---------------------------------------------------------------------------
+// search-product-catalog (JSON catalog search)
+// ---------------------------------------------------------------------------
+
+class SearchProductCatalogTool implements ClientTool {
+  final String? prospectId;
+  final String stageBucket;
+
+  SearchProductCatalogTool({this.prospectId, required this.stageBucket});
+
+  @override
+  Future<ClientToolResult?> execute(Map<String, dynamic> parameters) async {
+    try {
+      final body = <String, dynamic>{
+        'stage_bucket': parameters['stage_bucket'] ?? stageBucket,
+        'need_signals': parameters['need_signals'] is List
+            ? parameters['need_signals']
+            : <String>[],
+        'top_k': parameters['top_k'] ?? 5,
+      };
+
+      final resp = await _dio.post(
+        '/conversations/tools/search-catalog',
+        data: body,
+      );
+
+      final results = (resp.data['results'] as List<dynamic>)
+          .map((r) => {
+                'name': r['name'],
+                'category': r['category'],
+                'short_description': r['short_description'],
+                'key_features': r['key_features'],
+                'estimated_value': r['estimated_value'],
+                'eligibility': r['eligibility'],
+              })
+          .toList();
+
+      return ClientToolResult.success({'products': results});
+    } catch (e) {
+      return ClientToolResult.failure('Failed to search product catalog: $e');
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// advance-phase (mid-call phase transition)
+// ---------------------------------------------------------------------------
+
+class AdvancePhaseTool implements ClientTool {
+  final String? prospectId;
+
+  AdvancePhaseTool({this.prospectId});
+
+  @override
+  Future<ClientToolResult?> execute(Map<String, dynamic> parameters) async {
+    try {
+      final body = <String, dynamic>{
+        'prospect_id': prospectId ?? parameters['prospect_id'],
+        'collected_attributes': parameters['collected_attributes'] is Map
+            ? parameters['collected_attributes']
+            : <String, dynamic>{},
+      };
+
+      final resp = await _dio.post(
+        '/conversations/advance-phase',
+        data: body,
+      );
+
+      return ClientToolResult.success({
+        'new_phase': resp.data['new_phase'],
+        'top_product_signals': resp.data['top_product_signals'],
+      });
+    } catch (e) {
+      return ClientToolResult.failure('Failed to advance phase: $e');
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// record-handoff (mid-call handoff to human banker)
+// ---------------------------------------------------------------------------
+
+class RecordHandoffTool implements ClientTool {
+  final String? prospectId;
+
+  RecordHandoffTool({this.prospectId});
+
+  @override
+  Future<ClientToolResult?> execute(Map<String, dynamic> parameters) async {
+    try {
+      final body = <String, dynamic>{
+        'prospect_id': prospectId ?? parameters['prospect_id'],
+        'product_interests': parameters['product_interests'] is List
+            ? parameters['product_interests']
+            : <String>[],
+        if (parameters['notes'] != null) 'notes': parameters['notes'],
+      };
+
+      final resp = await _dio.post(
+        '/conversations/record-handoff',
+        data: body,
+      );
+
+      return ClientToolResult.success({
+        'handoff_id': resp.data['handoff_id'],
+        'assigned_manager_type': resp.data['assigned_manager_type'],
+        'status': resp.data['status'],
+      });
+    } catch (e) {
+      return ClientToolResult.failure('Failed to record handoff: $e');
+    }
+  }
+}

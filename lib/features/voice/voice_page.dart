@@ -1,5 +1,6 @@
 ﻿import 'package:elevenlabs_agents/elevenlabs_agents.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../tools/client_tools.dart';
 
 // ---------------------------------------------------------------------------
@@ -63,6 +64,12 @@ class _VoicePageState extends State<VoicePage> {
         'capture_need': CaptureNeedTool(prospectId: widget.prospectId),
         'search_products': SearchProductsTool(prospectId: widget.prospectId),
         'record_off_ramp': RecordOffRampTool(prospectId: widget.prospectId),
+        'search_product_catalog': SearchProductCatalogTool(
+          prospectId: widget.prospectId,
+          stageBucket: widget.stageBucket,
+        ),
+        'advance_phase': AdvancePhaseTool(prospectId: widget.prospectId),
+        'record_handoff': RecordHandoffTool(prospectId: widget.prospectId),
       },
       callbacks: ConversationCallbacks(
         onConnect: ({required conversationId}) {
@@ -80,7 +87,7 @@ class _VoicePageState extends State<VoicePage> {
           if (!mounted) return;
           setState(() {
             _statusText = mode == ConversationMode.speaking
-                ? 'Alex is speaking…'
+                ? '$_agentName is speaking…'
                 : 'Listening';
           });
         },
@@ -247,8 +254,31 @@ class _VoicePageState extends State<VoicePage> {
         return 'Seed';
       case 'growth':
         return 'Growth';
+      case 'early_stage':
+        return 'Early Stage';
+      case 'growth_stage':
+        return 'Growth';
+      case 'late_stage':
+        return 'Late Stage';
+      case 'ipo_beyond':
+        return 'IPO & Beyond';
       default:
         return widget.stageBucket;
+    }
+  }
+
+  String get _agentName {
+    switch (widget.stageBucket) {
+      case 'early_stage':
+        return 'Earl';
+      case 'growth_stage':
+        return 'Gary';
+      case 'late_stage':
+        return 'Leena';
+      case 'ipo_beyond':
+        return 'Irma';
+      default:
+        return 'Alex';
     }
   }
 
@@ -267,7 +297,7 @@ class _VoicePageState extends State<VoicePage> {
         elevation: 0,
         automaticallyImplyLeading: false,
         title: Text(
-          'Alex · $_stageLabel',
+          '$_agentName · $_stageLabel',
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),
         actions: [
@@ -299,8 +329,8 @@ class _VoicePageState extends State<VoicePage> {
                 ? Center(
                     child: Text(
                       _client.status == ConversationStatus.connecting
-                          ? 'Connecting to Alex…'
-                          : 'Alex will start speaking shortly.\nBegin talking when you\'re ready.',
+                          ? 'Connecting to $_agentName…'
+                          : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: colorScheme.onSurfaceVariant,
@@ -321,6 +351,7 @@ class _VoicePageState extends State<VoicePage> {
             isConnected: isConnected,
             isMuted: _client.isMuted,
             isEnded: _conversationEnded,
+            prospectId: widget.prospectId,
             onToggleMute: () => _client.toggleMute(),
             onSend: _sendTextMessage,
             onStartNew: _startNewSession,
@@ -474,6 +505,7 @@ class _BottomBar extends StatefulWidget {
   final bool isConnected;
   final bool isMuted;
   final bool isEnded;
+  final String? prospectId;
   final VoidCallback onToggleMute;
   final void Function(String) onSend;
   final VoidCallback onStartNew;
@@ -485,6 +517,7 @@ class _BottomBar extends StatefulWidget {
     required this.onToggleMute,
     required this.onSend,
     required this.onStartNew,
+    this.prospectId,
   });
 
   @override
@@ -560,6 +593,9 @@ class _BottomBarState extends State<_BottomBar> {
                 ],
               ),
             ),
+          // ── Return URL (shown after conversation ends, only when prospectId exists) ──
+          if (widget.isEnded && widget.prospectId != null)
+            _ReturnUrlBanner(prospectId: widget.prospectId!),
           // ── Text input row ───────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
@@ -651,6 +687,95 @@ class _BottomBarState extends State<_BottomBar> {
                       ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Return URL banner — shown post-conversation so the user can copy their link
+// ---------------------------------------------------------------------------
+class _ReturnUrlBanner extends StatelessWidget {
+  final String prospectId;
+
+  const _ReturnUrlBanner({required this.prospectId});
+
+  String get _returnUrl {
+    final uri = Uri.base;
+    final origin = uri.origin;
+    // Flutter Web defaults to hash routing: URLs look like http://host/#/...
+    // uri.fragment is non-empty (e.g. "/") when hash routing is active.
+    if (uri.fragment.isNotEmpty) {
+      return '$origin/#/?p=$prospectId';
+    }
+    return '$origin/?p=$prospectId';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final url = _returnUrl;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer.withOpacity(0.4),
+        border: Border(
+          top: BorderSide(color: colorScheme.outlineVariant, width: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.link_rounded,
+            size: 16,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your return link — come back any time to continue',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  url,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.primary,
+                        fontFamily: 'monospace',
+                      ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.copy_rounded, size: 18),
+            tooltip: 'Copy link',
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: url));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Return link copied to clipboard'),
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 2),
+                  width: 280,
+                ),
+              );
+            },
+            style: IconButton.styleFrom(
+              foregroundColor: colorScheme.primary,
+              minimumSize: const Size(36, 36),
             ),
           ),
         ],
