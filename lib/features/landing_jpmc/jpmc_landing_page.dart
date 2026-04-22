@@ -110,7 +110,7 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
     });
 
     try {
-      const stageBucket = 'early_stage';
+      const stageBucket = 'super_agent';
       final prospectId = await _service.createProspect(stageBucket);
       final result = await _service.getVoiceToken(
         stageBucket,

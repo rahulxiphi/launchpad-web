@@ -16,6 +16,18 @@ class _StageContent {
 }
 
 const _stageContent = {
+  // ── Super agent ───────────────────────────────────────────────────────────
+  'super_agent': _StageContent(
+    heading: 'Nova — Your JPMC AI Advisor',
+    description:
+        'Nova will get to know your startup — stage, priorities, and financial needs — then route you to the right specialist and surface personalised JPMC product recommendations.',
+    topics: [
+      'Your startup stage, business model, and key priorities',
+      'Banking, payments, treasury, and credit options for your stage',
+      'Personalised JPMC product recommendations and next steps',
+    ],
+    duration: '10–15 min',
+  ),
   // ── Legacy stages (kept for backward compat) ──────────────────────────────
   'pre_seed': _StageContent(
     heading: 'Early-stage financial advisory',

@@ -1,47 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../services/conversation_service.dart';
 import '../../shared/widgets/app_shell.dart';
 
-class _StageOption {
-  final String bucket;
-  final String label;
-  final String description;
-  final IconData icon;
-
-  const _StageOption({
-    required this.bucket,
-    required this.label,
-    required this.description,
-    required this.icon,
-  });
-}
-
-const _stages = [
-  _StageOption(
-    bucket: 'early_stage',
-    label: 'Early Stage',
-    description: 'Pre-seed to Seed · validating product-market fit',
-    icon: Icons.rocket_launch_outlined,
-  ),
-  _StageOption(
-    bucket: 'growth_stage',
-    label: 'Growth Stage',
-    description: 'Series A/B · scaling revenue and team',
-    icon: Icons.trending_up_outlined,
-  ),
-  _StageOption(
-    bucket: 'late_stage',
-    label: 'Late Stage',
-    description: 'Series C+ · pre-IPO · institutional capital',
-    icon: Icons.account_balance_outlined,
-  ),
-  _StageOption(
-    bucket: 'ipo_beyond',
-    label: 'IPO & Beyond',
-    description: 'IPO-ready or public · capital markets focus',
-    icon: Icons.show_chart_outlined,
-  ),
-];
+const _kSuperAgentBucket = 'super_agent';
 
 class StageSelectorPage extends StatefulWidget {
   final String? invitationCode;
@@ -59,10 +20,8 @@ class StageSelectorPage extends StatefulWidget {
 
 class _StageSelectorPageState extends State<StageSelectorPage> {
   final _service = ConversationService();
-  String? _loadingBucket;
+  bool _loading = false;
   String? _errorMessage;
-  bool _inviteLoading = false;
-  String _agentName = 'your JPMC AI Advisor';
 
   @override
   void initState() {
@@ -74,178 +33,168 @@ class _StageSelectorPageState extends State<StageSelectorPage> {
     }
   }
 
-  /// Return visit via /?p=<UUID> — resume existing prospect session.
   Future<void> _handleReturnVisit(String prospectId) async {
     setState(() {
-      _inviteLoading = true;
+      _loading = true;
       _errorMessage = null;
     });
-
     try {
-      // 1. Fetch existing prospect data
       final prospect = await _service.getProspect(prospectId);
-
-      setState(() {
-        _agentName = prospect.agentDisplayName;
-      });
-
-      // 2. Get voice token for the existing prospect
       final tokenResult = await _service.getVoiceToken(
         prospect.stageBucket,
         prospectId: prospectId,
       );
-
       if (!mounted) return;
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => AppShell(
-            conversationToken: tokenResult.conversationToken,
-            stageBucket: prospect.stageBucket,
-            prospectId: prospectId,
-            dynamicVariables: tokenResult.dynamicVariables,
-          ),
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => AppShell(
+          conversationToken: tokenResult.conversationToken,
+          stageBucket: prospect.stageBucket,
+          prospectId: prospectId,
+          dynamicVariables: tokenResult.dynamicVariables,
         ),
-      );
-    } catch (e) {
+      ));
+    } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _errorMessage = 'Could not resume your session. '
-            'Select your startup stage to start a new conversation.';
-      });
+      setState(() => _errorMessage = 'Could not resume your session. Tap below to start fresh.');
     } finally {
-      if (mounted) setState(() => _inviteLoading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  /// Invitation code present — resolve to stage + agent, then start session.
   Future<void> _handleInviteCode(String invitationCode) async {
     setState(() {
-      _inviteLoading = true;
+      _loading = true;
       _errorMessage = null;
     });
-
     try {
-      // 1. Resolve invitation code → prospect + stage + agent
       final initResult = await _service.initProspect(invitationCode);
-
-      setState(() {
-        _agentName = initResult.agentDisplayName;
-      });
-
-      // 2. Get voice token with resolved stage
       final tokenResult = await _service.getVoiceToken(
         initResult.stageBucket,
         prospectId: initResult.prospectId,
       );
-
       if (!mounted) return;
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => AppShell(
-            conversationToken: tokenResult.conversationToken,
-            stageBucket: initResult.stageBucket,
-            prospectId: initResult.prospectId,
-            dynamicVariables: tokenResult.dynamicVariables,
-          ),
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => AppShell(
+          conversationToken: tokenResult.conversationToken,
+          stageBucket: initResult.stageBucket,
+          prospectId: initResult.prospectId,
+          dynamicVariables: tokenResult.dynamicVariables,
         ),
-      );
-    } catch (e) {
+      ));
+    } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _errorMessage = 'Invalid or expired invitation link. '
-            'Select your startup stage to continue.';
-      });
+      setState(() => _errorMessage = 'Invalid or expired invitation link. Tap below to continue.');
     } finally {
-      if (mounted) setState(() => _inviteLoading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  /// Manual stage selection fallback (no invitation code).
-  Future<void> _startSession(String stageBucket) async {
+  Future<void> _startSession() async {
     setState(() {
-      _loadingBucket = stageBucket;
+      _loading = true;
       _errorMessage = null;
     });
-
     try {
-      // 1. Create prospect identity
-      final prospectId = await _service.createProspect(stageBucket);
-
-      // 2. Get voice token with prospect context
+      final prospectId = await _service.createProspect(_kSuperAgentBucket);
       final result = await _service.getVoiceToken(
-        stageBucket,
+        _kSuperAgentBucket,
         prospectId: prospectId,
       );
-
       if (!mounted) return;
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => AppShell(
-            conversationToken: result.conversationToken,
-            stageBucket: stageBucket,
-            prospectId: prospectId,
-            dynamicVariables: result.dynamicVariables,
-          ),
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => AppShell(
+          conversationToken: result.conversationToken,
+          stageBucket: _kSuperAgentBucket,
+          prospectId: prospectId,
+          dynamicVariables: result.dynamicVariables,
         ),
-      );
+      ));
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _errorMessage = 'Failed to start session: ${e.toString()}';
-      });
+      setState(() => _errorMessage = 'Failed to start session: ${e.toString()}');
     } finally {
-      if (mounted) setState(() => _loadingBucket = null);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    // While handling invite/return URL, show full-screen loader
+    if (_loading && (widget.invitationCode != null || widget.returnProspectId != null)) {
+      return Scaffold(
+        backgroundColor: colorScheme.surface,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 680),
+          constraints: const BoxConstraints(maxWidth: 560),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Hi, I\'m $_agentName',
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                // Logo / wordmark
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Icons.auto_awesome,
+                          color: colorScheme.onPrimary, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'JPMC LaunchPad',
+                      style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: colorScheme.onSurface,
+                        letterSpacing: 0.2,
                       ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.returnProspectId != null
-                      ? 'Welcome back. Resuming your session...'
-                      : widget.invitationCode != null
-                          ? 'Your JPMC Innovation Economy AI advisor. Setting up your session...'
-                          : 'Your JPMC Innovation Economy AI advisor. Select your startup stage to begin.',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                ),
-                const SizedBox(height: 40),
-                if (_inviteLoading)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 48),
-                      child: CircularProgressIndicator(),
                     ),
-                  )
-                else
-                ..._stages.map((stage) => _StageCard(
-                      stage: stage,
-                      isLoading: _loadingBucket == stage.bucket,
-                      isDisabled: _loadingBucket != null,
-                      onTap: () => _startSession(stage.bucket),
-                    )),
+                  ],
+                ),
+
+                const SizedBox(height: 56),
+
+                // Headline
+                Text(
+                  'Hi, I\'m Nova.',
+                  style: textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Your JPMC Innovation Economy AI advisor.\n'
+                  'I\'ll learn about your startup and recommend the right banking solutions for your stage.',
+                  style: textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                ),
+
+                const SizedBox(height: 48),
+
+                // Single CTA card
+                _NovaCard(
+                  isLoading: _loading,
+                  onTap: _loading ? null : _startSession,
+                ),
+
+                // Error
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 16),
                   Container(
@@ -269,12 +218,12 @@ class _StageSelectorPageState extends State<StageSelectorPage> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 32),
+
+                const SizedBox(height: 40),
                 Text(
-                  'Demo build — auth not required',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colorScheme.outline,
-                      ),
+                  'Demo build - auth not required',
+                  style: textTheme.labelSmall
+                      ?.copyWith(color: colorScheme.outline),
                 ),
               ],
             ),
@@ -285,85 +234,74 @@ class _StageSelectorPageState extends State<StageSelectorPage> {
   }
 }
 
-class _StageCard extends StatelessWidget {
-  final _StageOption stage;
-  final bool isLoading;
-  final bool isDisabled;
-  final VoidCallback onTap;
+// Nova CTA card
 
-  const _StageCard({
-    required this.stage,
-    required this.isLoading,
-    required this.isDisabled,
-    required this.onTap,
-  });
+class _NovaCard extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback? onTap;
+
+  const _NovaCard({required this.isLoading, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: isDisabled ? null : onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(stage.icon, color: colorScheme.onPrimaryContainer),
+    return Material(
+      color: colorScheme.primaryContainer,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: colorScheme.primary,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        stage.label,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                child: Icon(Icons.record_voice_over_outlined,
+                    color: colorScheme.onPrimary, size: 26),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Talk to Nova',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onPrimaryContainer,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        stage.description,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                if (isLoading)
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: colorScheme.primary,
                     ),
-                  )
-                else
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 16,
-                    color: isDisabled
-                        ? colorScheme.outline
-                        : colorScheme.onSurfaceVariant,
-                  ),
-              ],
-            ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '10-15 min | personalized for your stage',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onPrimaryContainer.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              isLoading
+                  ? SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
+                    )
+                  : Icon(Icons.arrow_forward_ios_rounded,
+                      size: 18, color: colorScheme.onPrimaryContainer),
+            ],
           ),
         ),
       ),
