@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/auth/login_page.dart';
 import '../features/auth/signup_page.dart';
+import '../features/landing_jpmc/jpmc_landing_page.dart';
 import '../features/stage_selector/stage_selector_page.dart';
 
 // ── Route paths ───────────────────────────────────────────────────────────────
@@ -10,6 +11,7 @@ import '../features/stage_selector/stage_selector_page.dart';
 class AppRoutes {
   static const login = '/login';
   static const signup = '/signup';
+  static const stageSelector = '/stages';
   static const home = '/';
 }
 
@@ -37,9 +39,6 @@ GoRouter createRouter({
           state.matchedLocation == AppRoutes.login ||
           state.matchedLocation == AppRoutes.signup;
 
-      // Already authenticated and on an auth page → send home.
-      // The demo flow (stage selector, conversation) is public — no redirect
-      // is applied to unauthenticated users so invite links work without login.
       if (authed && isOnAuth) return AppRoutes.home;
 
       return null;
@@ -58,12 +57,25 @@ GoRouter createRouter({
         ),
       ),
       GoRoute(
-        path: AppRoutes.home,
+        path: AppRoutes.stageSelector,
         pageBuilder: (context, state) {
           final invitationCode = state.uri.queryParameters['invite'];
           final returnProspectId = state.uri.queryParameters['p'];
           return NoTransitionPage(
             child: StageSelectorPage(
+              invitationCode: invitationCode,
+              returnProspectId: returnProspectId,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.home,
+        pageBuilder: (context, state) {
+          final invitationCode = state.uri.queryParameters['invite'];
+          final returnProspectId = state.uri.queryParameters['p'];
+          return NoTransitionPage(
+            child: JpmcLandingPage(
               invitationCode: invitationCode,
               returnProspectId: returnProspectId,
             ),

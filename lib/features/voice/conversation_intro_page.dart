@@ -118,189 +118,281 @@ class ConversationIntroPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final content = _stageContent[stageBucket]!;
-    final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    // Core aesthetic colors for JPMC
+    const jpmcNavy = Color(0xFF0A2744);
+    const jpmcBgDk = Color(0xFF0F3460);
+    const jpmcBlue = Color(0xFF006CAD);
+    const jpmcGold = Color(0xFFC8872A);
+    
     return Scaffold(
-      backgroundColor: colorScheme.surface,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: colorScheme.surface,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          // Pop the AppShell from the root navigator → back to StageSelectorPage.
-          // ConversationIntroPage is the initial route of the inner navigator,
-          // so a plain pop() would be a no-op here.
-          onPressed: () =>
-              Navigator.of(context, rootNavigator: true).pop(),
+        automaticallyImplyLeading: false,
+        leadingWidth: 200,
+        leading: Container(
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.only(left: 24),
+          child: InkWell(
+            onTap: () => Navigator.of(context, rootNavigator: true).pop(),
+            child: const Text(
+              'Back to Home',
+              style: TextStyle(
+                color: jpmcGold,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+                decorationColor: jpmcGold,
+              ),
+            ),
+          ),
         ),
       ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(
-                      Icons.headset_mic_rounded,
-                      color: colorScheme.onPrimaryContainer,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'You\'re about to start a\nvoice session',
-                    style: textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      height: 1.25,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    content.description,
-                    style: textTheme.bodyLarge?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      height: 1.55,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  Text(
-                    'What we\'ll cover',
-                    style: textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ...content.topics.map(
-                    (topic) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Row(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [jpmcNavy, jpmcBgDk],
+          ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = constraints.maxWidth < 640;
+              
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Center(
+                    child: Container(
+                      width: isMobile ? double.infinity : 600,
+                      margin: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 0 : 24, 
+                        vertical: isMobile ? 0 : 40
+                      ),
+                      padding: EdgeInsets.all(isMobile ? 24 : 36),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                        borderRadius: BorderRadius.circular(isMobile ? 0 : 20),
+                        boxShadow: isMobile ? null : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.20),
+                            blurRadius: 40,
+                            offset: const Offset(0, 15),
+                          )
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 7),
-                            child: Container(
-                              width: 5,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: colorScheme.primary,
-                                shape: BoxShape.circle,
+                          // Animated / glowing modern AI icon
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFEBF4FF), Color(0xFFBBE0FF)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: jpmcBlue.withOpacity(0.3),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                )
+                              ]
+                            ),
+                            child: const Icon(
+                              Icons.task_alt_rounded,
+                              color: jpmcBlue,
+                              size: 28,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              topic,
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                                height: 1.4,
-                              ),
+                          const SizedBox(height: 24),
+                          
+                          // Heading
+                          Text(
+                            content.heading,
+                            style: textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white : jpmcNavy,
+                              height: 1.15,
+                              letterSpacing: -0.5,
                             ),
                           ),
+                          const SizedBox(height: 12),
+                          
+                          // Description
+                          Text(
+                            content.description,
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: isDark ? Colors.white70 : const Color(0xFF4B5563),
+                              height: 1.5,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          
+                          // Topics "What we'll cover"
+                          Text(
+                            'WHAT WE\'LL COVER',
+                            style: textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: jpmcGold,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          ...content.topics.map((topic) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  margin: const EdgeInsets.only(top: 2),
+                                  padding: const EdgeInsets.all(3),
+                                  decoration: BoxDecoration(
+                                    color: jpmcBlue.withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.check, size: 12, color: jpmcBlue),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    topic,
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: isDark ? Colors.white70 : const Color(0xFF374151),
+                                      height: 1.4,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                          const SizedBox(height: 28),
+                          
+                          // Microphone permission banner
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: jpmcBlue.withOpacity(0.04),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: jpmcBlue.withOpacity(0.12)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 6)],
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.mic_none_rounded, size: 18, color: jpmcBlue),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Microphone access required',
+                                        style: textTheme.labelLarge?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: isDark ? Colors.white : jpmcNavy,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Your browser will request permission when the session starts.',
+                                        style: textTheme.bodySmall?.copyWith(
+                                          color: isDark ? Colors.white60 : const Color(0xFF6B7280),
+                                          height: 1.4,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          
+                          const SizedBox(height: 32),
+                          
+                          // Action footer
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.schedule_rounded, size: 16, color: isDark ? Colors.white54 : const Color(0xFF9CA3AF)),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Est. ${content.duration}',
+                                    style: textTheme.labelLarge?.copyWith(
+                                      color: isDark ? Colors.white54 : const Color(0xFF6B7280),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (_) => VoicePage(
+                                          conversationToken: conversationToken,
+                                          stageBucket: stageBucket,
+                                          prospectId: prospectId,
+                                          dynamicVariables: dynamicVariables,
+                                          onStartNew: onStartNew,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.auto_awesome, size: 18),
+                                  label: const Text('GET STARTED'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: jpmcNavy,
+                                    foregroundColor: jpmcGold,
+                                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)), // Match the squared look of JPMC
+                                    elevation: 8,
+                                    shadowColor: jpmcNavy.withOpacity(0.5),
+                                    textStyle: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.mic_rounded,
-                          size: 18,
-                          color: colorScheme.primary,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Microphone access required',
-                                style: textTheme.labelMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                'Your browser will ask for microphone permission when the session starts. This is required for the voice conversation.',
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.schedule_rounded,
-                        size: 14,
-                        color: colorScheme.outline,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        'Estimated duration: ${content.duration}',
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colorScheme.outline,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (_) => VoicePage(
-                              conversationToken: conversationToken,
-                              stageBucket: stageBucket,
-                              prospectId: prospectId,
-                              dynamicVariables: dynamicVariables,
-                              onStartNew: onStartNew,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.mic_rounded, size: 20),
-                      label: const Text('Begin conversation'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
       ),

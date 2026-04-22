@@ -1,4 +1,4 @@
-﻿import 'package:elevenlabs_agents/elevenlabs_agents.dart';
+import 'package:elevenlabs_agents/elevenlabs_agents.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../tools/client_tools.dart';
@@ -315,48 +315,53 @@ class _VoicePageState extends State<VoicePage> {
             ),
         ],
       ),
-      body: Column(
-        children: [
-          // ── Status strip ─────────────────────────────────────────────────
-          _StatusStrip(
-            statusText: _statusText,
-            isSpeaking: _client.isSpeaking,
-            colorScheme: colorScheme,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Column(
+            children: [
+              // ── Status strip ─────────────────────────────────────────────────
+              _StatusStrip(
+                statusText: _statusText,
+                isSpeaking: _client.isSpeaking,
+                colorScheme: colorScheme,
+              ),
+              // ── Transcript area ───────────────────────────────────────────────
+              Expanded(
+                child: _transcript.isEmpty
+                    ? Center(
+                        child: Text(
+                          _client.status == ConversationStatus.connecting
+                              ? 'Connecting to $_agentName…'
+                              : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                height: 1.6,
+                              ),
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                        itemCount: _transcript.length,
+                        itemBuilder: (context, index) =>
+                            _BubbleRow(entry: _transcript[index]),
+                      ),
+              ),
+              // ── Bottom controls ───────────────────────────────────────────────
+              _BottomBar(
+                isConnected: isConnected,
+                isMuted: _client.isMuted,
+                isEnded: _conversationEnded,
+                prospectId: widget.prospectId,
+                onToggleMute: () => _client.toggleMute(),
+                onSend: _sendTextMessage,
+                onStartNew: _startNewSession,
+              ),
+            ],
           ),
-          // ── Transcript area ───────────────────────────────────────────────
-          Expanded(
-            child: _transcript.isEmpty
-                ? Center(
-                    child: Text(
-                      _client.status == ConversationStatus.connecting
-                          ? 'Connecting to $_agentName…'
-                          : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                            height: 1.6,
-                          ),
-                    ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                    itemCount: _transcript.length,
-                    itemBuilder: (context, index) =>
-                        _BubbleRow(entry: _transcript[index]),
-                  ),
-          ),
-          // ── Bottom controls ───────────────────────────────────────────────
-          _BottomBar(
-            isConnected: isConnected,
-            isMuted: _client.isMuted,
-            isEnded: _conversationEnded,
-            prospectId: widget.prospectId,
-            onToggleMute: () => _client.toggleMute(),
-            onSend: _sendTextMessage,
-            onStartNew: _startNewSession,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -460,18 +465,22 @@ class _BubbleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final isUser = entry.isUser;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    // Aesthetic colors
+    const jpmcNavy = Color(0xFF0A2744);
+    const jpmcGold = Color(0xFFC8872A);
+    final aiBubbleColor = isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
+    final aiTextColor = isDark ? Colors.white : const Color(0xFF1F2937);
 
     final bubble = Container(
       constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.72),
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       decoration: BoxDecoration(
-        color: isUser
-            ? colorScheme.primaryContainer
-            : colorScheme.surfaceContainerHigh,
+        color: isUser ? jpmcNavy : aiBubbleColor,
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(16),
           topRight: const Radius.circular(16),
@@ -482,9 +491,10 @@ class _BubbleRow extends StatelessWidget {
       child: Text(
         entry.text,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: isUser
-                  ? colorScheme.onPrimaryContainer
-                  : colorScheme.onSurface,
+              color: isUser ? jpmcGold : aiTextColor,
+              height: 1.5,
+              fontSize: 15,
+              fontWeight: isUser ? FontWeight.w500 : FontWeight.w400,
               fontStyle:
                   entry.isTentative ? FontStyle.italic : FontStyle.normal,
             ),
@@ -598,64 +608,86 @@ class _BottomBarState extends State<_BottomBar> {
             _ReturnUrlBanner(prospectId: widget.prospectId!),
           // ── Text input row ───────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    focusNode: _focusNode,
-                    enabled: widget.isConnected && !widget.isEnded,
-                    onSubmitted: (_) => _submit(),
-                    textInputAction: TextInputAction.send,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    decoration: InputDecoration(
-                      hintText: widget.isConnected
-                          ? 'Type a message…'
-                          : 'Connecting…',
-                      hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                      filled: true,
-                      fillColor: colorScheme.surfaceContainerLow,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1F2937) : Colors.white,
+                borderRadius: BorderRadius.circular(32), // Pill shape
+                border: Border.all(color: colorScheme.outlineVariant, width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _textController,
+                      focusNode: _focusNode,
+                      enabled: widget.isConnected && !widget.isEnded,
+                      onSubmitted: (_) => _submit(),
+                      textInputAction: TextInputAction.send,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlignVertical: TextAlignVertical.center,
+                      minLines: 1,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText: widget.isConnected
+                            ? 'Type a message…'
+                            : 'Connecting…',
+                        hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        isDense: true,
                       ),
-                      isDense: true,
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _textController,
-                  builder: (context, value, _) {
-                    final canSend =
-                        widget.isConnected && value.text.trim().isNotEmpty;
-                    return IconButton.filled(
-                      onPressed: canSend ? _submit : null,
-                      icon: const Icon(Icons.send_rounded, size: 20),
-                      style: IconButton.styleFrom(
-                        backgroundColor: canSend
-                            ? colorScheme.primary
-                            : colorScheme.surfaceContainerHigh,
-                        foregroundColor: canSend
-                            ? colorScheme.onPrimary
-                            : colorScheme.onSurfaceVariant,
-                        minimumSize: const Size(44, 44),
-                      ),
-                      tooltip: 'Send message',
-                    );
-                  },
-                ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.all(6.0),
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _textController,
+                      builder: (context, value, _) {
+                        final canSend =
+                            widget.isConnected && value.text.trim().isNotEmpty;
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: canSend
+                                ? const Color(0xFF0A2744) // JPMC Navy
+                                : colorScheme.surfaceContainerHigh,
+                            shape: BoxShape.circle, // Circular send button
+                          ),
+                          child: IconButton(
+                            onPressed: canSend ? _submit : null,
+                            icon: const Icon(Icons.arrow_upward_rounded, size: 20),
+                            color: canSend
+                                ? const Color(0xFFC8872A) // JPMC Gold
+                                : colorScheme.onSurfaceVariant.withOpacity(0.5),
+                            padding: const EdgeInsets.all(8),
+                            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                            tooltip: 'Send message',
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           // ── Mic toggle row ───────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -667,15 +699,17 @@ class _BottomBarState extends State<_BottomBar> {
                     widget.isMuted
                         ? Icons.mic_off_rounded
                         : Icons.mic_rounded,
+                    size: 20,
                   ),
                   style: IconButton.styleFrom(
                     backgroundColor: widget.isMuted
                         ? colorScheme.errorContainer
-                        : colorScheme.primaryContainer,
+                        : const Color(0xFF006CAD), // JPMC Blue
                     foregroundColor: widget.isMuted
                         ? colorScheme.onErrorContainer
-                        : colorScheme.onPrimaryContainer,
-                    minimumSize: const Size(48, 48),
+                        : Colors.white,
+                    minimumSize: const Size(44, 44), // Smaller circle
+                    shape: const CircleBorder(), // Fully rounded
                   ),
                   tooltip: widget.isMuted ? 'Unmute' : 'Mute',
                 ),
