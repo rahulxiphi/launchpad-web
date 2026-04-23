@@ -171,8 +171,9 @@ class SearchProductCatalogTool implements ClientTool {
 
 class AdvancePhaseTool implements ClientTool {
   final String? prospectId;
+  final void Function(int)? onPhaseAdvanced;
 
-  AdvancePhaseTool({this.prospectId});
+  AdvancePhaseTool({this.prospectId, this.onPhaseAdvanced});
 
   @override
   Future<ClientToolResult?> execute(Map<String, dynamic> parameters) async {
@@ -188,6 +189,10 @@ class AdvancePhaseTool implements ClientTool {
         '/conversations/advance-phase',
         data: body,
       );
+
+      if (onPhaseAdvanced != null) {
+        onPhaseAdvanced!(resp.data['new_phase']);
+      }
 
       return ClientToolResult.success({
         'new_phase': resp.data['new_phase'],

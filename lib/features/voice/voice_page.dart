@@ -53,12 +53,20 @@ class _VoicePageState extends State<VoicePage> {
   // True once the session ends — stays on this page, shows restart banner.
   bool _conversationEnded = false;
 
+  // Track the current phase locally so we can update it via tool calls
+  late int _activePhase;
+
   // ---------------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------------
   @override
   void initState() {
     super.initState();
+    
+    // Initialize active phase from dynamic variables
+    final phaseStr = widget.dynamicVariables['conversation_phase']?.toString();
+    _activePhase = int.tryParse(phaseStr ?? '1') ?? 1;
+
     _client = ConversationClient(
       clientTools: {
         'capture_need': CaptureNeedTool(prospectId: widget.prospectId),
@@ -68,7 +76,14 @@ class _VoicePageState extends State<VoicePage> {
           prospectId: widget.prospectId,
           stageBucket: widget.stageBucket,
         ),
-        'advance_phase': AdvancePhaseTool(prospectId: widget.prospectId),
+        'advance_phase': AdvancePhaseTool(
+          prospectId: widget.prospectId,
+          onPhaseAdvanced: (newPhase) {
+            if (mounted) {
+              setState(() => _activePhase = newPhase);
+            }
+          },
+        ),
         'record_handoff': RecordHandoffTool(prospectId: widget.prospectId),
       },
       callbacks: ConversationCallbacks(
@@ -282,6 +297,160 @@ class _VoicePageState extends State<VoicePage> {
     }
   }
 
+  int get _currentPhase => _activePhase;
+
+  Widget _buildSidebar() {
+    final currentPhase = _currentPhase;
+    
+    return Container(
+      width: 340,
+      margin: const EdgeInsets.only(left: 24, top: 24, bottom: 24, right: 24),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'CONVERSATION PHASES',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey.shade500,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 24),
+            _buildPhaseItem(
+              phaseNumber: 1,
+              title: 'Entry & Welcome',
+              subtitle: 'Identity and intent capture',
+              currentPhase: currentPhase,
+            ),
+            const SizedBox(height: 12),
+            _buildPhaseItem(
+              phaseNumber: 2,
+              title: 'Discovery',
+              subtitle: 'Stage-tailored profiling',
+              currentPhase: currentPhase,
+            ),
+            const SizedBox(height: 12),
+            _buildPhaseItem(
+              phaseNumber: 3,
+              title: 'Deep Qualification',
+              subtitle: 'Financial and growth health',
+              currentPhase: currentPhase,
+            ),
+            const SizedBox(height: 12),
+            _buildPhaseItem(
+              phaseNumber: 4,
+              title: 'Recommendations',
+              subtitle: 'Product match and education',
+              currentPhase: currentPhase,
+            ),
+            const SizedBox(height: 12),
+            _buildPhaseItem(
+              phaseNumber: 5,
+              title: 'Next Actions',
+              subtitle: 'Facilitation and relationship',
+              currentPhase: currentPhase,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhaseItem({
+    required int phaseNumber,
+    required String title,
+    required String subtitle,
+    required int currentPhase,
+  }) {
+    final isCompleted = phaseNumber < currentPhase;
+    final isCurrent = phaseNumber == currentPhase;
+    
+    const jpmcDarkNavy = Color(0xFF131F2E);
+    const jpmcGold = Color(0xFFC8872A);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isCurrent ? jpmcDarkNavy : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (isCompleted)
+            Container(
+              width: 36,
+              height: 36,
+              decoration: const BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check, color: Colors.white, size: 20),
+            )
+          else
+            Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isCurrent ? Colors.white.withOpacity(0.15) : (isDark ? Colors.grey.shade800 : const Color(0xFFF3EFE9)),
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                '0$phaseNumber',
+                style: TextStyle(
+                  color: isCurrent ? jpmcGold : (isDark ? Colors.white70 : const Color(0xFF4A3C31)),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: isCurrent ? Colors.white : (isDark ? Colors.white : const Color(0xFF4A3C31)),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isCurrent ? Colors.white70 : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Build
   // ---------------------------------------------------------------------------
@@ -315,53 +484,62 @@ class _VoicePageState extends State<VoicePage> {
             ),
         ],
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: Column(
-            children: [
-              // ── Status strip ─────────────────────────────────────────────────
-              _StatusStrip(
-                statusText: _statusText,
-                isSpeaking: _client.isSpeaking,
-                colorScheme: colorScheme,
-              ),
-              // ── Transcript area ───────────────────────────────────────────────
-              Expanded(
-                child: _transcript.isEmpty
-                    ? Center(
-                        child: Text(
-                          _client.status == ConversationStatus.connecting
-                              ? 'Connecting to $_agentName…'
-                              : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                                height: 1.6,
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (MediaQuery.of(context).size.width >= 1024)
+            _buildSidebar(),
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: Column(
+                  children: [
+                    // ── Status strip ─────────────────────────────────────────────────
+                    _StatusStrip(
+                      statusText: _statusText,
+                      isSpeaking: _client.isSpeaking,
+                      colorScheme: colorScheme,
+                    ),
+                    // ── Transcript area ───────────────────────────────────────────────
+                    Expanded(
+                      child: _transcript.isEmpty
+                          ? Center(
+                              child: Text(
+                                _client.status == ConversationStatus.connecting
+                                    ? 'Connecting to $_agentName…'
+                                    : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                      height: 1.6,
+                                    ),
                               ),
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
-                        itemCount: _transcript.length,
-                        itemBuilder: (context, index) =>
-                            _BubbleRow(entry: _transcript[index]),
-                      ),
+                            )
+                          : ListView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                              itemCount: _transcript.length,
+                              itemBuilder: (context, index) =>
+                                  _BubbleRow(entry: _transcript[index]),
+                            ),
+                    ),
+                    // ── Bottom controls ───────────────────────────────────────────────
+                    _BottomBar(
+                      isConnected: isConnected,
+                      isMuted: _client.isMuted,
+                      isEnded: _conversationEnded,
+                      prospectId: widget.prospectId,
+                      onToggleMute: () => _client.toggleMute(),
+                      onSend: _sendTextMessage,
+                      onStartNew: _startNewSession,
+                    ),
+                  ],
+                ),
               ),
-              // ── Bottom controls ───────────────────────────────────────────────
-              _BottomBar(
-                isConnected: isConnected,
-                isMuted: _client.isMuted,
-                isEnded: _conversationEnded,
-                prospectId: widget.prospectId,
-                onToggleMute: () => _client.toggleMute(),
-                onSend: _sendTextMessage,
-                onStartNew: _startNewSession,
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
