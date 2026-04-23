@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 /// Top application bar shown across all shell pages.
 /// Height: 64 px (implements PreferredSizeWidget).
@@ -27,125 +28,113 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(64);
+  Size get preferredSize => const Size.fromHeight(70);
 
   @override
   Widget build(BuildContext context) {
-    const navy = Color(0xFF0A2744);
-    const gold = Color(0xFFC8872A);
     final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 600;
+    final isMobile = screenWidth < 768;
+    final isDesktop = screenWidth >= 1024;
+    const jpmcBrown = Color(0xFF4A3C31);
 
     return AppBar(
-      backgroundColor: navy,
+      backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
-      scrolledUnderElevation: 1,
+      scrolledUnderElevation: 0,
       automaticallyImplyLeading: false,
-      toolbarHeight: 64,
+      toolbarHeight: 70,
+      titleSpacing: isMobile ? 16 : 48,
       title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          RichText(
-            text: const TextSpan(
-              style: TextStyle(fontFamily: 'Georgia, serif', fontSize: 20, color: Colors.white, letterSpacing: 0.5),
+          InkWell(
+            onTap: () {
+              Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+              context.go('/');
+            },
+            child: const Text(
+              'J.P.Morgan',
+              style: TextStyle(
+                fontFamily: 'Georgia, serif',
+                fontSize: 26,
+                color: jpmcBrown,
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          
+          // Desktop Center Links
+          if (isDesktop)
+            Row(
               children: [
-                TextSpan(text: 'J.P. '),
-                TextSpan(text: 'Morgan', style: TextStyle(color: gold)),
+                _topNavDropdown('Solutions'),
+                _topNavDropdown('Who We Serve'),
+                _topNavDropdown('Insights'),
+                _topNavDropdown('About Us'),
               ],
             ),
-          ),
-          if (!isMobile) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Text('× LaunchPad', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5)),
+
+          // Right Utilities
+          if (!isMobile)
+            Row(
+              children: [
+                const Icon(Icons.search, size: 18, color: Colors.black87),
+                const SizedBox(width: 24),
+                _topUtilityLink('Careers', null),
+                _topUtilityLink('News', null),
+                _topUtilityLink('Contact Us', null),
+                _topUtilityLink(isAuthenticated ? 'Logout' : 'Login', isAuthenticated ? onSignOut : onSignIn),
+                _topUtilityLink('Global', null),
+              ],
             )
-          ]
+          else
+            InkWell(
+              onTap: onSignIn,
+              child: const Icon(Icons.menu, color: Colors.black87),
+            ),
         ],
       ),
-      actions: [
-        if (isMobile)
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.menu_rounded, color: Colors.white),
-            color: navy,
-            offset: const Offset(0, 56), // Drop it below the app bar
-            onSelected: (value) {
-              if (value == 'profile') onProfileTap();
-              if (value == 'auth') {
-                if (isAuthenticated && onSignOut != null) {
-                  onSignOut!();
-                } else {
-                  onSignIn();
-                }
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'notifications',
-                child: Row(children: [Icon(Icons.notifications_none_rounded, color: Colors.white70, size: 18), SizedBox(width: 12), Text('Notifications', style: TextStyle(color: Colors.white))]),
-              ),
-              const PopupMenuItem(
-                value: 'profile',
-                child: Row(children: [Icon(Icons.person_rounded, color: Colors.white70, size: 18), SizedBox(width: 12), Text('Profile', style: TextStyle(color: Colors.white))]),
-              ),
-              PopupMenuItem(
-                value: 'auth',
-                child: Row(children: [Icon(isAuthenticated ? Icons.logout_rounded : Icons.login_rounded, color: Colors.white70, size: 18), SizedBox(width: 12), Text(isAuthenticated ? 'Sign Out' : 'Sign In', style: const TextStyle(color: Colors.white))]),
-              ),
-            ],
-          )
-        else ...[
-          // Notification bell
-          IconButton(
-            tooltip: 'Notifications',
-            icon: const Badge(
-              isLabelVisible: false,
-              child: Icon(
-                Icons.notifications_none_rounded,
-                color: Colors.white70,
-              ),
+    );
+  }
+
+  Widget _topNavDropdown(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
             ),
-            onPressed: () {},
-          ),
-          // Profile avatar icon
-          IconButton(
-            tooltip: 'Profile',
-            icon: CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.white.withOpacity(0.15),
-              child: const Icon(
-                Icons.person_rounded,
-                size: 18,
-                color: Colors.white,
-              ),
-            ),
-            onPressed: onProfileTap,
           ),
           const SizedBox(width: 4),
-          OutlinedButton.icon(
-            onPressed: isAuthenticated ? onSignOut : onSignIn,
-            icon: Icon(
-              isAuthenticated ? Icons.logout_rounded : Icons.login_rounded,
-              size: 16,
-            ),
-            label: Text(isAuthenticated ? 'Sign Out' : 'Sign In'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              side: BorderSide(color: Colors.white.withOpacity(0.4)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              textStyle: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
+          const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.black54),
+        ],
+      ),
+    );
+  }
+
+  Widget _topUtilityLink(String text, VoidCallback? onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF9E3A30),
+            fontWeight: FontWeight.w500,
           ),
-          const SizedBox(width: 16),
-        ]
-      ],
+        ),
+      ),
     );
   }
 }

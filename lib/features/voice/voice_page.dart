@@ -469,18 +469,21 @@ class _BubbleRow extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     // Aesthetic colors
-    const jpmcNavy = Color(0xFF0A2744);
+    const jpmcDarkNavy = Color(0xFF131F2E);
     const jpmcGold = Color(0xFFC8872A);
     final aiBubbleColor = isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
     final aiTextColor = isDark ? Colors.white : const Color(0xFF1F2937);
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final containerWidth = screenWidth > 800 ? 800.0 : screenWidth;
+
     final bubble = Container(
       constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.72),
+          maxWidth: containerWidth * 0.70),
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       decoration: BoxDecoration(
-        color: isUser ? jpmcNavy : aiBubbleColor,
+        color: isUser ? jpmcDarkNavy : aiBubbleColor,
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(16),
           topRight: const Radius.circular(16),
@@ -663,7 +666,7 @@ class _BottomBarState extends State<_BottomBar> {
                         return Container(
                           decoration: BoxDecoration(
                             color: canSend
-                                ? const Color(0xFF0A2744) // JPMC Navy
+                                ? const Color(0xFF131F2E) // JPMC Dark Navy
                                 : colorScheme.surfaceContainerHigh,
                             shape: BoxShape.circle, // Circular send button
                           ),

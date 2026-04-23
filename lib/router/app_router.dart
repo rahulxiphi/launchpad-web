@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/auth/login_page.dart';
 import '../features/auth/signup_page.dart';
-import '../features/landing_jpmc/jpmc_landing_page.dart';
+import '../features/landing_jpmc/jpmc_startups_clone_page.dart';
 import '../features/stage_selector/stage_selector_page.dart';
 
 // ── Route paths ───────────────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ GoRouter createRouter({
           final invitationCode = state.uri.queryParameters['invite'];
           final returnProspectId = state.uri.queryParameters['p'];
           return NoTransitionPage(
-            child: JpmcLandingPage(
+            child: JpmcStartupsClonePage(
               invitationCode: invitationCode,
               returnProspectId: returnProspectId,
             ),
