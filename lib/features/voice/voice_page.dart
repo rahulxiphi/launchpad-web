@@ -278,7 +278,11 @@ class _VoicePageState extends State<VoicePage> {
       case 'ipo_beyond':
         return 'IPO & Beyond';
       default:
-        return widget.stageBucket;
+        // Convert snake_case to Title Case (e.g. 'super_agent_stage' → 'Super Agent Stage')
+        return widget.stageBucket
+            .split('_')
+            .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+            .join(' ');
     }
   }
 
@@ -301,73 +305,41 @@ class _VoicePageState extends State<VoicePage> {
 
   Widget _buildSidebar() {
     final currentPhase = _currentPhase;
-    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      width: 340,
-      margin: const EdgeInsets.only(left: 24, top: 24, bottom: 24, right: 24),
-      padding: const EdgeInsets.all(24),
+      width: 220,
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade800 : const Color(0xFFE5E7EB),
+        ),
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'CONVERSATION PHASES',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
+            child: Text(
+              'Phases',
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Colors.grey.shade500,
-                letterSpacing: 1.2,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: isDark ? Colors.grey.shade400 : const Color(0xFF8d8578),
+                letterSpacing: 0.8,
               ),
             ),
-            const SizedBox(height: 24),
-            _buildPhaseItem(
-              phaseNumber: 1,
-              title: 'Entry & Welcome',
-              subtitle: 'Identity and intent capture',
-              currentPhase: currentPhase,
-            ),
-            const SizedBox(height: 12),
-            _buildPhaseItem(
-              phaseNumber: 2,
-              title: 'Discovery',
-              subtitle: 'Stage-tailored profiling',
-              currentPhase: currentPhase,
-            ),
-            const SizedBox(height: 12),
-            _buildPhaseItem(
-              phaseNumber: 3,
-              title: 'Deep Qualification',
-              subtitle: 'Financial and growth health',
-              currentPhase: currentPhase,
-            ),
-            const SizedBox(height: 12),
-            _buildPhaseItem(
-              phaseNumber: 4,
-              title: 'Recommendations',
-              subtitle: 'Product match and education',
-              currentPhase: currentPhase,
-            ),
-            const SizedBox(height: 12),
-            _buildPhaseItem(
-              phaseNumber: 5,
-              title: 'Next Actions',
-              subtitle: 'Facilitation and relationship',
-              currentPhase: currentPhase,
-            ),
-          ],
-        ),
+          ),
+          _buildPhaseItem(phaseNumber: 1, title: 'Entry & Welcome',    subtitle: 'Identity & intent',       currentPhase: currentPhase),
+          _buildPhaseItem(phaseNumber: 2, title: 'Discovery',          subtitle: 'Stage-tailored profiling', currentPhase: currentPhase),
+          _buildPhaseItem(phaseNumber: 3, title: 'Deep Qualification', subtitle: 'Financial health',         currentPhase: currentPhase),
+          _buildPhaseItem(phaseNumber: 4, title: 'Recommendations',    subtitle: 'Product match',           currentPhase: currentPhase),
+          _buildPhaseItem(phaseNumber: 5, title: 'Next Actions',       subtitle: 'Facilitation',            currentPhase: currentPhase),
+        ],
       ),
     );
   }
@@ -380,73 +352,89 @@ class _VoicePageState extends State<VoicePage> {
   }) {
     final isCompleted = phaseNumber < currentPhase;
     final isCurrent = phaseNumber == currentPhase;
-    
-    const jpmcDarkNavy = Color(0xFF131F2E);
-    const jpmcGold = Color(0xFFC8872A);
+    const jpmcDarkNavy = Color(0xFF04213d);
+    const jpmcGold = Color(0xFFe8cc7a);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isCurrent ? jpmcDarkNavy : Colors.transparent,
+    // Number badge
+    final Widget numBadge = isCompleted
+        ? Container(
+            width: 28,
+            height: 28,
+            decoration: const BoxDecoration(
+              color: Color(0xFF1d9e75),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.check, color: Colors.white, size: 14),
+          )
+        : Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isCurrent
+                  ? const Color(0x2Ac9a84c) // gold tint on navy
+                  : (isDark ? Colors.grey.shade800 : const Color(0xFFF3F0EA)),
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '0$phaseNumber',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: isCurrent
+                    ? jpmcGold
+                    : (isDark ? Colors.white70 : const Color(0xFF1a1a18)),
+              ),
+            ),
+          );
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isCompleted)
-            Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                color: Colors.green,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check, color: Colors.white, size: 20),
-            )
-          else
-            Container(
-              width: 36,
-              height: 36,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: isCurrent ? Colors.white.withOpacity(0.15) : (isDark ? Colors.grey.shade800 : const Color(0xFFF3EFE9)),
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                '0$phaseNumber',
-                style: TextStyle(
-                  color: isCurrent ? jpmcGold : (isDark ? Colors.white70 : const Color(0xFF4A3C31)),
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: isCurrent ? Colors.white : (isDark ? Colors.white : const Color(0xFF4A3C31)),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isCurrent ? Colors.white70 : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-                  ),
-                ),
-              ],
-            ),
+        onTap: null,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isCurrent ? jpmcDarkNavy : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              numBadge,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+                        color: isCurrent
+                            ? Colors.white
+                            : (isDark ? Colors.grey.shade300 : const Color(0xFF6f675b)),
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isCurrent
+                            ? Colors.white.withOpacity(0.65)
+                            : (isDark ? Colors.grey.shade500 : Colors.grey.shade500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -458,87 +446,298 @@ class _VoicePageState extends State<VoicePage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isConnected = _client.status == ConversationStatus.connected;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF0f172a) : const Color(0xFFF4F1EB);
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: colorScheme.surface,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Text(
-          '$_agentName · $_stageLabel',
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+      backgroundColor: bgColor,
+      body: SafeArea(
+        child: SizedBox.expand(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: SizedBox(
+                height: double.infinity,
+                child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1080),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Sidebar (phases) ──────────────────────────────────────
+                  if (MediaQuery.of(context).size.width >= 860)
+                    _buildSidebar(),
+
+                  // 12px gap between sidebar and chat card
+                  if (MediaQuery.of(context).size.width >= 860)
+                    const SizedBox(width: 12),
+
+                  // ── Chat container ────────────────────────────────────────
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF1E1E1E)
+                            : const Color(0xFFF5F3EE),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.grey.shade800
+                              : const Color(0xFFE5E0D4),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 20,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          _JpmcMockHeader(
+                            agentName: _agentName,
+                            stageLabel: _stageLabel,
+                            statusText: _statusText,
+                            isSpeaking: _client.isSpeaking,
+                            isEnded: _conversationEnded,
+                            onEnd: _endSession,
+                            onStartNew: _startNewSession,
+                            colorScheme: colorScheme,
+                          ),
+                          Expanded(
+                            child: _transcript.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      _client.status ==
+                                              ConversationStatus.connecting
+                                          ? 'Connecting to $_agentName…'
+                                          : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.',
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color:
+                                                colorScheme.onSurfaceVariant,
+                                            height: 1.6,
+                                          ),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    controller: _scrollController,
+                                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                                    itemCount: _transcript.length,
+                                    itemBuilder: (context, index) =>
+                                        _BubbleRow(
+                                            entry: _transcript[index],
+                                            agentInitial: _agentName.isNotEmpty
+                                                ? _agentName[0].toUpperCase()
+                                                : 'A'),
+                                  ),
+                          ),
+                          _BottomBar(
+                            isConnected: isConnected,
+                            isMuted: _client.isMuted,
+                            isEnded: _conversationEnded,
+                            prospectId: widget.prospectId,
+                            onToggleMute: () => _client.toggleMute(),
+                            onSend: _sendTextMessage,
+                            onStartNew: _startNewSession,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),           // closes ConstrainedBox
+          ),             // closes SizedBox(height)
+        ),               // closes Padding
+      ),                 // closes Center
+    ),                   // closes SizedBox.expand
+  ),                     // closes SafeArea
+);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// JPMC Mock Header — title bar that matches the HTML template's .mock-header
+// ---------------------------------------------------------------------------
+class _JpmcMockHeader extends StatelessWidget {
+  final String agentName;
+  final String stageLabel;
+  final String statusText;
+  final bool isSpeaking;
+  final bool isEnded;
+  final VoidCallback onEnd;
+  final VoidCallback onStartNew;
+  final ColorScheme colorScheme;
+
+  const _JpmcMockHeader({
+    required this.agentName,
+    required this.stageLabel,
+    required this.statusText,
+    required this.isSpeaking,
+    required this.isEnded,
+    required this.onEnd,
+    required this.onStartNew,
+    required this.colorScheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const jpmcNavy = Color(0xFF04213d);
+    const jpmcGold = Color(0xFFc9a84c);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
         ),
-        actions: [
-          if (!_conversationEnded)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: TextButton.icon(
-                onPressed: _endSession,
-                icon: const Icon(Icons.call_end_rounded, size: 18),
-                label: const Text('End'),
-                style: TextButton.styleFrom(
-                  foregroundColor: colorScheme.error,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? Colors.grey.shade800 : const Color(0xFFE5E0D4),
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Wordmark
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'JPMC',
+                      style: TextStyle(
+                        fontFamily: 'Georgia',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                        color: isDark ? Colors.white : jpmcNavy,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    TextSpan(
+                      text: '  •  Innovation Economy Advisor',
+                      style: TextStyle(
+                        fontFamily: 'Georgia',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                        color: isDark
+                            ? const Color(0xFFe8cc7a)
+                            : jpmcGold,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(height: 2),
+              Text(
+                'Prospect workspace  ·  $agentName  ·  $stageLabel',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? Colors.grey.shade400 : const Color(0xFF8d8578),
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          // Status pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF0EAD8),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: isDark
+                    ? Colors.grey.shade700
+                    : const Color(0xFFD4C9AD),
+              ),
             ),
-        ],
-      ),
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (MediaQuery.of(context).size.width >= 1024)
-            _buildSidebar(),
-          Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 800),
-                child: Column(
-                  children: [
-                    // ── Status strip ─────────────────────────────────────────────────
-                    _StatusStrip(
-                      statusText: _statusText,
-                      isSpeaking: _client.isSpeaking,
-                      colorScheme: colorScheme,
-                    ),
-                    // ── Transcript area ───────────────────────────────────────────────
-                    Expanded(
-                      child: _transcript.isEmpty
-                          ? Center(
-                              child: Text(
-                                _client.status == ConversationStatus.connecting
-                                    ? 'Connecting to $_agentName…'
-                                    : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.',
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                      height: 1.6,
-                                    ),
-                              ),
-                            )
-                          : ListView.builder(
-                              controller: _scrollController,
-                              padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
-                              itemCount: _transcript.length,
-                              itemBuilder: (context, index) =>
-                                  _BubbleRow(entry: _transcript[index]),
-                            ),
-                    ),
-                    // ── Bottom controls ───────────────────────────────────────────────
-                    _BottomBar(
-                      isConnected: isConnected,
-                      isMuted: _client.isMuted,
-                      isEnded: _conversationEnded,
-                      prospectId: widget.prospectId,
-                      onToggleMute: () => _client.toggleMute(),
-                      onSend: _sendTextMessage,
-                      onStartNew: _startNewSession,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _PulseDot(active: isSpeaking, colorScheme: colorScheme),
+                const SizedBox(width: 6),
+                Text(
+                  statusText,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? Colors.grey.shade300
+                        : const Color(0xFF6f675b),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isEnded) ...[
+            const SizedBox(width: 10),
+            // ── Start new session button (coral, replaces End when conversation done)
+            GestureDetector(
+              onTap: onStartNew,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.refresh_rounded, size: 14, color: Color(0xFFDC2626)),
+                    SizedBox(width: 5),
+                    Text(
+                      'Start new session',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFDC2626),
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-          ),
+          ] else ...[
+            const SizedBox(width: 10),
+            // ── End button
+            GestureDetector(
+              onTap: onEnd,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.call_end_rounded, size: 14, color: Color(0xFFDC2626)),
+                    SizedBox(width: 5),
+                    Text(
+                      'End',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFDC2626),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -638,53 +837,94 @@ class _PulseDotState extends State<_PulseDot>
 // ---------------------------------------------------------------------------
 class _BubbleRow extends StatelessWidget {
   final _TranscriptEntry entry;
+  final String agentInitial;
 
-  const _BubbleRow({required this.entry});
+  const _BubbleRow({required this.entry, this.agentInitial = 'A'});
 
   @override
   Widget build(BuildContext context) {
     final isUser = entry.isUser;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    // Aesthetic colors
+
+    // Bubble colors
     const jpmcDarkNavy = Color(0xFF131F2E);
-    const jpmcGold = Color(0xFFC8872A);
     final aiBubbleColor = isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
     final aiTextColor = isDark ? Colors.white : const Color(0xFF1F2937);
 
     final screenWidth = MediaQuery.of(context).size.width;
     final containerWidth = screenWidth > 800 ? 800.0 : screenWidth;
 
+    // Avatar colors: each avatar uses the OPPOSITE bubble's bg color
+    final aiAvatarBg = jpmcDarkNavy;    // same as user bubble = dark navy
+    final userAvatarBg = aiBubbleColor; // same as AI bubble = grey/light
+
+    // ── Avatar widget ────────────────────────────────────────────────────────
+    Widget avatar(Color bg, Widget child) => Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+          child: Center(child: child),
+        );
+
+    final aiAvatar = avatar(
+      aiAvatarBg,
+      Text(
+        agentInitial,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFFc9a84c), // gold initial on dark bg
+        ),
+      ),
+    );
+
+    final userAvatar = avatar(
+      userAvatarBg,
+      Icon(
+        Icons.person_rounded,
+        size: 16,
+        color: isDark ? Colors.white70 : const Color(0xFF6B7280),
+      ),
+    );
+
+    // ── Bubble ───────────────────────────────────────────────────────────────
     final bubble = Container(
-      constraints: BoxConstraints(
-          maxWidth: containerWidth * 0.70),
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      constraints: BoxConstraints(maxWidth: containerWidth * 0.68),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
       decoration: BoxDecoration(
         color: isUser ? jpmcDarkNavy : aiBubbleColor,
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(16),
-          topRight: const Radius.circular(16),
-          bottomLeft: isUser ? const Radius.circular(16) : Radius.zero,
-          bottomRight: isUser ? Radius.zero : const Radius.circular(16),
-        ),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         entry.text,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: isUser ? jpmcGold : aiTextColor,
+              color: isUser ? Colors.white : aiTextColor,
               height: 1.5,
               fontSize: 15,
-              fontWeight: isUser ? FontWeight.w500 : FontWeight.w400,
+              fontWeight: FontWeight.w500, // same richness for both sides
               fontStyle:
                   entry.isTentative ? FontStyle.italic : FontStyle.normal,
             ),
       ),
     );
 
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: bubble,
+    // Estimate line count (~70 chars per line matches the actual bubble width)
+    final estimatedLines =
+        (entry.text.length / 70).ceil() + '\n'.allMatches(entry.text).length;
+    final avatarAlign = estimatedLines <= 1
+        ? CrossAxisAlignment.center
+        : CrossAxisAlignment.end;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment:
+            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: avatarAlign,
+        children: isUser
+            ? [bubble, const SizedBox(width: 8), userAvatar]
+            : [aiAvatar, const SizedBox(width: 8), bubble],
+      ),
     );
   }
 }
@@ -718,6 +958,18 @@ class _BottomBar extends StatefulWidget {
 class _BottomBarState extends State<_BottomBar> {
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  bool _copied = false;
+
+  // Compute the prospect return URL (mirrors _ReturnUrlBanner logic)
+  String get _returnUrl {
+    if (widget.prospectId == null) return '';
+    final uri = Uri.base;
+    final origin = uri.origin;
+    if (uri.fragment.isNotEmpty) {
+      return '$origin/#/?p=${widget.prospectId}';
+    }
+    return '$origin/?p=${widget.prospectId}';
+  }
 
   @override
   void dispose() {
@@ -734,267 +986,303 @@ class _BottomBarState extends State<_BottomBar> {
     _focusNode.requestFocus();
   }
 
+  void _copyReturnUrl() {
+    final url = _returnUrl;
+    if (url.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: url));
+    setState(() => _copied = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Return link copied to clipboard'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+        width: 260,
+      ),
+    );
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasReturnUrl = widget.isEnded && widget.prospectId != null;
+    final returnUrl = hasReturnUrl ? _returnUrl : '';
+
+    // Hardcoded suggestion chips (shown above input during active session)
+    const chips = [
+      'Pre-seed, pre-revenue',
+      'Seed stage, early revenue',
+      'Series A, growing revenue',
+      'Profitable, bootstrapped',
+    ];
 
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: Colors.transparent,
         border: Border(
-          top: BorderSide(color: colorScheme.outlineVariant, width: 0.5),
+          top: BorderSide(
+            color: isDark ? Colors.grey.shade800 : const Color(0xFFE5E0D4),
+            width: 1,
+          ),
         ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── "Start new session" banner (shown after conversation ends) ────
-          if (widget.isEnded)
-            Container(
-              width: double.infinity,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              color: colorScheme.surfaceContainerLow,
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.check_circle_outline_rounded,
-                    size: 18,
-                    color: colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Conversation complete',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                    ),
-                  ),
-                  FilledButton.tonal(
-                    onPressed: widget.onStartNew,
-                    style: FilledButton.styleFrom(
+          // ── Suggestion chips (only when conversation is active) ───────────
+          if (!widget.isEnded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                alignment: WrapAlignment.start,
+                children: chips.map((chip) {
+                  return GestureDetector(
+                    onTap: () {
+                      if (widget.isConnected) widget.onSend(chip);
+                    },
+                    child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      textStyle: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
-                    child: const Text('Start new session'),
-                  ),
-                ],
-              ),
-            ),
-          // ── Return URL (shown after conversation ends, only when prospectId exists) ──
-          if (widget.isEnded && widget.prospectId != null)
-            _ReturnUrlBanner(prospectId: widget.prospectId!),
-          // ── Text input row ───────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1F2937) : Colors.white,
-                borderRadius: BorderRadius.circular(32), // Pill shape
-                border: Border.all(color: colorScheme.outlineVariant, width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  )
-                ]
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _textController,
-                      focusNode: _focusNode,
-                      enabled: widget.isConnected && !widget.isEnded,
-                      onSubmitted: (_) => _submit(),
-                      textInputAction: TextInputAction.send,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      textAlignVertical: TextAlignVertical.center,
-                      minLines: 1,
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        hintText: widget.isConnected
-                            ? 'Type a message…'
-                            : 'Connecting…',
-                        hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        isDense: true,
+                          horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF1F2937)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.grey.shade700
+                              : const Color(0xFFD4C9AD),
+                        ),
+                      ),
+                      child: Text(
+                        chip,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: isDark
+                              ? Colors.grey.shade300
+                              : const Color(0xFF4B5563),
+                        ),
                       ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(6.0),
-                    child: ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _textController,
-                      builder: (context, value, _) {
-                        final canSend =
-                            widget.isConnected && value.text.trim().isNotEmpty;
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: canSend
-                                ? const Color(0xFF131F2E) // JPMC Dark Navy
-                                : colorScheme.surfaceContainerHigh,
-                            shape: BoxShape.circle, // Circular send button
-                          ),
-                          child: IconButton(
-                            onPressed: canSend ? _submit : null,
-                            icon: const Icon(Icons.arrow_upward_rounded, size: 20),
-                            color: canSend
-                                ? const Color(0xFFC8872A) // JPMC Gold
-                                : colorScheme.onSurfaceVariant.withOpacity(0.5),
-                            padding: const EdgeInsets.all(8),
-                            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                            tooltip: 'Send message',
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+                  );
+                }).toList(),
               ),
             ),
-          ),
-          // ── Mic toggle row ───────────────────────────────────────────────
+
+          // ── Input area (Pill + Outside Mic) ───────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                IconButton.filled(
-                  onPressed: widget.isConnected && !widget.isEnded
-                      ? widget.onToggleMute
-                      : null,
-                  icon: Icon(
-                    widget.isMuted
-                        ? Icons.mic_off_rounded
-                        : Icons.mic_rounded,
-                    size: 20,
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: widget.isMuted
-                        ? colorScheme.errorContainer
-                        : const Color(0xFF006CAD), // JPMC Blue
-                    foregroundColor: widget.isMuted
-                        ? colorScheme.onErrorContainer
-                        : Colors.white,
-                    minimumSize: const Size(44, 44), // Smaller circle
-                    shape: const CircleBorder(), // Fully rounded
-                  ),
-                  tooltip: widget.isMuted ? 'Unmute' : 'Mute',
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  widget.isMuted ? 'Microphone off' : 'Microphone on',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1F2937) : const Color(0xFFFDFCF9),
+                      borderRadius: BorderRadius.circular(32),
+                      border: Border.all(
+                        color: hasReturnUrl
+                            ? (isDark ? Colors.grey.shade600 : const Color(0xFFD4C9AD))
+                            : colorScheme.outlineVariant,
+                        width: 1,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (hasReturnUrl)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 16),
+                            child: Icon(
+                              Icons.link_rounded,
+                              size: 15,
+                              color: isDark
+                                  ? Colors.grey.shade400
+                                  : const Color(0xFF8d8578),
+                            ),
+                          )
+                        else
+                          const SizedBox(width: 8),
+                        // ── Text area ─────────────────────────────────────────
+                        Expanded(
+                          child: hasReturnUrl
+                              ? Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Your return link — come back any time to continue',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                          color: isDark
+                                              ? Colors.grey.shade400
+                                              : const Color(0xFF8d8578),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        returnUrl,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isDark
+                                              ? const Color(0xFF60A5FA)
+                                              : const Color(0xFF006CAD),
+                                          fontFamily: 'monospace',
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : TextField(
+                                  controller: _textController,
+                                  focusNode: _focusNode,
+                                  enabled: widget.isConnected && !widget.isEnded,
+                                  onSubmitted: (_) => _submit(),
+                                  textInputAction: TextInputAction.send,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(color: Colors.white),
+                                  textAlignVertical: TextAlignVertical.center,
+                                  minLines: 1,
+                                  maxLines: 4,
+                                  decoration: InputDecoration(
+                                    hintText: widget.isConnected
+                                        ? 'Type a message…'
+                                        : 'Connecting…',
+                                    hintStyle: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                            color: colorScheme.onSurfaceVariant),
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 14),
+                                    isDense: true,
+                                  ),
+                                ),
+                        ),
+                        // ── Copy / Send button ────────────────────────────────
+                        Padding(
+                          padding: const EdgeInsets.all(5),
+                          child: hasReturnUrl
+                              ? GestureDetector(
+                                  onTap: _copyReturnUrl,
+                                  child: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: _copied
+                                          ? const Color(0xFF1d9e75)
+                                          : const Color(0xFF04213d),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      _copied
+                                          ? Icons.check_rounded
+                                          : Icons.copy_rounded,
+                                      size: 18,
+                                      color: _copied
+                                          ? Colors.white
+                                          : const Color(0xFFc9a84c),
+                                    ),
+                                  ),
+                                )
+                              : ValueListenableBuilder<TextEditingValue>(
+                                  valueListenable: _textController,
+                                  builder: (context, value, _) {
+                                    final canSend = widget.isConnected &&
+                                        value.text.trim().isNotEmpty;
+                                    return GestureDetector(
+                                      onTap: canSend ? _submit : null,
+                                      child: Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color: canSend
+                                              ? const Color(0xFF131F2E)
+                                              : colorScheme.surfaceContainerHigh,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.arrow_upward_rounded,
+                                          size: 20,
+                                          color: canSend
+                                              ? const Color(0xFFC8872A)
+                                              : colorScheme.onSurfaceVariant
+                                                  .withOpacity(0.4),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
+                // ── Mic button (outside, to the right) ───────────────────────
+                if (!hasReturnUrl && !widget.isEnded) ...[
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: widget.isConnected ? widget.onToggleMute : null,
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: widget.isMuted
+                            ? colorScheme.errorContainer
+                            : const Color(0xFF006CAD),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        widget.isMuted
+                            ? Icons.mic_off_rounded
+                            : Icons.mic_rounded,
+                        size: 22,
+                        color: widget.isMuted
+                            ? colorScheme.onErrorContainer
+                            : Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ],
       ),
     );
+
   }
 }
 
-// ---------------------------------------------------------------------------
-// Return URL banner — shown post-conversation so the user can copy their link
-// ---------------------------------------------------------------------------
-class _ReturnUrlBanner extends StatelessWidget {
-  final String prospectId;
-
-  const _ReturnUrlBanner({required this.prospectId});
-
-  String get _returnUrl {
-    final uri = Uri.base;
-    final origin = uri.origin;
-    // Flutter Web defaults to hash routing: URLs look like http://host/#/...
-    // uri.fragment is non-empty (e.g. "/") when hash routing is active.
-    if (uri.fragment.isNotEmpty) {
-      return '$origin/#/?p=$prospectId';
-    }
-    return '$origin/?p=$prospectId';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final url = _returnUrl;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: colorScheme.secondaryContainer.withOpacity(0.4),
-        border: Border(
-          top: BorderSide(color: colorScheme.outlineVariant, width: 0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.link_rounded,
-            size: 16,
-            color: colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Your return link — come back any time to continue',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  url,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.primary,
-                        fontFamily: 'monospace',
-                      ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.copy_rounded, size: 18),
-            tooltip: 'Copy link',
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: url));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Return link copied to clipboard'),
-                  behavior: SnackBarBehavior.floating,
-                  duration: const Duration(seconds: 2),
-                  width: 280,
-                ),
-              );
-            },
-            style: IconButton.styleFrom(
-              foregroundColor: colorScheme.primary,
-              minimumSize: const Size(36, 36),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

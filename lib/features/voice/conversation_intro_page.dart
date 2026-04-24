@@ -138,6 +138,13 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _companyController = TextEditingController();
+  bool _preferManual = false;
+
+  // Core JPMC aesthetic colors
+  static const jpmcNavy = Color(0xFF0A2744);
+  static const jpmcDarkNavy = Color(0xFF131F2E);
+  static const jpmcBlue = Color(0xFF006CAD);
+  static const jpmcGold = Color(0xFFC8872A);
 
   @override
   void initState() {
@@ -172,223 +179,241 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     // Core aesthetic colors for JPMC
-    const jpmcNavy = Color(0xFF0A2744);
-    const jpmcDarkNavy = Color(0xFF131F2E);
     const jpmcBgDk = Color(0xFF0F3460);
-    const jpmcBlue = Color(0xFF006CAD);
-    const jpmcGold = Color(0xFFC8872A);
     
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isMobile = constraints.maxWidth < 640;
-            
-            return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Center(
-                  child: Container(
-                    width: isMobile ? double.infinity : 1000,
-                    margin: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 0 : 24, 
-                      vertical: isMobile ? 0 : 24
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(isMobile ? 24 : 36),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                        borderRadius: BorderRadius.circular(isMobile ? 0 : 20),
-                        boxShadow: isMobile ? null : [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.20),
-                            blurRadius: 40,
-                            offset: const Offset(0, 15),
-                          )
-                        ],
-                      ),
-                      child: Flex(
-                        direction: isMobile ? Axis.vertical : Axis.horizontal,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: isMobile ? 0 : 5,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Animated / glowing modern AI icon
-                                Container(
-                                  width: 56,
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFFEBF4FF), Color(0xFFBBE0FF)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: jpmcBlue.withOpacity(0.3),
-                                        blurRadius: 20,
-                                        offset: const Offset(0, 10),
-                                      )
-                                    ]
-                                  ),
-                                  child: const Icon(
-                                    Icons.task_alt_rounded,
-                                    color: jpmcBlue,
-                                    size: 28,
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
-                                
-                                // Heading
-                                Text(
-                                  content.heading,
-                                  style: textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: isDark ? Colors.white : jpmcNavy,
-                                    height: 1.15,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                
-                                // Description
-                                Text(
-                                  content.description,
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    color: isDark ? Colors.white70 : const Color(0xFF4B5563),
-                                    height: 1.5,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                const SizedBox(height: 32),
-                                
-                                // Topics "What we'll cover"
-                                Text(
-                                  'WHAT WE\'LL COVER',
-                                  style: textTheme.labelSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: jpmcGold,
-                                    letterSpacing: 1.2,
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
-                                ...content.topics.map((topic) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        margin: const EdgeInsets.only(top: 2),
-                                        padding: const EdgeInsets.all(3),
-                                        decoration: BoxDecoration(
-                                          color: jpmcBlue.withOpacity(0.1),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.check, size: 12, color: jpmcBlue),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          topic,
-                                          style: textTheme.bodySmall?.copyWith(
-                                            color: isDark ? Colors.white70 : const Color(0xFF374151),
-                                            height: 1.4,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )),
-                                const SizedBox(height: 28),
-                                
-                                // Microphone permission banner
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: jpmcBlue.withOpacity(0.04),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: jpmcBlue.withOpacity(0.12)),
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 6)],
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.mic_none_rounded, size: 18, color: jpmcBlue),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Microphone access required',
-                                              style: textTheme.labelLarge?.copyWith(
-                                                fontWeight: FontWeight.w700,
-                                                color: isDark ? Colors.white : jpmcNavy,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'Your browser will request permission when the session starts.',
-                                              style: textTheme.bodySmall?.copyWith(
-                                                color: isDark ? Colors.white60 : const Color(0xFF6B7280),
-                                                height: 1.4,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (!isMobile) const SizedBox(width: 48),
-                          if (isMobile) const SizedBox(height: 48),
-                          Expanded(
-                            flex: isMobile ? 0 : 4,
-                            child: _buildForm(textTheme, isDark, content.duration),
-                          ),
-                        ],
-                      ),
-                    ),
+      body: Stack(
+        children: [
+          // Background Image
+          Positioned.fill(
+            child: Image.network(
+              'https://images.unsplash.com/photo-1556761175-b413da4baf72?q=80&w=2000&auto=format&fit=crop',
+              fit: BoxFit.cover,
+            ),
+          ),
+          // Gradient Overlay for readability
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.3),
+                    Colors.black.withOpacity(0.6),
                   ],
                 ),
               ),
             ),
           ),
-        );
-      },
-    ),
-  ),
-);
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 640;
+                
+                return SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Center(
+                      child: Container(
+                        width: isMobile ? double.infinity : 1000,
+                        margin: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 0 : 24, 
+                          vertical: isMobile ? 0 : 24
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(isMobile ? 24 : 36),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E1E1E) : Colors.white.withOpacity(0.95),
+                                borderRadius: BorderRadius.circular(isMobile ? 0 : 20),
+                                boxShadow: isMobile ? null : [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.20),
+                                    blurRadius: 40,
+                                    offset: const Offset(0, 15),
+                                  )
+                                ],
+                              ),
+                              child: Flex(
+                                direction: isMobile ? Axis.vertical : Axis.horizontal,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: isMobile ? 0 : 5,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Animated / glowing modern AI icon
+                                        Container(
+                                          width: 56,
+                                          height: 56,
+                                          decoration: BoxDecoration(
+                                            gradient: const LinearGradient(
+                                              colors: [Color(0xFFEBF4FF), Color(0xFFBBE0FF)],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                            borderRadius: BorderRadius.circular(16),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: jpmcBlue.withOpacity(0.3),
+                                                blurRadius: 20,
+                                                offset: const Offset(0, 10),
+                                              )
+                                            ]
+                                          ),
+                                          child: const Icon(
+                                            Icons.task_alt_rounded,
+                                            color: jpmcBlue,
+                                            size: 28,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
+                                        
+                                        // Heading
+                                        Text(
+                                          content.heading,
+                                          style: textTheme.headlineSmall?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                            color: isDark ? Colors.white : jpmcNavy,
+                                            height: 1.15,
+                                            letterSpacing: -0.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        
+                                        // Description
+                                        Text(
+                                          content.description,
+                                          style: textTheme.bodyMedium?.copyWith(
+                                            color: isDark ? Colors.white70 : const Color(0xFF4B5563),
+                                            height: 1.5,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 32),
+                                        
+                                        // Topics "What we'll cover"
+                                        Text(
+                                          'WHAT WE\'LL COVER',
+                                          style: textTheme.labelSmall?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            color: jpmcGold,
+                                            letterSpacing: 1.2,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 14),
+                                        ...content.topics.map((topic) => Padding(
+                                          padding: const EdgeInsets.only(bottom: 12),
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Container(
+                                                margin: const EdgeInsets.only(top: 2),
+                                                padding: const EdgeInsets.all(3),
+                                                decoration: BoxDecoration(
+                                                  color: jpmcBlue.withOpacity(0.1),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(Icons.check, size: 12, color: jpmcBlue),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Text(
+                                                  topic,
+                                                  style: textTheme.bodySmall?.copyWith(
+                                                    color: isDark ? Colors.white70 : const Color(0xFF374151),
+                                                    height: 1.4,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )),
+                                        const SizedBox(height: 28),
+                                        
+                                        // Microphone permission banner
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: jpmcBlue.withOpacity(0.04),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: jpmcBlue.withOpacity(0.12)),
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.all(8),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 6)],
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(Icons.mic_none_rounded, size: 18, color: jpmcBlue),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Microphone access required',
+                                                      style: textTheme.labelLarge?.copyWith(
+                                                        fontWeight: FontWeight.w700,
+                                                        color: isDark ? Colors.white : jpmcNavy,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      'Your browser will request permission when the session starts.',
+                                                      style: textTheme.bodySmall?.copyWith(
+                                                        color: isDark ? Colors.white60 : const Color(0xFF6B7280),
+                                                        height: 1.4,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (!isMobile) const SizedBox(width: 48),
+                                  if (isMobile) const SizedBox(height: 48),
+                                  Expanded(
+                                    flex: isMobile ? 0 : 4,
+                                    child: _buildForm(textTheme, isDark, content.duration),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
   Widget _buildForm(TextTheme textTheme, bool isDark, String duration) {
-    const jpmcNavy = Color(0xFF0A2744);
-    const jpmcGold = Color(0xFFC8872A);
-    const jpmcDarkNavy = Color(0xFF131F2E);
-
     return Form(
       key: _formKey,
       child: Column(
@@ -401,60 +426,42 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
               color: isDark ? Colors.white : jpmcNavy,
             ),
           ),
-          const SizedBox(height: 24),
-          // Switch pre/post incorporated
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: isDark ? Colors.black26 : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(50),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() => _isPostIncorporated = false);
-                      _onFormChanged();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: !_isPostIncorporated ? Colors.white : Colors.transparent,
-                        borderRadius: BorderRadius.circular(50),
-                        boxShadow: !_isPostIncorporated ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4)] : null,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text('Pre-incorporated', style: TextStyle(fontSize: 13, fontWeight: !_isPostIncorporated ? FontWeight.bold : FontWeight.normal, color: !_isPostIncorporated ? jpmcNavy : Colors.grey.shade600)),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() => _isPostIncorporated = true);
-                      _onFormChanged();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: _isPostIncorporated ? Colors.white : Colors.transparent,
-                        borderRadius: BorderRadius.circular(50),
-                        boxShadow: _isPostIncorporated ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4)] : null,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text('Post-incorporated', style: TextStyle(fontSize: 13, fontWeight: _isPostIncorporated ? FontWeight.bold : FontWeight.normal, color: _isPostIncorporated ? jpmcNavy : Colors.grey.shade600)),
-                    ),
-                  ),
-                ),
-              ],
+          const SizedBox(height: 16),
+          _buildTextField('Name', _nameController, false, hint: 'Alex Rivera', onChanged: (_) => _onFormChanged()),
+          _buildTextField('Email', _emailController, true, hint: 'alex@yourcompany.com', onChanged: (_) => _onFormChanged()),
+          _buildTextField('Phone number', _phoneController, false, hint: '+1 (555) 000-0000', onChanged: (_) => _onFormChanged()),
+          
+          // Post-incorporated checkbox
+          Padding(
+            padding: const EdgeInsets.only(top: 0, bottom: 12),
+            child: _buildCheckbox(
+              _isPostIncorporated,
+              (val) {
+                setState(() => _isPostIncorporated = val ?? false);
+                _onFormChanged();
+              },
+              'Post-incorporated',
+              isDark,
             ),
           ),
-          const SizedBox(height: 24),
-          _buildTextField('Name', _nameController, false, onChanged: (_) => _onFormChanged()),
-          _buildTextField('Email', _emailController, true, onChanged: (_) => _onFormChanged()),
-          _buildTextField('Phone number', _phoneController, false, onChanged: (_) => _onFormChanged()),
-          _buildTextField('Company', _companyController, _isPostIncorporated, onChanged: (_) => _onFormChanged()),
+          _buildTextField('Company', _companyController, _isPostIncorporated, hint: 'e.g. Northline AI', onChanged: (_) => _onFormChanged()),
+          const SizedBox(height: 8),
+          // Manual fill disclaimer box
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF2C261A) : const Color(0xFFFDF8E1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isDark ? const Color(0xFF423C2B) : const Color(0xFFF0E6C5)),
+            ),
+            child: _buildCheckbox(
+              _preferManual,
+              (val) => setState(() => _preferManual = val ?? false),
+              'I prefer to fill in the form manually — I understand this may result in slower matching and less tailored recommendations',
+              isDark,
+              isMultiLine: true,
+            ),
+          ),
           const SizedBox(height: 32),
           Row(
             children: [
@@ -481,6 +488,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                   if (_phoneController.text.trim().isNotEmpty) vars['userPhone'] = _phoneController.text.trim();
                   if (_companyController.text.trim().isNotEmpty) vars['companyName'] = _companyController.text.trim();
                   vars['isPostIncorporated'] = _isPostIncorporated;
+                  vars['preferManual'] = _preferManual;
                   
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
@@ -498,16 +506,18 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
               icon: const Icon(Icons.auto_awesome, size: 18),
               label: const Text('GET STARTED'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _canSubmit ? jpmcDarkNavy : (isDark ? Colors.grey.shade800 : Colors.grey.shade300),
-                foregroundColor: _canSubmit ? jpmcGold : (isDark ? Colors.grey.shade600 : Colors.grey.shade500),
+                backgroundColor: _canSubmit 
+                    ? (isDark ? const Color(0xFF334155) : const Color(0xFF94A3B8))
+                    : (isDark ? Colors.grey.shade800 : Colors.grey.shade300),
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                elevation: _canSubmit ? 8 : 0,
-                shadowColor: _canSubmit ? jpmcNavy.withOpacity(0.5) : Colors.transparent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: _canSubmit ? 4 : 0,
+                shadowColor: Colors.black.withOpacity(0.2),
                 textStyle: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
+                  letterSpacing: 1.0,
                 ),
               ),
             ),
@@ -517,9 +527,9 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, bool isMandatory, {void Function(String)? onChanged}) {
+  Widget _buildTextField(String label, TextEditingController controller, bool isMandatory, {String? hint, void Function(String)? onChanged}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -544,19 +554,61 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
             },
             decoration: InputDecoration(
               filled: true,
-              fillColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2C2C2C) : Colors.grey.shade50,
+              fillColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9FAFB),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              hintText: hint,
+              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4),
-                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: Colors.grey.shade200),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4),
-                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: Colors.grey.shade200),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4),
-                borderSide: const BorderSide(color: Color(0xFF167899)),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: jpmcBlue, width: 1.5),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckbox(bool value, ValueChanged<bool?> onChanged, String label, bool isDark, {bool isMultiLine = false}) {
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        crossAxisAlignment: isMultiLine ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 20,
+            height: 20,
+            margin: EdgeInsets.only(top: isMultiLine ? 2 : 0),
+            decoration: BoxDecoration(
+              color: value ? jpmcBlue : Colors.transparent,
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(
+                color: value ? jpmcBlue : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+                width: 1.5,
+              ),
+            ),
+            child: value
+                ? const Icon(Icons.check, size: 14, color: Colors.white)
+                : null,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: isMultiLine ? 12 : 13,
+                fontWeight: isMultiLine ? FontWeight.normal : FontWeight.w600,
+                color: isDark ? Colors.white70 : (isMultiLine ? const Color(0xFF6B7280) : Colors.grey.shade800),
+                height: isMultiLine ? 1.4 : 1.0,
               ),
             ),
           ),
