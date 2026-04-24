@@ -506,14 +506,12 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
               icon: const Icon(Icons.auto_awesome, size: 18),
               label: const Text('GET STARTED'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _canSubmit 
-                    ? (isDark ? const Color(0xFF334155) : const Color(0xFF94A3B8))
-                    : (isDark ? Colors.grey.shade800 : Colors.grey.shade300),
+                backgroundColor: _canSubmit ? jpmcBlue : (isDark ? Colors.grey.shade800 : Colors.grey.shade300),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: _canSubmit ? 4 : 0,
-                shadowColor: Colors.black.withOpacity(0.2),
+                shadowColor: jpmcBlue.withOpacity(0.4),
                 textStyle: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
