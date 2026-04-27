@@ -1,6 +1,7 @@
 import 'package:elevenlabs_agents/elevenlabs_agents.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dio/dio.dart';
 import '../../tools/client_tools.dart';
 
 // ---------------------------------------------------------------------------
@@ -93,10 +94,45 @@ class _VoicePageState extends State<VoicePage> {
         },
         onDisconnect: (_) {
           if (!mounted) return;
+          // Inject the return link as the final AI message
+          final uri = Uri.base;
+          final origin = uri.origin;
+          final returnUrl = widget.prospectId != null
+              ? (uri.fragment.isNotEmpty
+                  ? '$origin/#/?p=${widget.prospectId}'
+                  : '$origin/?p=${widget.prospectId}')
+              : null;
           setState(() {
             _conversationEnded = true;
             _statusText = 'Conversation ended';
+            if (returnUrl != null) {
+              final email = widget.dynamicVariables['userEmail']?.toString() ?? '';
+              final emailNote = email.isNotEmpty
+                  ? "We've also sent this link to $email"
+                  : "Save this link to come back anytime";
+              _transcript.add(_TranscriptEntry(
+                isUser: false,
+                text:
+                    "Your return link — come back any time to continue:\n$returnUrl\n\n$emailNote",
+                isTentative: false,
+              ));
+
+              if (email.isNotEmpty) {
+                try {
+                  Dio().post(
+                    'http://localhost:8000/api/v1/conversations/send-return-link',
+                    data: {
+                      'email': email,
+                      'return_url': returnUrl,
+                    },
+                  );
+                } catch (e) {
+                  // Silently ignore so as not to disrupt the UI if mail sending fails
+                }
+              }
+            }
           });
+          _scrollToBottom();
         },
         onModeChange: ({required mode}) {
           if (!mounted) return;
@@ -458,18 +494,20 @@ class _VoicePageState extends State<VoicePage> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: SizedBox(
                 height: double.infinity,
-                child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1080),
-              child: Row(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 848),
+                child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Sidebar (phases) ──────────────────────────────────────
+                  /*
                   if (MediaQuery.of(context).size.width >= 860)
                     _buildSidebar(),
 
                   // 12px gap between sidebar and chat card
                   if (MediaQuery.of(context).size.width >= 860)
                     const SizedBox(width: 12),
+                  */
 
                   // ── Chat container ────────────────────────────────────────
                   Expanded(
@@ -498,6 +536,7 @@ class _VoicePageState extends State<VoicePage> {
                             agentName: _agentName,
                             stageLabel: _stageLabel,
                             statusText: _statusText,
+                            currentPhase: _activePhase,
                             isSpeaking: _client.isSpeaking,
                             isEnded: _conversationEnded,
                             onEnd: _endSession,
@@ -527,12 +566,22 @@ class _VoicePageState extends State<VoicePage> {
                                     controller: _scrollController,
                                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                                     itemCount: _transcript.length,
-                                    itemBuilder: (context, index) =>
-                                        _BubbleRow(
-                                            entry: _transcript[index],
-                                            agentInitial: _agentName.isNotEmpty
-                                                ? _agentName[0].toUpperCase()
-                                                : 'A'),
+                                    itemBuilder: (context, index) {
+                                      final entry = _transcript[index];
+                                      final prevEntry = index > 0 ? _transcript[index - 1] : null;
+                                      final nextEntry = index < _transcript.length - 1 ? _transcript[index + 1] : null;
+                                      final isPrevSame = prevEntry != null && prevEntry.isUser == entry.isUser;
+                                      final isNextSame = nextEntry != null && nextEntry.isUser == entry.isUser;
+                                      
+                                      return _BubbleRow(
+                                        entry: entry,
+                                        isPrevSame: isPrevSame,
+                                        isNextSame: isNextSame,
+                                        agentInitial: _agentName.isNotEmpty
+                                            ? _agentName[0].toUpperCase()
+                                            : 'A',
+                                      );
+                                    },
                                   ),
                           ),
                           _BottomBar(
@@ -567,6 +616,7 @@ class _JpmcMockHeader extends StatelessWidget {
   final String agentName;
   final String stageLabel;
   final String statusText;
+  final int currentPhase;
   final bool isSpeaking;
   final bool isEnded;
   final VoidCallback onEnd;
@@ -577,6 +627,7 @@ class _JpmcMockHeader extends StatelessWidget {
     required this.agentName,
     required this.stageLabel,
     required this.statusText,
+    required this.currentPhase,
     required this.isSpeaking,
     required this.isEnded,
     required this.onEnd,
@@ -638,13 +689,43 @@ class _JpmcMockHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                'Prospect workspace  ·  $agentName  ·  $stageLabel',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isDark ? Colors.grey.shade400 : const Color(0xFF8d8578),
-                ),
+              const SizedBox(height: 6),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    'Progress',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.grey.shade300 : jpmcNavy,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  SizedBox(
+                    width: 60,
+                    height: 5,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: currentPhase / 5.0,
+                        backgroundColor: isDark ? Colors.grey.shade800 : const Color(0xFFE5E0D4),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          isDark ? const Color(0xFFe8cc7a) : jpmcGold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Prospect workspace  ·  $agentName  ·  $stageLabel',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Colors.grey.shade400 : const Color(0xFF8d8578),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -838,8 +919,17 @@ class _PulseDotState extends State<_PulseDot>
 class _BubbleRow extends StatelessWidget {
   final _TranscriptEntry entry;
   final String agentInitial;
+  final bool isPrevSame;
+  final bool isNextSame;
+  final bool isGrouped; // Restored just to appease hot-reload state constraints
 
-  const _BubbleRow({required this.entry, this.agentInitial = 'A'});
+  const _BubbleRow({
+    required this.entry,
+    this.agentInitial = 'A',
+    this.isPrevSame = false,
+    this.isNextSame = false,
+    this.isGrouped = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -893,7 +983,12 @@ class _BubbleRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
       decoration: BoxDecoration(
         color: isUser ? jpmcDarkNavy : aiBubbleColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(isPrevSame && !isUser ? 4 : 20),
+          topRight: Radius.circular(isPrevSame && isUser ? 4 : 20),
+          bottomLeft: Radius.circular(isNextSame && !isUser ? 4 : 20),
+          bottomRight: Radius.circular(isNextSame && isUser ? 4 : 20),
+        ),
       ),
       child: Text(
         entry.text,
@@ -915,19 +1010,158 @@ class _BubbleRow extends StatelessWidget {
         ? CrossAxisAlignment.center
         : CrossAxisAlignment.end;
 
+    // ── Return link bubble (special formatting) ────────────────────────────
+    final bool isReturnLink = !isUser && entry.text.contains('come back any time to continue');
+
+    if (isReturnLink) {
+      final parts = entry.text.split('\n');
+      final label = parts.isNotEmpty ? parts[0] : '';
+      final url = parts.length > 1 ? parts[1] : '';
+      final note = parts.length > 3 ? parts.skip(3).join('\n') : '';
+      return Padding(
+        padding: EdgeInsets.only(top: isPrevSame ? 2 : 12, bottom: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            aiAvatar,
+            const SizedBox(width: 8),
+            Flexible(
+              child: Container(
+                constraints: BoxConstraints(maxWidth: containerWidth * 0.75),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: aiBubbleColor,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(isPrevSame && !isUser ? 4 : 20),
+                    topRight: Radius.circular(isPrevSame && isUser ? 4 : 20),
+                    bottomLeft: Radius.circular(isNextSame && !isUser ? 4 : 20),
+                    bottomRight: Radius.circular(isNextSame && isUser ? 4 : 20),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? Colors.grey.shade400 : const Color(0xFF6B7280),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    SelectableText(
+                      url,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF006CAD),
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _CopyLinkButton(url: url),
+                    if (note.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        note,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.grey.shade400 : const Color(0xFF6B7280),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: EdgeInsets.only(top: isPrevSame ? 1 : 10, bottom: 1),
       child: Row(
         mainAxisAlignment:
             isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: avatarAlign,
         children: isUser
-            ? [bubble, const SizedBox(width: 8), userAvatar]
-            : [aiAvatar, const SizedBox(width: 8), bubble],
+            ? [
+                bubble,
+                const SizedBox(width: 8),
+                // Hide avatar for grouped messages unless it's the last one in the group
+                if (isNextSame) const SizedBox(width: 28) else userAvatar,
+              ]
+            : [
+                if (isNextSame) const SizedBox(width: 28) else aiAvatar,
+                const SizedBox(width: 8),
+                bubble,
+              ],
       ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Copy link button used inside the return-link bubble
+// ---------------------------------------------------------------------------
+class _CopyLinkButton extends StatefulWidget {
+  final String url;
+  const _CopyLinkButton({required this.url});
+  @override
+  State<_CopyLinkButton> createState() => _CopyLinkButtonState();
+}
+
+class _CopyLinkButtonState extends State<_CopyLinkButton> {
+  bool _copied = false;
+
+  void _copy() {
+    Clipboard.setData(ClipboardData(text: widget.url));
+    setState(() => _copied = true);
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: _copy,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: _copied
+              ? const Color(0xFF1d9e75)
+              : const Color(0xFF04213d),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _copied ? Icons.check_rounded : Icons.copy_rounded,
+              size: 14,
+              color: _copied ? Colors.white : const Color(0xFFc9a84c),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              _copied ? 'Copied!' : 'Copy link',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: _copied ? Colors.white : const Color(0xFFc9a84c),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 // ---------------------------------------------------------------------------
 // Bottom control bar — mic toggle + text input
@@ -1008,8 +1242,6 @@ class _BottomBarState extends State<_BottomBar> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hasReturnUrl = widget.isEnded && widget.prospectId != null;
-    final returnUrl = hasReturnUrl ? _returnUrl : '';
 
     // Hardcoded suggestion chips (shown above input during active session)
     const chips = [
@@ -1088,9 +1320,7 @@ class _BottomBarState extends State<_BottomBar> {
                       color: isDark ? const Color(0xFF1F2937) : const Color(0xFFFDFCF9),
                       borderRadius: BorderRadius.circular(32),
                       border: Border.all(
-                        color: hasReturnUrl
-                            ? (isDark ? Colors.grey.shade600 : const Color(0xFFD4C9AD))
-                            : colorScheme.outlineVariant,
+                        color: colorScheme.outlineVariant,
                         width: 1,
                       ),
                       boxShadow: [
@@ -1104,178 +1334,109 @@ class _BottomBarState extends State<_BottomBar> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        if (hasReturnUrl)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 16),
-                            child: Icon(
-                              Icons.link_rounded,
-                              size: 15,
-                              color: isDark
-                                  ? Colors.grey.shade400
-                                  : const Color(0xFF8d8578),
-                            ),
-                          )
-                        else
-                          const SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         // ── Text area ─────────────────────────────────────────
                         Expanded(
-                          child: hasReturnUrl
-                              ? Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'Your return link — come back any time to continue',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w500,
-                                          color: isDark
-                                              ? Colors.grey.shade400
-                                              : const Color(0xFF8d8578),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        returnUrl,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: isDark
-                                              ? const Color(0xFF60A5FA)
-                                              : const Color(0xFF006CAD),
-                                          fontFamily: 'monospace',
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              : TextField(
-                                  controller: _textController,
-                                  focusNode: _focusNode,
-                                  enabled: widget.isConnected && !widget.isEnded,
-                                  onSubmitted: (_) => _submit(),
-                                  textInputAction: TextInputAction.send,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(color: Colors.white),
-                                  textAlignVertical: TextAlignVertical.center,
-                                  minLines: 1,
-                                  maxLines: 4,
-                                  decoration: InputDecoration(
-                                    hintText: widget.isConnected
-                                        ? 'Type a message…'
-                                        : 'Connecting…',
-                                    hintStyle: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                            color: colorScheme.onSurfaceVariant),
-                                    border: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 14),
-                                    isDense: true,
-                                  ),
+                          child: TextField(
+                            controller: _textController,
+                            focusNode: _focusNode,
+                            enabled: widget.isConnected && !widget.isEnded,
+                            onSubmitted: (_) => _submit(),
+                            textInputAction: TextInputAction.send,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: isDark ? Colors.white : const Color(0xFF1F2937),
                                 ),
+                            textAlignVertical: TextAlignVertical.center,
+                            minLines: 1,
+                            maxLines: 4,
+                            decoration: InputDecoration(
+                              hintText: widget.isEnded
+                                  ? "You can't type now, Conversation Ended."
+                                  : (widget.isConnected ? 'Type a message…' : 'Connecting…'),
+                              hintStyle: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                      color: colorScheme.onSurfaceVariant),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
+                              isDense: true,
+                            ),
+                          ),
                         ),
                         // ── Copy / Send button ────────────────────────────────
                         Padding(
                           padding: const EdgeInsets.all(5),
-                          child: hasReturnUrl
-                              ? GestureDetector(
-                                  onTap: _copyReturnUrl,
-                                  child: Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: _copied
-                                          ? const Color(0xFF1d9e75)
-                                          : const Color(0xFF04213d),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      _copied
-                                          ? Icons.check_rounded
-                                          : Icons.copy_rounded,
-                                      size: 18,
-                                      color: _copied
-                                          ? Colors.white
-                                          : const Color(0xFFc9a84c),
-                                    ),
+                          child: ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _textController,
+                            builder: (context, value, _) {
+                              final canSend = widget.isConnected && !widget.isEnded &&
+                                  value.text.trim().isNotEmpty;
+                              return GestureDetector(
+                                onTap: canSend ? _submit : null,
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: canSend
+                                        ? const Color(0xFF131F2E)
+                                        : colorScheme.surfaceContainerHigh,
+                                    shape: BoxShape.circle,
                                   ),
-                                )
-                              : ValueListenableBuilder<TextEditingValue>(
-                                  valueListenable: _textController,
-                                  builder: (context, value, _) {
-                                    final canSend = widget.isConnected &&
-                                        value.text.trim().isNotEmpty;
-                                    return GestureDetector(
-                                      onTap: canSend ? _submit : null,
-                                      child: Container(
-                                        width: 40,
-                                        height: 40,
-                                        decoration: BoxDecoration(
-                                          color: canSend
-                                              ? const Color(0xFF131F2E)
-                                              : colorScheme.surfaceContainerHigh,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          Icons.arrow_upward_rounded,
-                                          size: 20,
-                                          color: canSend
-                                              ? const Color(0xFFC8872A)
-                                              : colorScheme.onSurfaceVariant
-                                                  .withOpacity(0.4),
-                                        ),
-                                      ),
-                                    );
-                                  },
+                                  child: Icon(
+                                    Icons.arrow_upward_rounded,
+                                    size: 20,
+                                    color: canSend
+                                        ? const Color(0xFFC8872A)
+                                        : colorScheme.onSurfaceVariant
+                                            .withOpacity(0.4),
+                                  ),
                                 ),
+                              );
+                            },
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
                 // ── Mic button (outside, to the right) ───────────────────────
-                if (!hasReturnUrl && !widget.isEnded) ...[
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: widget.isConnected ? widget.onToggleMute : null,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: widget.isMuted
-                            ? colorScheme.errorContainer
-                            : const Color(0xFF006CAD),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        widget.isMuted
-                            ? Icons.mic_off_rounded
-                            : Icons.mic_rounded,
-                        size: 22,
-                        color: widget.isMuted
-                            ? colorScheme.onErrorContainer
-                            : Colors.white,
-                      ),
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: (widget.isConnected && !widget.isEnded) ? widget.onToggleMute : null,
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: (widget.isMuted || widget.isEnded)
+                          ? colorScheme.errorContainer
+                          : const Color(0xFF006CAD),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      (widget.isMuted || widget.isEnded)
+                          ? Icons.mic_off_rounded
+                          : Icons.mic_rounded,
+                      size: 22,
+                      color: (widget.isMuted || widget.isEnded)
+                          ? colorScheme.onErrorContainer
+                          : Colors.white,
                     ),
                   ),
-                ],
+                ),
               ],
             ),
           ),
