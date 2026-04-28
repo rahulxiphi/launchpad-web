@@ -15,14 +15,12 @@ import 'top_bar.dart';
 /// The SideNav (Matches/Sessions/Learn/Connections) is intentionally absent
 /// for prospects; it will be added in the client Relationship Hub flow.
 class AppShell extends ConsumerStatefulWidget {
-  final String conversationToken;
   final String stageBucket;
   final String? prospectId;
   final Map<String, dynamic> dynamicVariables;
 
   const AppShell({
     super.key,
-    required this.conversationToken,
     required this.stageBucket,
     this.prospectId,
     this.dynamicVariables = const {},
@@ -69,33 +67,17 @@ class _AppShellState extends ConsumerState<AppShell> {
   /// Fetches a fresh token for the same stage + prospect, then replaces
   /// the inner navigator stack with a new ConversationIntroPage.
   Future<void> _handleStartNew() async {
-    try {
-      final result = await _service.getVoiceToken(
-        widget.stageBucket,
-        prospectId: widget.prospectId,
-      );
-      if (!mounted) return;
-      _innerNavKey.currentState?.pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => ConversationIntroPage(
-            conversationToken: result.conversationToken,
-            stageBucket: result.stageBucket,
-            prospectId: result.prospectId,
-            dynamicVariables: result.dynamicVariables,
-            onStartNew: _handleStartNew,
-          ),
+    _innerNavKey.currentState?.pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => ConversationIntroPage(
+          stageBucket: widget.stageBucket,
+          prospectId: widget.prospectId,
+          dynamicVariables: widget.dynamicVariables,
+          onStartNew: _handleStartNew,
         ),
-        (_) => false, // clear the old voice/intro pages
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to restart session: $e'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+      ),
+      (_) => false, // clear the old voice/intro pages
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -119,7 +101,6 @@ class _AppShellState extends ConsumerState<AppShell> {
           return MaterialPageRoute(
             settings: settings,
             builder: (_) => ConversationIntroPage(
-              conversationToken: widget.conversationToken,
               stageBucket: widget.stageBucket,
               prospectId: widget.prospectId,
               dynamicVariables: widget.dynamicVariables,

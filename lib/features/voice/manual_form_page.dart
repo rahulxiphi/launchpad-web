@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../services/conversation_service.dart';
 import 'voice_page.dart';
 
 class ManualFormPage extends StatefulWidget {
-  final String conversationToken;
   final String stageBucket;
   final String? prospectId;
   final Map<String, dynamic> dynamicVariables;
@@ -10,7 +10,6 @@ class ManualFormPage extends StatefulWidget {
 
   const ManualFormPage({
     super.key,
-    required this.conversationToken,
     required this.stageBucket,
     required this.onStartNew,
     this.prospectId,
@@ -26,6 +25,8 @@ class _ManualFormPageState extends State<ManualFormPage> {
   static const jpmcNavy = Color(0xFF0A2744);
   static const jpmcBlue = Color(0xFF006CAD);
   static const jpmcGold = Color(0xFFC8872A);
+
+  bool _isFetchingToken = false;
 
   // Stage
   String? _selectedStage;
@@ -59,25 +60,41 @@ class _ManualFormPageState extends State<ManualFormPage> {
     });
   }
 
-  void _submit() {
-    final vars = Map<String, dynamic>.from(widget.dynamicVariables);
-    vars['stage'] = _selectedStage;
-    vars['industry'] = _industryController.text.trim();
-    vars['headcount'] = _headcount;
-    vars['priorities'] = _selectedPriorities.toList();
-    vars['preferManual'] = true;
+  Future<void> _submit() async {
+    setState(() => _isFetchingToken = true);
+    try {
+      final tokenResult = await ConversationService().getVoiceToken(
+        widget.stageBucket,
+        prospectId: widget.prospectId,
+      );
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => VoicePage(
-          conversationToken: widget.conversationToken,
-          stageBucket: widget.stageBucket,
-          prospectId: widget.prospectId,
-          dynamicVariables: vars,
-          onStartNew: widget.onStartNew,
+      final vars = Map<String, dynamic>.from(widget.dynamicVariables);
+      vars.addAll(tokenResult.dynamicVariables);
+      vars['stage'] = _selectedStage;
+      vars['industry'] = _industryController.text.trim();
+      vars['headcount'] = _headcount;
+      vars['priorities'] = _selectedPriorities.toList();
+      vars['preferManual'] = true;
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => VoicePage(
+            conversationToken: tokenResult.conversationToken,
+            stageBucket: widget.stageBucket,
+            prospectId: widget.prospectId,
+            dynamicVariables: vars,
+            onStartNew: widget.onStartNew,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to start session: $e')),
+      );
+      setState(() => _isFetchingToken = false);
+    }
   }
 
   @override
@@ -157,25 +174,11 @@ class _ManualFormPageState extends State<ManualFormPage> {
                               isMobile ? 24 : 36,
                               24,
                               isMobile ? 24 : 36,
-                              isMobile ? 24 : 36,
+                              24,
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // ── Section 1: About your company ─────────
-                                _sectionLabel('ABOUT YOUR COMPANY', isDark),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Helps Nova calibrate every recommendation to your actual situation — not a generic playbook.',
-                                  style: textTheme.bodySmall?.copyWith(
-                                    color: isDark
-                                        ? Colors.white.withOpacity(0.54)
-                                        : const Color(0xFF6B7280),
-                                    height: 1.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-
                                 // Stage pills
                                 Text(
                                   'Company stage',
@@ -199,7 +202,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                         duration:
                                             const Duration(milliseconds: 180),
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 16, vertical: 8),
+                                            horizontal: 12, vertical: 6),
                                         decoration: BoxDecoration(
                                           color: selected
                                               ? jpmcNavy
@@ -265,11 +268,6 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                 ),
 
                                 const SizedBox(height: 32),
-                                Divider(
-                                    color: isDark
-                                        ? Colors.white.withOpacity(0.12)
-                                        : const Color(0xFFE5E7EB)),
-                                const SizedBox(height: 28),
 
                                 // ── Section 2: Priorities ──────────────────
                                 _sectionLabel(
@@ -286,122 +284,128 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                 ),
                                 const SizedBox(height: 16),
 
-                                ...(_priorityOptions.map((entry) {
-                                  final title = entry.$1;
-                                  final subtitle = entry.$2;
-                                  final isSelected =
-                                      _selectedPriorities.contains(title);
-                                  final isDisabled =
-                                      !isSelected && _selectedPriorities.length >= 3;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: GestureDetector(
-                                      onTap: isDisabled
-                                          ? null
-                                          : () => _togglePriority(title),
-                                      child: AnimatedOpacity(
-                                        duration:
-                                            const Duration(milliseconds: 200),
-                                        opacity: isDisabled ? 0.45 : 1.0,
-                                        child: AnimatedContainer(
+                                Wrap(
+                                  spacing: 16,
+                                  runSpacing: 10,
+                                  children: _priorityOptions.map((entry) {
+                                    final title = entry.$1;
+                                    final subtitle = entry.$2;
+                                    final isSelected =
+                                        _selectedPriorities.contains(title);
+                                    final isDisabled =
+                                        !isSelected && _selectedPriorities.length >= 3;
+                                    return SizedBox(
+                                      width: isMobile ? double.infinity : 336,
+                                      child: GestureDetector(
+                                        onTap: isDisabled
+                                            ? null
+                                            : () => _togglePriority(title),
+                                        child: AnimatedOpacity(
                                           duration:
-                                              const Duration(milliseconds: 180),
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 16, vertical: 12),
-                                          decoration: BoxDecoration(
-                                            color: isSelected
-                                                ? (isDark
-                                                    ? const Color(0xFF0A2744)
-                                                        .withOpacity(0.5)
-                                                    : const Color(0xFFEBF4FF))
-                                                : (isDark
-                                                    ? const Color(0xFF2C2C2C)
-                                                    : Colors.white),
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                            border: Border.all(
+                                              const Duration(milliseconds: 200),
+                                          opacity: isDisabled ? 0.45 : 1.0,
+                                          child: AnimatedContainer(
+                                            duration:
+                                                const Duration(milliseconds: 180),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16, vertical: 12),
+                                            decoration: BoxDecoration(
                                               color: isSelected
-                                                  ? jpmcBlue
+                                                  ? (isDark
+                                                      ? const Color(0xFF0A2744)
+                                                          .withOpacity(0.5)
+                                                      : const Color(0xFFEBF4FF))
                                                   : (isDark
-                                                      ? Colors.white.withOpacity(0.12)
-                                                      : const Color(0xFFE5E7EB)),
-                                              width: 1.5,
+                                                      ? const Color(0xFF2C2C2C)
+                                                      : Colors.white),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: isSelected
+                                                    ? jpmcBlue
+                                                    : (isDark
+                                                        ? Colors.white.withOpacity(0.12)
+                                                        : const Color(0xFFE5E7EB)),
+                                                width: 1.5,
+                                              ),
                                             ),
-                                          ),
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.center,
-                                            children: [
-                                              // Checkbox
-                                              AnimatedContainer(
-                                                duration: const Duration(
-                                                    milliseconds: 180),
-                                                width: 20,
-                                                height: 20,
-                                                decoration: BoxDecoration(
-                                                  color: isSelected
-                                                      ? jpmcBlue
-                                                      : Colors.transparent,
-                                                  borderRadius:
-                                                      BorderRadius.circular(5),
-                                                  border: Border.all(
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.center,
+                                              children: [
+                                                // Checkbox
+                                                AnimatedContainer(
+                                                  duration: const Duration(
+                                                      milliseconds: 180),
+                                                  width: 20,
+                                                  height: 20,
+                                                  decoration: BoxDecoration(
                                                     color: isSelected
                                                         ? jpmcBlue
-                                                        : (isDark
-                                                            ? Colors.white.withOpacity(0.38)
-                                                            : const Color(
-                                                                0xFFD1D5DB)),
-                                                    width: 1.5,
+                                                        : Colors.transparent,
+                                                    borderRadius:
+                                                        BorderRadius.circular(5),
+                                                    border: Border.all(
+                                                      color: isSelected
+                                                          ? jpmcBlue
+                                                          : (isDark
+                                                              ? Colors.white.withOpacity(0.38)
+                                                              : const Color(
+                                                                  0xFFD1D5DB)),
+                                                      width: 1.5,
+                                                    ),
+                                                  ),
+                                                  child: isSelected
+                                                      ? const Icon(Icons.check,
+                                                          size: 13,
+                                                          color: Colors.white)
+                                                      : null,
+                                                ),
+                                                const SizedBox(width: 14),
+                                                // Text
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        title,
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: isDark
+                                                              ? Colors.white.withOpacity(0.87)
+                                                              : jpmcNavy,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 2),
+                                                      Text(
+                                                        subtitle,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: isDark
+                                                              ? Colors.white.withOpacity(0.38)
+                                                              : const Color(
+                                                                  0xFF6B7280),
+                                                          height: 1.4,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
-                                                child: isSelected
-                                                    ? const Icon(Icons.check,
-                                                        size: 13,
-                                                        color: Colors.white)
-                                                    : null,
-                                              ),
-                                              const SizedBox(width: 14),
-                                              // Text
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      title,
-                                                      style: TextStyle(
-                                                        fontSize: 14,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color: isDark
-                                                            ? Colors.white.withOpacity(0.87)
-                                                            : jpmcNavy,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      subtitle,
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        color: isDark
-                                                            ? Colors.white.withOpacity(0.38)
-                                                            : const Color(
-                                                                0xFF6B7280),
-                                                        height: 1.4,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  );
-                                })),
+                                    );
+                                  }).toList(),
+                                ),
 
-                                const SizedBox(height: 32),
+                                const SizedBox(height: 24),
 
                                 // ── Footer: Submit ─────────────────────────
                                 Center(
@@ -409,14 +413,16 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                     height: 52,
                                     width: isMobile ? double.infinity : 360,
                                     child: ElevatedButton.icon(
-                                      onPressed: _canSubmit ? _submit : null,
-                                      icon: Icon(
-                                        Icons.auto_awesome,
-                                        size: 18,
-                                        color: _canSubmit
-                                            ? jpmcGold
-                                            : Colors.white,
-                                      ),
+                                      onPressed: _canSubmit && !_isFetchingToken ? _submit : null,
+                                      icon: _isFetchingToken
+                                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                          : Icon(
+                                              Icons.auto_awesome,
+                                              size: 18,
+                                              color: _canSubmit
+                                                  ? jpmcGold
+                                                  : Colors.white,
+                                            ),
                                       label: const Text('GET STARTED'),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: jpmcBlue,
@@ -484,7 +490,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tell us about your company',
+                  'ABOUT YOUR COMPANY',
                   style: textTheme.titleMedium?.copyWith(
                     color: const Color(0xFFD4AD46),
                     fontWeight: FontWeight.w700,
@@ -492,7 +498,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'Manual form — faster setup, tailored from the start',
+                  'Helps Nova calibrate every recommendation to your actual situation — not a generic playbook.',
                   style: textTheme.bodySmall?.copyWith(
                     color: Colors.white.withOpacity(0.38),
                     fontSize: 12,
@@ -598,68 +604,44 @@ class _ManualFormPageState extends State<ManualFormPage> {
           ),
         ),
         const SizedBox(height: 8),
-        GestureDetector(
-          key: key,
-          onTap: () async {
-            final RenderBox box = key.currentContext!.findRenderObject() as RenderBox;
-            final Offset offset = box.localToGlobal(Offset.zero);
-            final size = MediaQuery.of(key.currentContext!).size;
-            final selected = await showMenu<String>(
-              context: key.currentContext!,
-              position: RelativeRect.fromLTRB(
-                offset.dx,
-                offset.dy + box.size.height,
-                size.width - offset.dx - box.size.width,
-                size.height - offset.dy - box.size.height,
-              ),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-              elevation: 6,
-              items: items
-                  .map((e) => PopupMenuItem<String>(
-                        value: e,
-                        height: 40,
-                        child: Text(
-                          e,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: value == e
-                                ? jpmcBlue
-                                : (isDark ? Colors.white : const Color(0xFF1F2937)),
-                            fontWeight: value == e ? FontWeight.w600 : FontWeight.normal,
-                          ),
-                        ),
-                      ))
-                  .toList(),
-            );
-            if (selected != null) onChanged(selected);
-          },
-          child: Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9FAFB),
+        DropdownButtonFormField<String>(
+          value: value,
+          onChanged: onChanged,
+          icon: Icon(Icons.keyboard_arrow_down_rounded,
+              size: 20,
+              color: isDark ? Colors.white.withOpacity(0.54) : Colors.grey.shade500),
+          dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9FAFB),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            hintText: 'Select…',
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade200),
+              borderSide: BorderSide(color: Colors.grey.shade200),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  value ?? 'Select…',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: value == null
-                        ? Colors.grey.shade400
-                        : (isDark ? Colors.white : const Color(0xFF1F2937)),
-                  ),
-                ),
-                Icon(Icons.keyboard_arrow_down_rounded,
-                    size: 20,
-                    color: isDark ? Colors.white.withOpacity(0.54) : Colors.grey.shade500),
-              ],
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: jpmcBlue, width: 1.5),
             ),
           ),
+          items: items.map((e) {
+            return DropdownMenuItem<String>(
+              value: e,
+              child: Text(
+                e,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white : const Color(0xFF1F2937),
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );

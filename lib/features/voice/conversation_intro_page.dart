@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/conversation_service.dart';
 import 'voice_page.dart';
 import 'manual_form_page.dart';
 
@@ -111,7 +112,6 @@ const _stageContent = {
 };
 
 class ConversationIntroPage extends StatefulWidget {
-  final String conversationToken;
   final String stageBucket;
   final String? prospectId;
   final Map<String, dynamic> dynamicVariables;
@@ -121,7 +121,6 @@ class ConversationIntroPage extends StatefulWidget {
 
   const ConversationIntroPage({
     super.key,
-    required this.conversationToken,
     required this.stageBucket,
     required this.onStartNew,
     this.prospectId,
@@ -135,6 +134,7 @@ class ConversationIntroPage extends StatefulWidget {
 class _ConversationIntroPageState extends State<ConversationIntroPage> {
   final _formKey = GlobalKey<FormState>();
   bool _isPostIncorporated = false;
+  bool _isFetchingToken = false;
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -270,7 +270,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                   letterSpacing: -0.5,
                                                 ),
                                               ),
-                                              const SizedBox(height: 8),
+                                              const SizedBox(height: 16),
                                               Text(
                                                 content.description,
                                                 style: textTheme.bodyMedium?.copyWith(
@@ -279,7 +279,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                   fontSize: 15,
                                                 ),
                                               ),
-                                              const SizedBox(height: 24),
+                                              const SizedBox(height: 40),
                                               Text(
                                                 'Tell us about your startup',
                                                 style: textTheme.titleLarge?.copyWith(
@@ -305,9 +305,9 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                   letterSpacing: 1.2,
                                                 ),
                                               ),
-                                              const SizedBox(height: 14),
+                                              const SizedBox(height: 8),
                                               ...content.topics.map((topic) => Padding(
-                                                padding: const EdgeInsets.only(bottom: 12),
+                                                padding: const EdgeInsets.only(bottom: 8),
                                                 child: Text(
                                                   topic,
                                                   style: textTheme.bodySmall?.copyWith(
@@ -347,25 +347,55 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               _buildTextField('Phone number', _phoneController, false, hint: '+1 (555) 000-0000', onChanged: (_) => _onFormChanged()),
-                                              Padding(
-                                                padding: const EdgeInsets.only(top: 4, bottom: 12),
-                                                child: _buildCheckbox(
-                                                  _isPostIncorporated,
-                                                  (val) {
-                                                    setState(() => _isPostIncorporated = val ?? false);
+                                              _buildTextField(
+                                                'Company',
+                                                _companyController,
+                                                _isPostIncorporated,
+                                                hint: 'e.g. Northline AI',
+                                                onChanged: (_) => _onFormChanged(),
+                                                trailingLabelWidget: GestureDetector(
+                                                  onTap: () {
+                                                    setState(() => _isPostIncorporated = !_isPostIncorporated);
                                                     _onFormChanged();
                                                   },
-                                                  'Post-incorporated',
-                                                  isDark,
+                                                  behavior: HitTestBehavior.opaque,
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Container(
+                                                        width: 16,
+                                                        height: 16,
+                                                        decoration: BoxDecoration(
+                                                          color: _isPostIncorporated ? jpmcBlue : Colors.transparent,
+                                                          borderRadius: BorderRadius.circular(4),
+                                                          border: Border.all(
+                                                            color: _isPostIncorporated ? jpmcBlue : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+                                                            width: 1.5,
+                                                          ),
+                                                        ),
+                                                        child: _isPostIncorporated
+                                                            ? const Icon(Icons.check, size: 12, color: Colors.white)
+                                                            : null,
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Text(
+                                                        'Post-incorporated',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.w500,
+                                                          color: isDark ? Colors.white70 : Colors.grey.shade800,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ),
-                                              _buildTextField('Company', _companyController, _isPostIncorporated, hint: 'e.g. Northline AI', onChanged: (_) => _onFormChanged()),
                                             ],
                                           ),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 24),
+                                    const SizedBox(height: 12),
                                     Container(
                                       width: double.infinity,
                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -377,14 +407,14 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                       child: _buildCheckbox(
                                         _preferManual,
                                         (val) => setState(() => _preferManual = val ?? false),
-                                        'I prefer to fill in the form manually — I understand this may result in slower matching and less tailored recommendations',
+                                        'I prefer filling the form manually — I understand this may result in slower matching and less tailored recommendations',
                                         isDark,
                                         isMultiLine: false,
                                       ),
                                     ),
                                     const SizedBox(height: 24),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         Icon(Icons.schedule_rounded, size: 16, color: isDark ? Colors.white54 : const Color(0xFF9CA3AF)),
                                         const SizedBox(width: 8),
@@ -414,7 +444,6 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                   if (_companyController.text.trim().isNotEmpty) vars['companyName'] = _companyController.text.trim();
                                                   Navigator.of(context).push(MaterialPageRoute(
                                                     builder: (_) => ManualFormPage(
-                                                      conversationToken: widget.conversationToken,
                                                       stageBucket: widget.stageBucket,
                                                       prospectId: widget.prospectId,
                                                       dynamicVariables: vars,
@@ -428,7 +457,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                                 ),
                                                 child: const Text(
-                                                  'FILL MANUAL FORM',
+                                                  'FILL MANUALLY',
                                                   style: TextStyle(
                                                     fontSize: 13,
                                                     fontWeight: FontWeight.bold,
@@ -444,34 +473,52 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                             height: 48,
                                             width: isMobile ? double.infinity : 320,
                                             child: ElevatedButton.icon(
-                                              onPressed: _canSubmit ? () {
+                                              onPressed: _canSubmit && !_isFetchingToken ? () async {
                                                 if (_formKey.currentState!.validate()) {
-                                                  final vars = Map<String, dynamic>.from(widget.dynamicVariables);
-                                                  if (_nameController.text.trim().isNotEmpty) vars['userName'] = _nameController.text.trim();
-                                                  if (_emailController.text.trim().isNotEmpty) vars['userEmail'] = _emailController.text.trim();
-                                                  if (_phoneController.text.trim().isNotEmpty) vars['userPhone'] = _phoneController.text.trim();
-                                                  if (_companyController.text.trim().isNotEmpty) vars['companyName'] = _companyController.text.trim();
-                                                  vars['isPostIncorporated'] = _isPostIncorporated;
-                                                  vars['preferManual'] = _preferManual;
-                                                  
-                                                  Navigator.of(context).pushReplacement(
-                                                    MaterialPageRoute(
-                                                      builder: (_) => VoicePage(
-                                                        conversationToken: widget.conversationToken,
-                                                        stageBucket: widget.stageBucket,
-                                                        prospectId: widget.prospectId,
-                                                        dynamicVariables: vars,
-                                                        onStartNew: widget.onStartNew,
+                                                  setState(() => _isFetchingToken = true);
+                                                  try {
+                                                    final tokenResult = await ConversationService().getVoiceToken(
+                                                      widget.stageBucket,
+                                                      prospectId: widget.prospectId,
+                                                    );
+                                                    
+                                                    final vars = Map<String, dynamic>.from(widget.dynamicVariables);
+                                                    vars.addAll(tokenResult.dynamicVariables);
+                                                    if (_nameController.text.trim().isNotEmpty) vars['userName'] = _nameController.text.trim();
+                                                    if (_emailController.text.trim().isNotEmpty) vars['userEmail'] = _emailController.text.trim();
+                                                    if (_phoneController.text.trim().isNotEmpty) vars['userPhone'] = _phoneController.text.trim();
+                                                    if (_companyController.text.trim().isNotEmpty) vars['companyName'] = _companyController.text.trim();
+                                                    vars['isPostIncorporated'] = _isPostIncorporated;
+                                                    vars['preferManual'] = _preferManual;
+                                                    
+                                                    if (!mounted) return;
+                                                    Navigator.of(context).pushReplacement(
+                                                      MaterialPageRoute(
+                                                        builder: (_) => VoicePage(
+                                                          conversationToken: tokenResult.conversationToken,
+                                                          stageBucket: widget.stageBucket,
+                                                          prospectId: widget.prospectId,
+                                                          dynamicVariables: vars,
+                                                          onStartNew: widget.onStartNew,
+                                                        ),
                                                       ),
-                                                    ),
-                                                  );
+                                                    );
+                                                  } catch (e) {
+                                                    if (!mounted) return;
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text('Failed to start session: $e')),
+                                                    );
+                                                    setState(() => _isFetchingToken = false);
+                                                  }
                                                 }
                                               } : null,
-                                              icon: Icon(
-                                                Icons.auto_awesome,
-                                                size: 18,
-                                                color: _canSubmit ? jpmcGold : Colors.white,
-                                              ),
+                                              icon: _isFetchingToken 
+                                                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                                  : Icon(
+                                                      Icons.auto_awesome,
+                                                      size: 18,
+                                                      color: _canSubmit ? jpmcGold : Colors.white,
+                                                    ),
                                               label: const Text('GET STARTED'),
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor: jpmcBlue, 
@@ -511,20 +558,28 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, bool isMandatory, {String? hint, void Function(String)? onChanged}) {
+  Widget _buildTextField(String label, TextEditingController controller, bool isMandatory, {String? hint, void Function(String)? onChanged, Widget? trailingLabelWidget}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          RichText(
-            text: TextSpan(
-              style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.grey.shade800, fontSize: 13, fontWeight: FontWeight.w600),
-              children: [
-                TextSpan(text: label),
-                if (isMandatory) const TextSpan(text: ' *', style: TextStyle(color: Colors.red)),
-              ]
-            )
+          Row(
+            children: [
+              RichText(
+                text: TextSpan(
+                  style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.grey.shade800, fontSize: 13, fontWeight: FontWeight.w600),
+                  children: [
+                    TextSpan(text: label),
+                    if (isMandatory) const TextSpan(text: ' *', style: TextStyle(color: Colors.red)),
+                  ]
+                )
+              ),
+              if (trailingLabelWidget != null) ...[
+                const Spacer(),
+                trailingLabelWidget,
+              ],
+            ],
           ),
           const SizedBox(height: 8),
           TextFormField(

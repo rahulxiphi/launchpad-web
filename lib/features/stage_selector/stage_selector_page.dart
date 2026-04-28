@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../services/conversation_service.dart';
 import '../../shared/widgets/app_shell.dart';
 
@@ -40,17 +40,11 @@ class _StageSelectorPageState extends State<StageSelectorPage> {
     });
     try {
       final prospect = await _service.getProspect(prospectId);
-      final tokenResult = await _service.getVoiceToken(
-        prospect.stageBucket,
-        prospectId: prospectId,
-      );
       if (!mounted) return;
       await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => AppShell(
-          conversationToken: tokenResult.conversationToken,
           stageBucket: prospect.stageBucket,
           prospectId: prospectId,
-          dynamicVariables: tokenResult.dynamicVariables,
         ),
       ));
     } catch (_) {
@@ -68,17 +62,11 @@ class _StageSelectorPageState extends State<StageSelectorPage> {
     });
     try {
       final initResult = await _service.initProspect(invitationCode);
-      final tokenResult = await _service.getVoiceToken(
-        initResult.stageBucket,
-        prospectId: initResult.prospectId,
-      );
       if (!mounted) return;
       await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => AppShell(
-          conversationToken: tokenResult.conversationToken,
           stageBucket: initResult.stageBucket,
           prospectId: initResult.prospectId,
-          dynamicVariables: tokenResult.dynamicVariables,
         ),
       ));
     } catch (_) {
@@ -96,17 +84,11 @@ class _StageSelectorPageState extends State<StageSelectorPage> {
     });
     try {
       final prospectId = await _service.createProspect(_kSuperAgentBucket);
-      final result = await _service.getVoiceToken(
-        _kSuperAgentBucket,
-        prospectId: prospectId,
-      );
       if (!mounted) return;
       await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => AppShell(
-          conversationToken: result.conversationToken,
           stageBucket: _kSuperAgentBucket,
           prospectId: prospectId,
-          dynamicVariables: result.dynamicVariables,
         ),
       ));
     } catch (e) {

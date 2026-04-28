@@ -57,17 +57,11 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
     setState(() => _isLoading = true);
     try {
       final prospect = await _service.getProspect(prospectId);
-      final tokenResult = await _service.getVoiceToken(
-        prospect.stageBucket,
-        prospectId: prospectId,
-      );
       if (!mounted) return;
       await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => AppShell(
-          conversationToken: tokenResult.conversationToken,
           stageBucket: prospect.stageBucket,
           prospectId: prospectId,
-          dynamicVariables: tokenResult.dynamicVariables,
         ),
       ));
     } catch (e) {
@@ -82,17 +76,11 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
     setState(() => _isLoading = true);
     try {
       final initResult = await _service.initProspect(invitationCode);
-      final tokenResult = await _service.getVoiceToken(
-        initResult.stageBucket,
-        prospectId: initResult.prospectId,
-      );
       if (!mounted) return;
       await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => AppShell(
-          conversationToken: tokenResult.conversationToken,
           stageBucket: initResult.stageBucket,
           prospectId: initResult.prospectId,
-          dynamicVariables: tokenResult.dynamicVariables,
         ),
       ));
     } catch (e) {
@@ -112,19 +100,13 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
     try {
       const stageBucket = 'super_agent';
       final prospectId = await _service.createProspect(stageBucket);
-      final result = await _service.getVoiceToken(
-        stageBucket,
-        prospectId: prospectId,
-      );
 
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => AppShell(
-            conversationToken: result.conversationToken,
             stageBucket: stageBucket,
             prospectId: prospectId,
-            dynamicVariables: result.dynamicVariables,
           ),
         ),
       );
