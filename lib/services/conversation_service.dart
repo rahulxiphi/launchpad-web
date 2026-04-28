@@ -1,6 +1,41 @@
 import 'package:dio/dio.dart';
 import '../config/api_config.dart';
 
+class ProspectClassification {
+  final String? inferredStageBucket;
+  final double? inferredStageConfidence;
+  final String? inferredStageConfidenceLabel;
+  final List<String> inferredStageReasons;
+  final String? inferredStageUpdatedAt;
+  final String? confirmedStageBucket;
+  final String? stageSelectionSource;
+  final String? confirmedStageUpdatedAt;
+
+  const ProspectClassification({
+    this.inferredStageBucket,
+    this.inferredStageConfidence,
+    this.inferredStageConfidenceLabel,
+    this.inferredStageReasons = const [],
+    this.inferredStageUpdatedAt,
+    this.confirmedStageBucket,
+    this.stageSelectionSource,
+    this.confirmedStageUpdatedAt,
+  });
+
+  bool get hasClassification =>
+      inferredStageBucket != null && inferredStageBucket!.isNotEmpty;
+}
+
+class UpdateProspectClassificationResult {
+  final String prospectId;
+  final ProspectClassification classification;
+
+  const UpdateProspectClassificationResult({
+    required this.prospectId,
+    required this.classification,
+  });
+}
+
 /// Response from the prospect/init endpoint.
 class ProspectInitResult {
   final String prospectId;
@@ -8,6 +43,7 @@ class ProspectInitResult {
   final String agentDisplayName;
   final int conversationPhase;
   final bool isReturning;
+  final ProspectClassification? classification;
 
   ProspectInitResult({
     required this.prospectId,
@@ -15,6 +51,7 @@ class ProspectInitResult {
     required this.agentDisplayName,
     this.conversationPhase = 1,
     this.isReturning = false,
+    this.classification,
   });
 }
 
@@ -83,14 +120,75 @@ class ConversationService {
       '${ApiConfig.baseUrl}/conversations/prospect/$prospectId',
     );
     final data = response.data as Map<String, dynamic>;
+    final classificationData = data['classification'] as Map<String, dynamic>?;
     return ProspectInitResult(
       prospectId: data['prospect_id'] as String,
       stageBucket: data['stage_bucket'] as String,
       agentDisplayName: data['agent_display_name'] as String? ?? 'your JPMC AI Advisor',
       conversationPhase: data['conversation_phase'] as int? ?? 1,
       isReturning: true,
+      classification: classificationData == null
+        ? null
+        : ProspectClassification(
+          inferredStageBucket:
+            classificationData['inferred_stage_bucket'] as String?,
+          inferredStageConfidence:
+              (classificationData['inferred_stage_confidence'] as num?)
+                ?.toDouble(),
+            inferredStageConfidenceLabel:
+              classificationData['inferred_stage_confidence_label'] as String?,
+          inferredStageReasons:
+            (classificationData['inferred_stage_reasons'] as List?)
+                ?.whereType<String>()
+                .toList() ??
+              const [],
+          inferredStageUpdatedAt:
+            classificationData['inferred_stage_updated_at'] as String?,
+            confirmedStageBucket:
+              classificationData['confirmed_stage_bucket'] as String?,
+            stageSelectionSource:
+              classificationData['stage_selection_source'] as String?,
+            confirmedStageUpdatedAt:
+              classificationData['confirmed_stage_updated_at'] as String?,
+        ),
     );
   }
+
+      Future<UpdateProspectClassificationResult> updateProspectClassification(
+      String prospectId, {
+      required String selectedStageBucket,
+      }) async {
+      final response = await _dio.post(
+        '${ApiConfig.baseUrl}/conversations/prospect/$prospectId/classification',
+        data: {
+        'selected_stage_bucket': selectedStageBucket,
+        },
+      );
+      final data = response.data as Map<String, dynamic>;
+      final classificationData = data['classification'] as Map<String, dynamic>;
+      return UpdateProspectClassificationResult(
+        prospectId: data['prospect_id'] as String,
+        classification: ProspectClassification(
+        inferredStageBucket: classificationData['inferred_stage_bucket'] as String?,
+        inferredStageConfidence:
+          (classificationData['inferred_stage_confidence'] as num?)?.toDouble(),
+        inferredStageConfidenceLabel:
+          classificationData['inferred_stage_confidence_label'] as String?,
+        inferredStageReasons:
+          (classificationData['inferred_stage_reasons'] as List?)
+              ?.whereType<String>()
+              .toList() ??
+            const [],
+        inferredStageUpdatedAt:
+          classificationData['inferred_stage_updated_at'] as String?,
+        confirmedStageBucket:
+          classificationData['confirmed_stage_bucket'] as String?,
+        stageSelectionSource: classificationData['stage_selection_source'] as String?,
+        confirmedStageUpdatedAt:
+          classificationData['confirmed_stage_updated_at'] as String?,
+        ),
+      );
+      }
 
   /// Calls POST /conversations/voice-token and returns the full result
   /// including dynamic_variables for the SDK.
