@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import '../../tools/client_tools.dart';
+import '../../services/conversation_service.dart';
+import 'widgets/voice_bubble_row.dart';
+import 'widgets/voice_classification_panel.dart';
+import 'widgets/voice_header.dart';
 
 // ---------------------------------------------------------------------------
 // Data model for a single transcript entry
@@ -46,6 +50,7 @@ class VoicePage extends StatefulWidget {
 
 class _VoicePageState extends State<VoicePage> {
   late final ConversationClient _client;
+  final ConversationService _conversationService = ConversationService();
   final List<_TranscriptEntry> _transcript = [];
   final ScrollController _scrollController = ScrollController();
 
@@ -53,6 +58,11 @@ class _VoicePageState extends State<VoicePage> {
   String _statusText = 'Connecting…';
   // True once the session ends — stays on this page, shows restart banner.
   bool _conversationEnded = false;
+  bool _isLoadingClassification = false;
+  ProspectClassification? _classification;
+  String? _classificationError;
+  bool _showStageOverride = false;
+  String? _selectedStageChoice;
 
   // Track the current phase locally so we can update it via tool calls
   late int _activePhase;
@@ -132,6 +142,7 @@ class _VoicePageState extends State<VoicePage> {
               }
             }
           });
+          _loadClassificationSummary();
           _scrollToBottom();
         },
         onModeChange: ({required mode}) {
@@ -294,6 +305,44 @@ class _VoicePageState extends State<VoicePage> {
     _scrollToBottom();
   }
 
+  Future<void> _loadClassificationSummary() async {
+    if (!_isStageChipsEnabled) return;
+    if (widget.prospectId == null) return;
+    if (!mounted) return;
+
+    setState(() {
+      _isLoadingClassification = true;
+      _classificationError = null;
+    });
+
+    try {
+      final prospect = await _conversationService.getProspect(widget.prospectId!);
+      if (!mounted) return;
+      setState(() {
+        _classification = prospect.classification;
+        _selectedStageChoice =
+            prospect.classification?.confirmedStageBucket ??
+            prospect.classification?.inferredStageBucket;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _classificationError = 'Could not load classification summary';
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingClassification = false;
+      });
+    }
+  }
+
+  bool get _isStageChipsEnabled {
+    final raw = widget.dynamicVariables['show_stage_chips'];
+    if (raw is bool) return raw;
+    return raw?.toString().toLowerCase() != 'false';
+  }
+
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
@@ -339,139 +388,60 @@ class _VoicePageState extends State<VoicePage> {
 
   int get _currentPhase => _activePhase;
 
-  Widget _buildSidebar() {
-    final currentPhase = _currentPhase;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Future<void> _persistStageSelection(String selectedBucket) async {
+    final prospectId = widget.prospectId;
+    if (prospectId == null) return;
 
-    return Container(
-      width: 220,
-      margin: EdgeInsets.zero,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isDark ? Colors.grey.shade800 : const Color(0xFFE5E7EB),
+    try {
+      final result = await _conversationService.updateProspectClassification(
+        prospectId,
+        selectedStageBucket: selectedBucket,
+      );
+      if (!mounted) return;
+      setState(() {
+        _classification = result.classification;
+        _selectedStageChoice = selectedBucket;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save stage selection right now'),
+          behavior: SnackBarBehavior.floating,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
-            child: Text(
-              'Phases',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.grey.shade400 : const Color(0xFF8d8578),
-                letterSpacing: 0.8,
-              ),
-            ),
-          ),
-          _buildPhaseItem(phaseNumber: 1, title: 'Entry & Welcome',    subtitle: 'Identity & intent',       currentPhase: currentPhase),
-          _buildPhaseItem(phaseNumber: 2, title: 'Discovery',          subtitle: 'Stage-tailored profiling', currentPhase: currentPhase),
-          _buildPhaseItem(phaseNumber: 3, title: 'Deep Qualification', subtitle: 'Financial health',         currentPhase: currentPhase),
-          _buildPhaseItem(phaseNumber: 4, title: 'Recommendations',    subtitle: 'Product match',           currentPhase: currentPhase),
-          _buildPhaseItem(phaseNumber: 5, title: 'Next Actions',       subtitle: 'Facilitation',            currentPhase: currentPhase),
-        ],
-      ),
-    );
+      );
+    }
   }
 
-  Widget _buildPhaseItem({
-    required int phaseNumber,
-    required String title,
-    required String subtitle,
-    required int currentPhase,
-  }) {
-    final isCompleted = phaseNumber < currentPhase;
-    final isCurrent = phaseNumber == currentPhase;
-    const jpmcDarkNavy = Color(0xFF04213d);
-    const jpmcGold = Color(0xFFe8cc7a);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildClassificationSummary() {
+    final inferredBucket = _classification?.inferredStageBucket;
 
-    // Number badge
-    final Widget numBadge = isCompleted
-        ? Container(
-            width: 28,
-            height: 28,
-            decoration: const BoxDecoration(
-              color: Color(0xFF1d9e75),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.check, color: Colors.white, size: 14),
-          )
-        : Container(
-            width: 28,
-            height: 28,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: isCurrent
-                  ? const Color(0x2Ac9a84c) // gold tint on navy
-                  : (isDark ? Colors.grey.shade800 : const Color(0xFFF3F0EA)),
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              '0$phaseNumber',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: isCurrent
-                    ? jpmcGold
-                    : (isDark ? Colors.white70 : const Color(0xFF1a1a18)),
-              ),
-            ),
-          );
-
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: null,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: isCurrent ? jpmcDarkNavy : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              numBadge,
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
-                        color: isCurrent
-                            ? Colors.white
-                            : (isDark ? Colors.grey.shade300 : const Color(0xFF6f675b)),
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isCurrent
-                            ? Colors.white.withOpacity(0.65)
-                            : (isDark ? Colors.grey.shade500 : Colors.grey.shade500),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return VoiceClassificationPanel(
+      enabled: _isStageChipsEnabled,
+      isLoading: _isLoadingClassification,
+      errorMessage: _classificationError,
+      classification: _classification,
+      showStageOverride: _showStageOverride,
+      selectedStageChoice: _selectedStageChoice,
+      onConfirmInferred: () {
+        if (inferredBucket == null) return;
+        setState(() {
+          _showStageOverride = false;
+          _selectedStageChoice = inferredBucket;
+        });
+        _persistStageSelection(inferredBucket);
+      },
+      onShowOverride: () {
+        setState(() {
+          _showStageOverride = true;
+        });
+      },
+      onSelectOverride: (bucket) {
+        setState(() {
+          _selectedStageChoice = bucket;
+        });
+        _persistStageSelection(bucket);
+      },
     );
   }
 
@@ -499,16 +469,6 @@ class _VoicePageState extends State<VoicePage> {
                 child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Sidebar (phases) ──────────────────────────────────────
-                  /*
-                  if (MediaQuery.of(context).size.width >= 860)
-                    _buildSidebar(),
-
-                  // 12px gap between sidebar and chat card
-                  if (MediaQuery.of(context).size.width >= 860)
-                    const SizedBox(width: 12),
-                  */
-
                   // ── Chat container ────────────────────────────────────────
                   Expanded(
                     child: Container(
@@ -532,7 +492,7 @@ class _VoicePageState extends State<VoicePage> {
                       ),
                       child: Column(
                         children: [
-                          _JpmcMockHeader(
+                          VoiceHeader(
                             agentName: _agentName,
                             stageLabel: _stageLabel,
                             statusText: _statusText,
@@ -573,8 +533,10 @@ class _VoicePageState extends State<VoicePage> {
                                       final isPrevSame = prevEntry != null && prevEntry.isUser == entry.isUser;
                                       final isNextSame = nextEntry != null && nextEntry.isUser == entry.isUser;
                                       
-                                      return _BubbleRow(
-                                        entry: entry,
+                                      return VoiceBubbleRow(
+                                        isUser: entry.isUser,
+                                        text: entry.text,
+                                        isTentative: entry.isTentative,
                                         isPrevSame: isPrevSame,
                                         isNextSame: isNextSame,
                                         agentInitial: _agentName.isNotEmpty
@@ -584,6 +546,7 @@ class _VoicePageState extends State<VoicePage> {
                                     },
                                   ),
                           ),
+                                  if (_conversationEnded) _buildClassificationSummary(),
                           _BottomBar(
                             isConnected: isConnected,
                             isMuted: _client.isMuted,
@@ -608,560 +571,6 @@ class _VoicePageState extends State<VoicePage> {
 );
   }
 }
-
-// ---------------------------------------------------------------------------
-// JPMC Mock Header — title bar that matches the HTML template's .mock-header
-// ---------------------------------------------------------------------------
-class _JpmcMockHeader extends StatelessWidget {
-  final String agentName;
-  final String stageLabel;
-  final String statusText;
-  final int currentPhase;
-  final bool isSpeaking;
-  final bool isEnded;
-  final VoidCallback onEnd;
-  final VoidCallback onStartNew;
-  final ColorScheme colorScheme;
-
-  const _JpmcMockHeader({
-    required this.agentName,
-    required this.stageLabel,
-    required this.statusText,
-    required this.currentPhase,
-    required this.isSpeaking,
-    required this.isEnded,
-    required this.onEnd,
-    required this.onStartNew,
-    required this.colorScheme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const jpmcNavy = Color(0xFF04213d);
-    const jpmcGold = Color(0xFFc9a84c);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF111827) : Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
-        ),
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? Colors.grey.shade800 : const Color(0xFFE5E0D4),
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Wordmark
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'JPMC',
-                      style: TextStyle(
-                        fontFamily: 'Georgia',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: isDark ? Colors.white : jpmcNavy,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                    TextSpan(
-                      text: '  •  Innovation Economy Advisor',
-                      style: TextStyle(
-                        fontFamily: 'Georgia',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: isDark
-                            ? const Color(0xFFe8cc7a)
-                            : jpmcGold,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    'Progress',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.grey.shade300 : jpmcNavy,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  SizedBox(
-                    width: 60,
-                    height: 5,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        value: currentPhase / 5.0,
-                        backgroundColor: isDark ? Colors.grey.shade800 : const Color(0xFFE5E0D4),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          isDark ? const Color(0xFFe8cc7a) : jpmcGold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Prospect workspace  ·  $agentName  ·  $stageLabel',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.grey.shade400 : const Color(0xFF8d8578),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const Spacer(),
-          // Status pill
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF0EAD8),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: isDark
-                    ? Colors.grey.shade700
-                    : const Color(0xFFD4C9AD),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _PulseDot(active: isSpeaking, colorScheme: colorScheme),
-                const SizedBox(width: 6),
-                Text(
-                  statusText,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: isDark
-                        ? Colors.grey.shade300
-                        : const Color(0xFF6f675b),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (isEnded) ...[
-            const SizedBox(width: 10),
-            // ── Start new session button (coral, replaces End when conversation done)
-            GestureDetector(
-              onTap: onStartNew,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEE2E2),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: const Color(0xFFFCA5A5)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.refresh_rounded, size: 14, color: Color(0xFFDC2626)),
-                    SizedBox(width: 5),
-                    Text(
-                      'Start new session',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFFDC2626),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ] else ...[
-            const SizedBox(width: 10),
-            // ── End button
-            GestureDetector(
-              onTap: onEnd,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEE2E2),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: const Color(0xFFFCA5A5)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.call_end_rounded, size: 14, color: Color(0xFFDC2626)),
-                    SizedBox(width: 5),
-                    Text(
-                      'End',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFFDC2626),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Status strip
-// ---------------------------------------------------------------------------
-class _StatusStrip extends StatelessWidget {
-  final String statusText;
-  final bool isSpeaking;
-  final ColorScheme colorScheme;
-
-  const _StatusStrip({
-    required this.statusText,
-    required this.isSpeaking,
-    required this.colorScheme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      color: colorScheme.surfaceContainerLow,
-      child: Row(
-        children: [
-          // Animated dot
-          _PulseDot(active: isSpeaking, colorScheme: colorScheme),
-          const SizedBox(width: 8),
-          Text(
-            statusText,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Pulsing dot indicator
-// ---------------------------------------------------------------------------
-class _PulseDot extends StatefulWidget {
-  final bool active;
-  final ColorScheme colorScheme;
-
-  const _PulseDot({required this.active, required this.colorScheme});
-
-  @override
-  State<_PulseDot> createState() => _PulseDotState();
-}
-
-class _PulseDotState extends State<_PulseDot>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _anim;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
-    _anim = Tween<double>(begin: 0.4, end: 1.0).animate(_ctrl);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: widget.active ? _anim : const AlwaysStoppedAnimation(0.4),
-      child: Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color:
-              widget.active ? widget.colorScheme.primary : widget.colorScheme.outline,
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Chat bubble row
-// ---------------------------------------------------------------------------
-class _BubbleRow extends StatelessWidget {
-  final _TranscriptEntry entry;
-  final String agentInitial;
-  final bool isPrevSame;
-  final bool isNextSame;
-  final bool isGrouped; // Restored just to appease hot-reload state constraints
-
-  const _BubbleRow({
-    required this.entry,
-    this.agentInitial = 'A',
-    this.isPrevSame = false,
-    this.isNextSame = false,
-    this.isGrouped = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isUser = entry.isUser;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // Bubble colors
-    const jpmcDarkNavy = Color(0xFF131F2E);
-    final aiBubbleColor = isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
-    final aiTextColor = isDark ? Colors.white : const Color(0xFF1F2937);
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final containerWidth = screenWidth > 800 ? 800.0 : screenWidth;
-
-    // Avatar colors: each avatar uses the OPPOSITE bubble's bg color
-    final aiAvatarBg = jpmcDarkNavy;    // same as user bubble = dark navy
-    final userAvatarBg = aiBubbleColor; // same as AI bubble = grey/light
-
-    // ── Avatar widget ────────────────────────────────────────────────────────
-    Widget avatar(Color bg, Widget child) => Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-          child: Center(child: child),
-        );
-
-    final aiAvatar = avatar(
-      aiAvatarBg,
-      Text(
-        agentInitial,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFFc9a84c), // gold initial on dark bg
-        ),
-      ),
-    );
-
-    final userAvatar = avatar(
-      userAvatarBg,
-      Icon(
-        Icons.person_rounded,
-        size: 16,
-        color: isDark ? Colors.white70 : const Color(0xFF6B7280),
-      ),
-    );
-
-    // ── Bubble ───────────────────────────────────────────────────────────────
-    final bubble = Container(
-      constraints: BoxConstraints(maxWidth: containerWidth * 0.68),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-      decoration: BoxDecoration(
-        color: isUser ? jpmcDarkNavy : aiBubbleColor,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(isPrevSame && !isUser ? 4 : 20),
-          topRight: Radius.circular(isPrevSame && isUser ? 4 : 20),
-          bottomLeft: Radius.circular(isNextSame && !isUser ? 4 : 20),
-          bottomRight: Radius.circular(isNextSame && isUser ? 4 : 20),
-        ),
-      ),
-      child: Text(
-        entry.text,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: isUser ? Colors.white : aiTextColor,
-              height: 1.5,
-              fontSize: 15,
-              fontWeight: FontWeight.w500, // same richness for both sides
-              fontStyle:
-                  entry.isTentative ? FontStyle.italic : FontStyle.normal,
-            ),
-      ),
-    );
-
-    // Estimate line count (~70 chars per line matches the actual bubble width)
-    final estimatedLines =
-        (entry.text.length / 70).ceil() + '\n'.allMatches(entry.text).length;
-    final avatarAlign = estimatedLines <= 1
-        ? CrossAxisAlignment.center
-        : CrossAxisAlignment.end;
-
-    // ── Return link bubble (special formatting) ────────────────────────────
-    final bool isReturnLink = !isUser && entry.text.contains('come back any time to continue');
-
-    if (isReturnLink) {
-      final parts = entry.text.split('\n');
-      final label = parts.isNotEmpty ? parts[0] : '';
-      final url = parts.length > 1 ? parts[1] : '';
-      final note = parts.length > 3 ? parts.skip(3).join('\n') : '';
-      return Padding(
-        padding: EdgeInsets.only(top: isPrevSame ? 2 : 12, bottom: 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            aiAvatar,
-            const SizedBox(width: 8),
-            Flexible(
-              child: Container(
-                constraints: BoxConstraints(maxWidth: containerWidth * 0.75),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: aiBubbleColor,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(isPrevSame && !isUser ? 4 : 20),
-                    topRight: Radius.circular(isPrevSame && isUser ? 4 : 20),
-                    bottomLeft: Radius.circular(isNextSame && !isUser ? 4 : 20),
-                    bottomRight: Radius.circular(isNextSame && isUser ? 4 : 20),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: isDark ? Colors.grey.shade400 : const Color(0xFF6B7280),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    SelectableText(
-                      url,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF006CAD),
-                        fontFamily: 'monospace',
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _CopyLinkButton(url: url),
-                    if (note.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        note,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.grey.shade400 : const Color(0xFF6B7280),
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Padding(
-      padding: EdgeInsets.only(top: isPrevSame ? 1 : 10, bottom: 1),
-      child: Row(
-        mainAxisAlignment:
-            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: avatarAlign,
-        children: isUser
-            ? [
-                bubble,
-                const SizedBox(width: 8),
-                // Hide avatar for grouped messages unless it's the last one in the group
-                if (isNextSame) const SizedBox(width: 28) else userAvatar,
-              ]
-            : [
-                if (isNextSame) const SizedBox(width: 28) else aiAvatar,
-                const SizedBox(width: 8),
-                bubble,
-              ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Copy link button used inside the return-link bubble
-// ---------------------------------------------------------------------------
-class _CopyLinkButton extends StatefulWidget {
-  final String url;
-  const _CopyLinkButton({required this.url});
-  @override
-  State<_CopyLinkButton> createState() => _CopyLinkButtonState();
-}
-
-class _CopyLinkButtonState extends State<_CopyLinkButton> {
-  bool _copied = false;
-
-  void _copy() {
-    Clipboard.setData(ClipboardData(text: widget.url));
-    setState(() => _copied = true);
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) setState(() => _copied = false);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
-      onTap: _copy,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: _copied
-              ? const Color(0xFF1d9e75)
-              : const Color(0xFF04213d),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              _copied ? Icons.check_rounded : Icons.copy_rounded,
-              size: 14,
-              color: _copied ? Colors.white : const Color(0xFFc9a84c),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              _copied ? 'Copied!' : 'Copy link',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: _copied ? Colors.white : const Color(0xFFc9a84c),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 
 // ---------------------------------------------------------------------------
 // Bottom control bar — mic toggle + text input
@@ -1192,18 +601,6 @@ class _BottomBar extends StatefulWidget {
 class _BottomBarState extends State<_BottomBar> {
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  bool _copied = false;
-
-  // Compute the prospect return URL (mirrors _ReturnUrlBanner logic)
-  String get _returnUrl {
-    if (widget.prospectId == null) return '';
-    final uri = Uri.base;
-    final origin = uri.origin;
-    if (uri.fragment.isNotEmpty) {
-      return '$origin/#/?p=${widget.prospectId}';
-    }
-    return '$origin/?p=${widget.prospectId}';
-  }
 
   @override
   void dispose() {
@@ -1218,24 +615,6 @@ class _BottomBarState extends State<_BottomBar> {
     widget.onSend(text);
     _textController.clear();
     _focusNode.requestFocus();
-  }
-
-  void _copyReturnUrl() {
-    final url = _returnUrl;
-    if (url.isEmpty) return;
-    Clipboard.setData(ClipboardData(text: url));
-    setState(() => _copied = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Return link copied to clipboard'),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 2),
-        width: 260,
-      ),
-    );
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) setState(() => _copied = false);
-    });
   }
 
   @override
