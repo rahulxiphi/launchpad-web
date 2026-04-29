@@ -45,6 +45,7 @@ class VoicePage extends StatefulWidget {
   final String stageBucket;
   final String? prospectId;
   final Map<String, dynamic> dynamicVariables;
+  final String initialMode; // 'voice' or 'chat'
   /// Callback owned by AppShell — fetches a fresh token and swaps in a new
   /// ConversationIntroPage on the inner Navigator. Stays on same stage.
   final Future<void> Function() onStartNew;
@@ -56,6 +57,7 @@ class VoicePage extends StatefulWidget {
     required this.onStartNew,
     this.prospectId,
     this.dynamicVariables = const {},
+    this.initialMode = 'voice',
   });
 
   @override
@@ -79,6 +81,7 @@ class _VoicePageState extends State<VoicePage> {
   String? _selectedStageChoice;
   _ResponseChipsState _responseChips = _ResponseChipsState.empty;
   int _chipsEpoch = 0;
+  late bool _isChatMode;
 
   // Track the current phase locally so we can update it via tool calls
   late int _activePhase;
@@ -90,6 +93,8 @@ class _VoicePageState extends State<VoicePage> {
   void initState() {
     super.initState();
     
+    _isChatMode = widget.initialMode == 'chat';
+
     // Initialize active phase from dynamic variables
     final phaseStr = widget.dynamicVariables['conversation_phase']?.toString();
     _activePhase = int.tryParse(phaseStr ?? '1') ?? 1;
@@ -654,11 +659,18 @@ class _VoicePageState extends State<VoicePage> {
                             isConnected: isConnected,
                             isMuted: _client.isMuted,
                             isEnded: _conversationEnded,
+                            isChatMode: _isChatMode,
                             prospectId: widget.prospectId,
                             suggestionChips: _responseChips.show
                                 ? _responseChips.chips
                                 : const <String>[],
                             onToggleMute: () => _client.toggleMute(),
+                            onToggleMode: () {
+                              setState(() {
+                                _isChatMode = !_isChatMode;
+                                // Agent switching logic will go here
+                              });
+                            },
                             onSend: _sendTextMessage,
                             onStartNew: _startNewSession,
                           ),
@@ -685,9 +697,11 @@ class _BottomBar extends StatefulWidget {
   final bool isConnected;
   final bool isMuted;
   final bool isEnded;
+  final bool isChatMode;
   final String? prospectId;
   final List<String> suggestionChips;
   final VoidCallback onToggleMute;
+  final VoidCallback onToggleMode;
   final void Function(String) onSend;
   final VoidCallback onStartNew;
 
@@ -695,7 +709,9 @@ class _BottomBar extends StatefulWidget {
     required this.isConnected,
     required this.isMuted,
     required this.isEnded,
+    required this.isChatMode,
     required this.onToggleMute,
+    required this.onToggleMode,
     required this.onSend,
     required this.onStartNew,
     required this.suggestionChips,
@@ -886,37 +902,91 @@ class _BottomBarState extends State<_BottomBar> {
                     ),
                   ),
                 ),
-                // ── Mic button (outside, to the right) ───────────────────────
+                // ── Right Side Buttons ───────────────────────
                 const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: (widget.isConnected && !widget.isEnded) ? widget.onToggleMute : null,
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: (widget.isMuted || widget.isEnded)
-                          ? colorScheme.errorContainer
-                          : const Color(0xFF006CAD),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                if (widget.isChatMode)
+                  GestureDetector(
+                    onTap: widget.onToggleMode,
+                    child: Container(
+                      height: 44,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFC8872A),
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        "Let's talk",
+                        style: TextStyle(
+                          color: Color(0xFF0A2744),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
-                      ],
+                      ),
                     ),
-                    child: Icon(
-                      (widget.isMuted || widget.isEnded)
-                          ? Icons.mic_off_rounded
-                          : Icons.mic_rounded,
-                      size: 22,
-                      color: (widget.isMuted || widget.isEnded)
-                          ? colorScheme.onErrorContainer
-                          : Colors.white,
-                    ),
+                  )
+                else
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: widget.onToggleMode,
+                        child: Container(
+                          height: 44,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(22),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            "Let's chat",
+                            style: TextStyle(
+                              color: Color(0xFF0A2744),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: (widget.isConnected && !widget.isEnded) ? widget.onToggleMute : null,
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: (widget.isMuted || widget.isEnded)
+                                ? colorScheme.errorContainer
+                                : const Color(0xFF006CAD),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            (widget.isMuted || widget.isEnded)
+                                ? Icons.mic_off_rounded
+                                : Icons.mic_rounded,
+                            size: 22,
+                            color: (widget.isMuted || widget.isEnded)
+                                ? colorScheme.onErrorContainer
+                                : Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
               ],
             ),
           ),

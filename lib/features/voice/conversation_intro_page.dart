@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/conversation_service.dart';
 import 'voice_page.dart';
+import 'mode_selection_page.dart';
 import 'manual_form_page.dart';
 
 class _StageContent {
@@ -134,7 +135,6 @@ class ConversationIntroPage extends StatefulWidget {
 class _ConversationIntroPageState extends State<ConversationIntroPage> {
   final _formKey = GlobalKey<FormState>();
   bool _isPostIncorporated = false;
-  bool _isFetchingToken = false;
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -473,48 +473,29 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                             height: 48,
                                             width: isMobile ? double.infinity : 320,
                                             child: ElevatedButton.icon(
-                                              onPressed: _canSubmit && !_isFetchingToken ? () async {
+                                              onPressed: _canSubmit ? () {
                                                 if (_formKey.currentState!.validate()) {
-                                                  setState(() => _isFetchingToken = true);
-                                                  try {
-                                                    final tokenResult = await ConversationService().getVoiceToken(
-                                                      widget.stageBucket,
-                                                      prospectId: widget.prospectId,
-                                                    );
-                                                    
-                                                    final vars = Map<String, dynamic>.from(widget.dynamicVariables);
-                                                    vars.addAll(tokenResult.dynamicVariables);
-                                                    if (_nameController.text.trim().isNotEmpty) vars['userName'] = _nameController.text.trim();
-                                                    if (_emailController.text.trim().isNotEmpty) vars['userEmail'] = _emailController.text.trim();
-                                                    if (_phoneController.text.trim().isNotEmpty) vars['userPhone'] = _phoneController.text.trim();
-                                                    if (_companyController.text.trim().isNotEmpty) vars['companyName'] = _companyController.text.trim();
-                                                    vars['isPostIncorporated'] = _isPostIncorporated;
-                                                    vars['preferManual'] = _preferManual;
-                                                    
-                                                    if (!mounted) return;
-                                                    Navigator.of(context).pushReplacement(
-                                                      MaterialPageRoute(
-                                                        builder: (_) => VoicePage(
-                                                          conversationToken: tokenResult.conversationToken,
-                                                          stageBucket: widget.stageBucket,
-                                                          prospectId: widget.prospectId,
-                                                          dynamicVariables: vars,
-                                                          onStartNew: widget.onStartNew,
-                                                        ),
+                                                  final vars = Map<String, dynamic>.from(widget.dynamicVariables);
+                                                  if (_nameController.text.trim().isNotEmpty) vars['userName'] = _nameController.text.trim();
+                                                  if (_emailController.text.trim().isNotEmpty) vars['userEmail'] = _emailController.text.trim();
+                                                  if (_phoneController.text.trim().isNotEmpty) vars['userPhone'] = _phoneController.text.trim();
+                                                  if (_companyController.text.trim().isNotEmpty) vars['companyName'] = _companyController.text.trim();
+                                                  vars['isPostIncorporated'] = _isPostIncorporated;
+                                                  vars['preferManual'] = _preferManual;
+                                                  
+                                                  Navigator.of(context).push(
+                                                    MaterialPageRoute(
+                                                      builder: (_) => ModeSelectionPage(
+                                                        stageBucket: widget.stageBucket,
+                                                        prospectId: widget.prospectId,
+                                                        dynamicVariables: vars,
+                                                        onStartNew: widget.onStartNew,
                                                       ),
-                                                    );
-                                                  } catch (e) {
-                                                    if (!mounted) return;
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      SnackBar(content: Text('Failed to start session: $e')),
-                                                    );
-                                                    setState(() => _isFetchingToken = false);
-                                                  }
+                                                    ),
+                                                  );
                                                 }
                                               } : null,
-                                              icon: _isFetchingToken 
-                                                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                                  : Icon(
+                                              icon: Icon(
                                                       Icons.auto_awesome,
                                                       size: 18,
                                                       color: _canSubmit ? jpmcGold : Colors.white,
