@@ -23,6 +23,20 @@ class _TranscriptEntry {
   });
 }
 
+class _ResponseChipsState {
+  final bool show;
+  final List<String> chips;
+  final DateTime? expiresAt;
+
+  const _ResponseChipsState({
+    required this.show,
+    required this.chips,
+    this.expiresAt,
+  });
+
+  static const empty = _ResponseChipsState(show: false, chips: <String>[]);
+}
+
 // ---------------------------------------------------------------------------
 // VoicePage
 // ---------------------------------------------------------------------------
@@ -63,6 +77,8 @@ class _VoicePageState extends State<VoicePage> {
   String? _classificationError;
   bool _showStageOverride = false;
   String? _selectedStageChoice;
+  _ResponseChipsState _responseChips = _ResponseChipsState.empty;
+  int _chipsEpoch = 0;
 
   // Track the current phase locally so we can update it via tool calls
   late int _activePhase;
@@ -96,6 +112,12 @@ class _VoicePageState extends State<VoicePage> {
           },
         ),
         'record_handoff': RecordHandoffTool(prospectId: widget.prospectId),
+        'set_response_chips': SetResponseChipsTool(
+          onUpdate: (payload) {
+            if (!mounted) return;
+            _applyResponseChips(payload);
+          },
+        ),
       },
       callbacks: ConversationCallbacks(
         onConnect: ({required conversationId}) {
@@ -115,6 +137,7 @@ class _VoicePageState extends State<VoicePage> {
           setState(() {
             _conversationEnded = true;
             _statusText = 'Conversation ended';
+            _responseChips = _ResponseChipsState.empty;
             if (returnUrl != null) {
               final email = widget.dynamicVariables['userEmail']?.toString() ?? '';
               final emailNote = email.isNotEmpty
@@ -234,6 +257,86 @@ class _VoicePageState extends State<VoicePage> {
 
     // Start the session automatically once the first frame is rendered
     WidgetsBinding.instance.addPostFrameCallback((_) => _startSession());
+  }
+
+  bool _isIdentityCategory(String? category) {
+    if (category == null || category.isEmpty) return false;
+    final normalized = category
+        .trim()
+        .toLowerCase()
+        .replaceAll('-', '_')
+        .replaceAll(' ', '_');
+
+    const exactBlocked = <String>{
+      'company_name',
+      'founder_name',
+      'email',
+      'phone',
+      'website',
+      'location',
+      'identity',
+      'contact',
+      'contact_info',
+    };
+    if (exactBlocked.contains(normalized)) return true;
+
+    const keywordBlocked = <String>[
+      'company',
+      'founder',
+      'email',
+      'phone',
+      'website',
+      'location',
+      'identity',
+      'contact',
+    ];
+    return keywordBlocked.any(normalized.contains);
+  }
+
+  void _applyResponseChips(SetResponseChipsPayload payload) {
+    final now = DateTime.now();
+    final expiresAt = payload.ttlMs != null && payload.ttlMs! > 0
+        ? now.add(Duration(milliseconds: payload.ttlMs!))
+        : null;
+
+    final shouldShow = payload.showChips &&
+        payload.chips.isNotEmpty &&
+        !_isIdentityCategory(payload.category) &&
+        !_conversationEnded;
+
+    final next = _ResponseChipsState(
+      show: shouldShow,
+      chips: shouldShow ? payload.chips : const <String>[],
+      expiresAt: expiresAt,
+    );
+
+    // Prevent redundant rebuilds when tool emits same payload repeatedly.
+    if (_responseChips.show == next.show &&
+        _responseChips.expiresAt == next.expiresAt &&
+        _responseChips.chips.length == next.chips.length &&
+        _responseChips.chips.join('|') == next.chips.join('|')) {
+      return;
+    }
+
+    setState(() {
+      _responseChips = next;
+      _chipsEpoch += 1;
+    });
+
+    if (next.expiresAt != null) {
+      final int scheduledEpoch = _chipsEpoch;
+      Future<void>.delayed(next.expiresAt!.difference(now), () {
+        if (!mounted) return;
+        if (scheduledEpoch != _chipsEpoch) return;
+        final expiry = _responseChips.expiresAt;
+        if (expiry == null) return;
+        if (DateTime.now().isBefore(expiry)) return;
+        setState(() {
+          _responseChips = _ResponseChipsState.empty;
+          _chipsEpoch += 1;
+        });
+      });
+    }
   }
 
   @override
@@ -552,6 +655,9 @@ class _VoicePageState extends State<VoicePage> {
                             isMuted: _client.isMuted,
                             isEnded: _conversationEnded,
                             prospectId: widget.prospectId,
+                            suggestionChips: _responseChips.show
+                                ? _responseChips.chips
+                                : const <String>[],
                             onToggleMute: () => _client.toggleMute(),
                             onSend: _sendTextMessage,
                             onStartNew: _startNewSession,
@@ -580,6 +686,7 @@ class _BottomBar extends StatefulWidget {
   final bool isMuted;
   final bool isEnded;
   final String? prospectId;
+  final List<String> suggestionChips;
   final VoidCallback onToggleMute;
   final void Function(String) onSend;
   final VoidCallback onStartNew;
@@ -591,6 +698,7 @@ class _BottomBar extends StatefulWidget {
     required this.onToggleMute,
     required this.onSend,
     required this.onStartNew,
+    required this.suggestionChips,
     this.prospectId,
   });
 
@@ -621,14 +729,7 @@ class _BottomBarState extends State<_BottomBar> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // Hardcoded suggestion chips (shown above input during active session)
-    const chips = [
-      'Pre-seed, pre-revenue',
-      'Seed stage, early revenue',
-      'Series A, growing revenue',
-      'Profitable, bootstrapped',
-    ];
+    final chips = widget.suggestionChips;
 
     return Container(
       decoration: BoxDecoration(
@@ -645,7 +746,7 @@ class _BottomBarState extends State<_BottomBar> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Suggestion chips (only when conversation is active) ───────────
-          if (!widget.isEnded)
+          if (!widget.isEnded && chips.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Wrap(
