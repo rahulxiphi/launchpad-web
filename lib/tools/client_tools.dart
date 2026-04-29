@@ -239,3 +239,75 @@ class RecordHandoffTool implements ClientTool {
     }
   }
 }
+
+// ---------------------------------------------------------------------------
+// set-response-chips (ElevenLabs turn-level UI hints)
+// ---------------------------------------------------------------------------
+
+class SetResponseChipsPayload {
+  final bool showChips;
+  final List<String> chips;
+  final String? category;
+  final int? ttlMs;
+
+  const SetResponseChipsPayload({
+    required this.showChips,
+    required this.chips,
+    this.category,
+    this.ttlMs,
+  });
+}
+
+class SetResponseChipsTool implements ClientTool {
+  final void Function(SetResponseChipsPayload payload) onUpdate;
+
+  SetResponseChipsTool({required this.onUpdate});
+
+  @override
+  Future<ClientToolResult?> execute(Map<String, dynamic> parameters) async {
+    try {
+      final show = parameters['show_chips'];
+      final bool showChips = show is bool
+          ? show
+          : show?.toString().toLowerCase() == 'true';
+
+      final rawChips = parameters['chips'];
+      final List<String> chips = rawChips is List
+          ? rawChips
+              .map((e) => e?.toString().trim() ?? '')
+              .where((e) => e.isNotEmpty)
+              .toSet()
+              .take(5)
+              .toList()
+          : const <String>[];
+
+      final rawCategory = parameters['category'];
+      final String? category = rawCategory == null
+          ? null
+          : rawCategory.toString().trim().isEmpty
+              ? null
+              : rawCategory.toString().trim().toLowerCase();
+
+      final rawTtl = parameters['ttl_ms'];
+      final int? ttlMs = rawTtl is int
+          ? rawTtl
+          : int.tryParse(rawTtl?.toString() ?? '');
+
+      final payload = SetResponseChipsPayload(
+        showChips: showChips,
+        chips: chips,
+        category: category,
+        ttlMs: ttlMs,
+      );
+      onUpdate(payload);
+
+      return ClientToolResult.success({
+        'applied': true,
+        'show_chips': payload.showChips,
+        'chips_count': payload.chips.length,
+      });
+    } catch (e) {
+      return ClientToolResult.failure('Failed to set response chips: $e');
+    }
+  }
+}
