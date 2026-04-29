@@ -127,10 +127,10 @@ class _VoicePageState extends State<VoicePage> {
       callbacks: ConversationCallbacks(
         onConnect: ({required conversationId}) {
           if (!mounted) return;
-          setState(() => _statusText = 'Listening');
+          setState(() => _statusText = _isChatMode ? 'Chatting' : 'Listening');
         },
         onDisconnect: (_) {
-          if (!mounted) return;
+          if (!mounted || _conversationEnded) return;
           // Inject the return link as the final AI message
           final uri = Uri.base;
           final origin = uri.origin;
@@ -178,7 +178,7 @@ class _VoicePageState extends State<VoicePage> {
           setState(() {
             _statusText = mode == ConversationMode.speaking
                 ? '$_agentName is speaking…'
-                : 'Listening';
+                : (_isChatMode ? 'Chatting' : 'Listening');
           });
         },
         onError: (message, [context]) {
@@ -192,7 +192,7 @@ class _VoicePageState extends State<VoicePage> {
         },
         // ── Transcript callbacks ────────────────────────────────────────────
         onTentativeUserTranscript: ({required transcript, required eventId}) {
-          if (!mounted) return;
+          if (!mounted || transcript.trim().isEmpty) return;
           setState(() {
             // Update the last tentative user entry, or add one
             if (_transcript.isNotEmpty &&
@@ -364,6 +364,14 @@ class _VoicePageState extends State<VoicePage> {
             ? widget.dynamicVariables
             : null,
       );
+      
+      // If we started in chat mode, make sure mic is muted just in case
+      // textOnly doesn't automatically mute it in the SDK state
+      if (widget.initialMode == 'chat') {
+        // Wait briefly to ensure LiveKit has fully grabbed the mic track
+        await Future.delayed(const Duration(milliseconds: 500));
+        await _client.setMicMuted(true);
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -665,11 +673,17 @@ class _VoicePageState extends State<VoicePage> {
                                 ? _responseChips.chips
                                 : const <String>[],
                             onToggleMute: () => _client.toggleMute(),
-                            onToggleMode: () {
+                            onToggleMode: () async {
+                              final newMode = !_isChatMode;
                               setState(() {
-                                _isChatMode = !_isChatMode;
-                                // Agent switching logic will go here
+                                _isChatMode = newMode;
+                                if (_statusText == 'Listening' || _statusText == 'Chatting') {
+                                  _statusText = newMode ? 'Chatting' : 'Listening';
+                                }
                               });
+                              if (isConnected && !_conversationEnded) {
+                                await _client.setMicMuted(newMode);
+                              }
                             },
                             onSend: _sendTextMessage,
                             onStartNew: _startNewSession,
@@ -904,58 +918,11 @@ class _BottomBarState extends State<_BottomBar> {
                 ),
                 // ── Right Side Buttons ───────────────────────
                 const SizedBox(width: 12),
-                if (widget.isChatMode)
-                  GestureDetector(
-                    onTap: widget.onToggleMode,
-                    child: Container(
-                      height: 44,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFC8872A),
-                        borderRadius: BorderRadius.circular(22),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        "Let's talk",
-                        style: TextStyle(
-                          color: Color(0xFF0A2744),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: widget.onToggleMode,
-                        child: Container(
-                          height: 44,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerHigh,
-                            borderRadius: BorderRadius.circular(22),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            "Let's chat",
-                            style: TextStyle(
-                              color: Color(0xFF0A2744),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Microphone button (only in Voice Mode)
+                    if (!widget.isChatMode) ...[
                       GestureDetector(
                         onTap: (widget.isConnected && !widget.isEnded) ? widget.onToggleMute : null,
                         child: Container(
@@ -985,8 +952,38 @@ class _BottomBarState extends State<_BottomBar> {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                     ],
-                  ),
+                    // Toggle Mode Button (Always on the far right)
+                    GestureDetector(
+                      onTap: widget.onToggleMode,
+                      child: Container(
+                        height: 44,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFC8872A),
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          widget.isChatMode ? "Let's talk" : "Let's chat",
+                          style: const TextStyle(
+                            color: Color(0xFF0A2744),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

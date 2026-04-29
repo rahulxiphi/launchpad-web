@@ -31,6 +31,7 @@ class VoiceBubbleRow extends StatelessWidget {
     final containerWidth = screenWidth > 800 ? 800.0 : screenWidth;
 
     final aiAvatarBg = jpmcDarkNavy;
+    final userBubbleBg = const Color(0xFF006CAD); // Same as "Get Started" button
     final userAvatarBg = aiBubbleColor;
 
     Widget avatar(Color bg, Widget child) => Container(
@@ -65,7 +66,7 @@ class VoiceBubbleRow extends StatelessWidget {
       constraints: BoxConstraints(maxWidth: containerWidth * 0.68),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
       decoration: BoxDecoration(
-        color: isUser ? jpmcDarkNavy : aiBubbleColor,
+        color: isUser ? userBubbleBg : aiBubbleColor,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(isPrevSame && !isUser ? 4 : 20),
           topRight: Radius.circular(isPrevSame && isUser ? 4 : 20),
