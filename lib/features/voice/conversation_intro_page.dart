@@ -218,10 +218,21 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                     constraints: BoxConstraints(minHeight: constraints.maxHeight),
                     child: Center(
                       child: Container(
-                        width: isMobile ? double.infinity : 1000,
+                        width: isMobile ? double.infinity : 760,
                         margin: EdgeInsets.symmetric(
                           horizontal: isMobile ? 0 : 24, 
-                          vertical: isMobile ? 0 : 24
+                          vertical: isMobile ? 0 : 32
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E1E1E) : Colors.white.withOpacity(0.96),
+                          borderRadius: BorderRadius.circular(isMobile ? 0 : 20),
+                          boxShadow: isMobile ? null : [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.22),
+                              blurRadius: 48,
+                              offset: const Offset(0, 16),
+                            )
+                          ],
                         ),
                         child: Form(
                           key: _formKey,
@@ -229,108 +240,43 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
+                              // ── Header bar ──────────────────────────────────
+                              _buildHeader(context, isDark, textTheme, content.heading, content.description),
+                              
+                              // ── Body ────────────────────────────────────────
+                              Padding(
                                 padding: EdgeInsets.fromLTRB(
                                   isMobile ? 24 : 36,
+                                  24,
                                   isMobile ? 24 : 36,
-                                  isMobile ? 24 : 36,
-                                  isMobile ? 16 : 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white.withOpacity(0.95),
-                                  borderRadius: BorderRadius.circular(isMobile ? 0 : 20),
-                                  boxShadow: isMobile ? null : [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.20),
-                                      blurRadius: 40,
-                                      offset: const Offset(0, 15),
-                                    )
-                                  ],
+                                  24,
                                 ),
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Upper Section: Advisor Info and Coverage List
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        // Left: Nova Info
-                                        Expanded(
-                                          flex: 5,
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                content.heading,
-                                                style: textTheme.headlineSmall?.copyWith(
-                                                  fontWeight: FontWeight.w800,
-                                                  color: isDark ? Colors.white : jpmcNavy,
-                                                  height: 1.15,
-                                                  letterSpacing: -0.5,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 16),
-                                              Text(
-                                                content.description,
-                                                style: textTheme.bodyMedium?.copyWith(
-                                                  color: isDark ? Colors.white70 : const Color(0xFF4B5563),
-                                                  height: 1.5,
-                                                  fontSize: 15,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 40),
-                                              Text(
-                                                'Tell us about your startup',
-                                                style: textTheme.titleLarge?.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: isDark ? Colors.white : jpmcNavy,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(width: 48),
-                                        // Right: Coverage List
-                                        Expanded(
-                                          flex: 4,
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'WHAT WE\'LL COVER',
-                                                style: textTheme.labelSmall?.copyWith(
-                                                  fontWeight: FontWeight.w700,
-                                                  color: jpmcGold,
-                                                  letterSpacing: 1.2,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              ...content.topics.map((topic) => Padding(
-                                                padding: const EdgeInsets.only(bottom: 8),
-                                                child: Text(
-                                                  topic,
-                                                  style: textTheme.bodySmall?.copyWith(
-                                                    color: isDark ? Colors.white70 : const Color(0xFF374151),
-                                                    height: 1.4,
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              )),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
+                                    Text(
+                                      'Let\'s start with you',
+                                      style: textTheme.titleLarge?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white : jpmcNavy,
+                                      ),
                                     ),
-                                    const SizedBox(height: 16),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'A few basics so Nova can make the conversation immediately useful.',
+                                      style: textTheme.bodySmall?.copyWith(
+                                        color: isDark ? Colors.white54 : const Color(0xFF6B7280),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 24),
                                     // Lower Section: Balanced Form Fields
                                     Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         // Left Form Fields: Name, Email
                                         Expanded(
-                                          flex: 5,
+                                          flex: 1,
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
@@ -342,7 +288,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                         const SizedBox(width: 48),
                                         // Right Form Fields: Phone, Checkbox, Company
                                         Expanded(
-                                          flex: 4,
+                                          flex: 1,
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
@@ -379,7 +325,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                       ),
                                                       const SizedBox(width: 8),
                                                       Text(
-                                                        'Post-incorporated',
+                                                        'Incorporated',
                                                         style: TextStyle(
                                                           fontSize: 12,
                                                           fontWeight: FontWeight.w500,
@@ -395,80 +341,11 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 12),
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? const Color(0xFF2C261A) : const Color(0xFFFDF8E1),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: isDark ? const Color(0xFF423C2B) : const Color(0xFFF0E6C5)),
-                                      ),
-                                      child: _buildCheckbox(
-                                        _preferManual,
-                                        (val) => setState(() => _preferManual = val ?? false),
-                                        'I prefer filling the form manually — I understand this may result in slower matching and less tailored recommendations',
-                                        isDark,
-                                        isMultiLine: false,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 24),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.schedule_rounded, size: 16, color: isDark ? Colors.white54 : const Color(0xFF9CA3AF)),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          'Est. ${content.duration}',
-                                          style: textTheme.labelLarge?.copyWith(
-                                            color: isDark ? Colors.white54 : const Color(0xFF6B7280),
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
+                                    const SizedBox(height: 32),
                                     Center(
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
-                                          if (_preferManual) ...[
-                                            SizedBox(
-                                              height: 48,
-                                              child: OutlinedButton(
-                                                onPressed: () {
-                                                  final vars = Map<String, dynamic>.from(widget.dynamicVariables);
-                                                  if (_nameController.text.trim().isNotEmpty) vars['userName'] = _nameController.text.trim();
-                                                  if (_emailController.text.trim().isNotEmpty) vars['userEmail'] = _emailController.text.trim();
-                                                  if (_phoneController.text.trim().isNotEmpty) vars['userPhone'] = _phoneController.text.trim();
-                                                  if (_companyController.text.trim().isNotEmpty) vars['companyName'] = _companyController.text.trim();
-                                                  Navigator.of(context).push(MaterialPageRoute(
-                                                    builder: (_) => ManualFormPage(
-                                                      stageBucket: widget.stageBucket,
-                                                      prospectId: widget.prospectId,
-                                                      dynamicVariables: vars,
-                                                      onStartNew: widget.onStartNew,
-                                                    ),
-                                                  ));
-                                                },
-                                                style: OutlinedButton.styleFrom(
-                                                  side: const BorderSide(color: jpmcBlue, width: 1.5),
-                                                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                                ),
-                                                child: const Text(
-                                                  'FILL MANUALLY',
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: jpmcBlue,
-                                                    letterSpacing: 1.0,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 16),
-                                          ],
                                           SizedBox(
                                             height: 48,
                                             width: isMobile ? double.infinity : 320,
@@ -532,6 +409,58 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                   ),
                 );
               },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(
+      BuildContext context, bool isDark, TextTheme textTheme, String title, String description) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(36, 24, 36, 20),
+      decoration: const BoxDecoration(
+        color: jpmcNavy,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: jpmcGold.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: jpmcGold.withOpacity(0.3)),
+            ),
+            child: const Center(
+              child: Text('✦',
+                  style: TextStyle(color: Color(0xFFD4AD46), fontSize: 14)),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: const Color(0xFFD4AD46),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  description,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withOpacity(0.50),
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

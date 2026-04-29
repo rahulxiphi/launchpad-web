@@ -423,7 +423,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                                   ? jpmcGold
                                                   : Colors.white,
                                             ),
-                                      label: const Text('GET STARTED'),
+                                      label: const Text('GO TO HUB'),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: jpmcBlue,
                                         foregroundColor: Colors.white,
