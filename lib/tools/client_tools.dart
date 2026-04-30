@@ -266,6 +266,8 @@ class SetResponseChipsTool implements ClientTool {
   @override
   Future<ClientToolResult?> execute(Map<String, dynamic> parameters) async {
     try {
+      print('[chips][tool] set_response_chips called with raw params: $parameters');
+
       final show = parameters['show_chips'];
       final bool showChips = show is bool
           ? show
@@ -299,7 +301,14 @@ class SetResponseChipsTool implements ClientTool {
         category: category,
         ttlMs: ttlMs,
       );
+
+      print(
+        '[chips][tool] parsed payload showChips=${payload.showChips} chips=${payload.chips} category=${payload.category} ttlMs=${payload.ttlMs}',
+      );
+
       onUpdate(payload);
+
+      print('[chips][tool] onUpdate dispatched successfully');
 
       return ClientToolResult.success({
         'applied': true,
@@ -307,6 +316,7 @@ class SetResponseChipsTool implements ClientTool {
         'chips_count': payload.chips.length,
       });
     } catch (e) {
+      print('[chips][tool] execute failed: $e');
       return ClientToolResult.failure('Failed to set response chips: $e');
     }
   }

@@ -81,6 +81,7 @@ class _VoicePageState extends State<VoicePage> {
   String? _selectedStageChoice;
   _ResponseChipsState _responseChips = _ResponseChipsState.empty;
   int _chipsEpoch = 0;
+  int _disconnectClearEpoch = 0;
   late bool _isChatMode;
 
   // Track the current phase locally so we can update it via tool calls
@@ -92,15 +93,14 @@ class _VoicePageState extends State<VoicePage> {
   @override
   void initState() {
     super.initState();
-
+    
     _isChatMode = widget.initialMode == 'chat';
 
     // Initialize active phase from dynamic variables
     final phaseStr = widget.dynamicVariables['conversation_phase']?.toString();
     _activePhase = int.tryParse(phaseStr ?? '1') ?? 1;
 
-    _client = ConversationClient(
-      clientTools: {
+    final clientTools = <String, ClientTool>{
         'capture_need': CaptureNeedTool(prospectId: widget.prospectId),
         'search_products': SearchProductsTool(prospectId: widget.prospectId),
         'record_off_ramp': RecordOffRampTool(prospectId: widget.prospectId),
@@ -119,18 +119,33 @@ class _VoicePageState extends State<VoicePage> {
         'record_handoff': RecordHandoffTool(prospectId: widget.prospectId),
         'set_response_chips': SetResponseChipsTool(
           onUpdate: (payload) {
-            if (!mounted) return;
+            if (!mounted) {
+              print('[chips][ui] onUpdate ignored because widget is not mounted');
+              return;
+            }
+            print(
+              '[chips][ui] onUpdate received showChips=${payload.showChips} chips=${payload.chips} category=${payload.category} ttlMs=${payload.ttlMs}',
+            );
             _applyResponseChips(payload);
           },
         ),
-      },
+      };
+
+    print('[chips][ui] registering client tools: ${clientTools.keys.toList()}');
+
+    _client = ConversationClient(
+      clientTools: clientTools,
       callbacks: ConversationCallbacks(
         onConnect: ({required conversationId}) {
+          print('[chips][ui] onConnect conversationId=$conversationId mode=${_isChatMode ? 'chat' : 'voice'}');
           if (!mounted) return;
           setState(() => _statusText = _isChatMode ? 'Chatting' : 'Listening');
         },
         onDisconnect: (_) {
           if (!mounted || _conversationEnded) return;
+          print(
+            '[chips][ui] onDisconnect triggered; clearing chips and marking conversation ended',
+          );
           // Inject the return link as the final AI message
           final uri = Uri.base;
           final origin = uri.origin;
@@ -142,10 +157,8 @@ class _VoicePageState extends State<VoicePage> {
           setState(() {
             _conversationEnded = true;
             _statusText = 'Conversation ended';
-            _responseChips = _ResponseChipsState.empty;
             if (returnUrl != null) {
-              final email =
-                  widget.dynamicVariables['userEmail']?.toString() ?? '';
+              final email = widget.dynamicVariables['userEmail']?.toString() ?? '';
               final emailNote = email.isNotEmpty
                   ? "We've also sent this link to $email"
                   : "Save this link to come back anytime";
@@ -170,6 +183,17 @@ class _VoicePageState extends State<VoicePage> {
                 }
               }
             }
+          });
+          // Keep chips briefly so late tool callbacks can render final options.
+          _disconnectClearEpoch += 1;
+          final scheduledEpoch = _disconnectClearEpoch;
+          Future<void>.delayed(const Duration(seconds: 2), () {
+            if (!mounted) return;
+            if (scheduledEpoch != _disconnectClearEpoch) return;
+            setState(() {
+              _responseChips = _ResponseChipsState.empty;
+            });
+            print('[chips][ui] delayed disconnect clear executed');
           });
           _loadClassificationSummary();
           _scrollToBottom();
@@ -218,7 +242,8 @@ class _VoicePageState extends State<VoicePage> {
                 ..text = transcript
                 ..isTentative = false;
             } else {
-              _transcript.add(_TranscriptEntry(isUser: true, text: transcript));
+              _transcript.add(
+                  _TranscriptEntry(isUser: true, text: transcript));
             }
           });
           _scrollToBottom();
@@ -248,7 +273,8 @@ class _VoicePageState extends State<VoicePage> {
                   ..text = message
                   ..isTentative = false;
               } else {
-                _transcript.add(_TranscriptEntry(isUser: false, text: message));
+                _transcript.add(
+                    _TranscriptEntry(isUser: false, text: message));
               }
             });
             _scrollToBottom();
@@ -265,8 +291,11 @@ class _VoicePageState extends State<VoicePage> {
 
   bool _isIdentityCategory(String? category) {
     if (category == null || category.isEmpty) return false;
-    final normalized =
-        category.trim().toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
+    final normalized = category
+        .trim()
+        .toLowerCase()
+        .replaceAll('-', '_')
+        .replaceAll(' ', '_');
 
     const exactBlocked = <String>{
       'company_name',
@@ -282,8 +311,8 @@ class _VoicePageState extends State<VoicePage> {
     if (exactBlocked.contains(normalized)) return true;
 
     const keywordBlocked = <String>[
-      'company',
-      'founder',
+      'company_name',
+      'founder_name',
       'email',
       'phone',
       'website',
@@ -291,7 +320,9 @@ class _VoicePageState extends State<VoicePage> {
       'identity',
       'contact',
     ];
-    return keywordBlocked.any(normalized.contains);
+    return keywordBlocked.any(
+      (keyword) => normalized == keyword || normalized.startsWith('${keyword}_'),
+    );
   }
 
   void _applyResponseChips(SetResponseChipsPayload payload) {
@@ -300,10 +331,15 @@ class _VoicePageState extends State<VoicePage> {
         ? now.add(Duration(milliseconds: payload.ttlMs!))
         : null;
 
+    final blockedByCategory = _isIdentityCategory(payload.category);
+
     final shouldShow = payload.showChips &&
         payload.chips.isNotEmpty &&
-        !_isIdentityCategory(payload.category) &&
-        !_conversationEnded;
+      !blockedByCategory;
+
+    print(
+      '[chips][ui] apply start show=${payload.showChips} chipsNotEmpty=${payload.chips.isNotEmpty} blockedByCategory=$blockedByCategory conversationEnded=$_conversationEnded => shouldShow=$shouldShow',
+    );
 
     final next = _ResponseChipsState(
       show: shouldShow,
@@ -316,6 +352,7 @@ class _VoicePageState extends State<VoicePage> {
         _responseChips.expiresAt == next.expiresAt &&
         _responseChips.chips.length == next.chips.length &&
         _responseChips.chips.join('|') == next.chips.join('|')) {
+      print('[chips][ui] skip state update (no effective change)');
       return;
     }
 
@@ -324,8 +361,13 @@ class _VoicePageState extends State<VoicePage> {
       _chipsEpoch += 1;
     });
 
+    print(
+      '[chips][ui] state applied show=${_responseChips.show} chips=${_responseChips.chips} expiresAt=${_responseChips.expiresAt} epoch=$_chipsEpoch',
+    );
+
     if (next.expiresAt != null) {
       final int scheduledEpoch = _chipsEpoch;
+      print('[chips][ui] expiry timer scheduled epoch=$scheduledEpoch expiresAt=${next.expiresAt}');
       Future<void>.delayed(next.expiresAt!.difference(now), () {
         if (!mounted) return;
         if (scheduledEpoch != _chipsEpoch) return;
@@ -336,6 +378,7 @@ class _VoicePageState extends State<VoicePage> {
           _responseChips = _ResponseChipsState.empty;
           _chipsEpoch += 1;
         });
+        print('[chips][ui] expiry timer cleared chips epoch=$_chipsEpoch');
       });
     }
   }
@@ -429,12 +472,12 @@ class _VoicePageState extends State<VoicePage> {
     });
 
     try {
-      final prospect =
-          await _conversationService.getProspect(widget.prospectId!);
+      final prospect = await _conversationService.getProspect(widget.prospectId!);
       if (!mounted) return;
       setState(() {
         _classification = prospect.classification;
-        _selectedStageChoice = prospect.classification?.confirmedStageBucket ??
+        _selectedStageChoice =
+            prospect.classification?.confirmedStageBucket ??
             prospect.classification?.inferredStageBucket;
       });
     } catch (e) {
@@ -479,8 +522,7 @@ class _VoicePageState extends State<VoicePage> {
         // Convert snake_case to Title Case (e.g. 'super_agent_stage' → 'Super Agent Stage')
         return widget.stageBucket
             .split('_')
-            .map((w) =>
-                w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+            .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
             .join(' ');
     }
   }
@@ -578,142 +620,127 @@ class _VoicePageState extends State<VoicePage> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: SizedBox(
                 height: double.infinity,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 848),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ── Chat container ────────────────────────────────────────
-                      Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF1E1E1E)
-                                : const Color(0xFFF5F3EE),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isDark
-                                  ? Colors.grey.shade800
-                                  : const Color(0xFFE5E0D4),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.06),
-                                blurRadius: 20,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              VoiceHeader(
-                                agentName: _agentName,
-                                stageLabel: _stageLabel,
-                                statusText: _statusText,
-                                currentPhase: _activePhase,
-                                isSpeaking: _client.isSpeaking,
-                                isEnded: _conversationEnded,
-                                onEnd: _endSession,
-                                onStartNew: _startNewSession,
-                                colorScheme: colorScheme,
-                              ),
-                              Expanded(
-                                child: _transcript.isEmpty
-                                    ? Center(
-                                        child: Text(
-                                          _client.status ==
-                                                  ConversationStatus.connecting
-                                              ? 'Connecting to $_agentName…'
-                                              : (_isChatMode
-                                                  ? '$_agentName is ready.\nType your first message below.'
-                                                  : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.'),
-                                          textAlign: TextAlign.center,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.copyWith(
-                                                color: colorScheme
-                                                    .onSurfaceVariant,
-                                                height: 1.6,
-                                              ),
-                                        ),
-                                      )
-                                    : ListView.builder(
-                                        controller: _scrollController,
-                                        padding: const EdgeInsets.fromLTRB(
-                                            16, 8, 16, 16),
-                                        itemCount: _transcript.length,
-                                        itemBuilder: (context, index) {
-                                          final entry = _transcript[index];
-                                          final prevEntry = index > 0
-                                              ? _transcript[index - 1]
-                                              : null;
-                                          final nextEntry =
-                                              index < _transcript.length - 1
-                                                  ? _transcript[index + 1]
-                                                  : null;
-                                          final isPrevSame = prevEntry !=
-                                                  null &&
-                                              prevEntry.isUser == entry.isUser;
-                                          final isNextSame = nextEntry !=
-                                                  null &&
-                                              nextEntry.isUser == entry.isUser;
-
-                                          return VoiceBubbleRow(
-                                            isUser: entry.isUser,
-                                            text: entry.text,
-                                            isTentative: entry.isTentative,
-                                            isPrevSame: isPrevSame,
-                                            isNextSame: isNextSame,
-                                            agentInitial: _agentName.isNotEmpty
-                                                ? _agentName[0].toUpperCase()
-                                                : 'A',
-                                          );
-                                        },
-                                      ),
-                              ),
-                              if (_conversationEnded)
-                                _buildClassificationSummary(),
-                              _BottomBar(
-                                isConnected: isConnected,
-                                isMuted: _client.isMuted,
-                                isEnded: _conversationEnded,
-                                isChatMode: _isChatMode,
-                                prospectId: widget.prospectId,
-                                suggestionChips: _responseChips.show
-                                    ? _responseChips.chips
-                                    : const <String>[],
-                                onToggleMute: () => _client.toggleMute(),
-                                onToggleMode: () async {
-                                  final newMode = !_isChatMode;
-                                  setState(() {
-                                    _isChatMode = newMode;
-                                    if (_statusText == 'Listening' ||
-                                        _statusText == 'Chatting') {
-                                      _statusText =
-                                          newMode ? 'Chatting' : 'Listening';
-                                    }
-                                  });
-                                  if (isConnected && !_conversationEnded) {
-                                    await _client.setMicMuted(newMode);
-                                  }
-                                },
-                                onSend: _sendTextMessage,
-                                onStartNew: _startNewSession,
-                              ),
-                            ],
-                          ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 848),
+                child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Chat container ────────────────────────────────────────
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF1E1E1E)
+                            : const Color(0xFFF5F3EE),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.grey.shade800
+                              : const Color(0xFFE5E0D4),
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 20,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
-                    ],
+                      child: Column(
+                        children: [
+                          VoiceHeader(
+                            agentName: _agentName,
+                            stageLabel: _stageLabel,
+                            statusText: _statusText,
+                            currentPhase: _activePhase,
+                            isSpeaking: _client.isSpeaking,
+                            isEnded: _conversationEnded,
+                            onEnd: _endSession,
+                            onStartNew: _startNewSession,
+                            colorScheme: colorScheme,
+                          ),
+                          Expanded(
+                            child: _transcript.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      _client.status ==
+                                              ConversationStatus.connecting
+                                          ? 'Connecting to $_agentName…'
+                                          : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.',
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color:
+                                                colorScheme.onSurfaceVariant,
+                                            height: 1.6,
+                                          ),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    controller: _scrollController,
+                                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                                    itemCount: _transcript.length,
+                                    itemBuilder: (context, index) {
+                                      final entry = _transcript[index];
+                                      final prevEntry = index > 0 ? _transcript[index - 1] : null;
+                                      final nextEntry = index < _transcript.length - 1 ? _transcript[index + 1] : null;
+                                      final isPrevSame = prevEntry != null && prevEntry.isUser == entry.isUser;
+                                      final isNextSame = nextEntry != null && nextEntry.isUser == entry.isUser;
+                                      
+                                      return VoiceBubbleRow(
+                                        isUser: entry.isUser,
+                                        text: entry.text,
+                                        isTentative: entry.isTentative,
+                                        isPrevSame: isPrevSame,
+                                        isNextSame: isNextSame,
+                                        agentInitial: _agentName.isNotEmpty
+                                            ? _agentName[0].toUpperCase()
+                                            : 'A',
+                                      );
+                                    },
+                                  ),
+                          ),
+                                  if (_conversationEnded) _buildClassificationSummary(),
+                          _BottomBar(
+                            isConnected: isConnected,
+                            isMuted: _client.isMuted,
+                            isEnded: _conversationEnded,
+                            isChatMode: _isChatMode,
+                            prospectId: widget.prospectId,
+                            suggestionChips: _responseChips.show
+                                ? _responseChips.chips
+                                : const <String>[],
+                            onToggleMute: () => _client.toggleMute(),
+                            onToggleMode: () async {
+                              final newMode = !_isChatMode;
+                              setState(() {
+                                _isChatMode = newMode;
+                                if (_statusText == 'Listening' || _statusText == 'Chatting') {
+                                  _statusText = newMode ? 'Chatting' : 'Listening';
+                                }
+                              });
+                              if (isConnected && !_conversationEnded) {
+                                await _client.setMicMuted(newMode);
+                              }
+                            },
+                            onSend: _sendTextMessage,
+                            onStartNew: _startNewSession,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ), // closes ConstrainedBox
-              ), // closes SizedBox(height)
-            ), // closes Padding
-          ), // closes Center
-        ), // closes SizedBox.expand
-      ), // closes SafeArea
-    );
+                ],
+              ),
+            ),           // closes ConstrainedBox
+          ),             // closes SizedBox(height)
+        ),               // closes Padding
+      ),                 // closes Center
+    ),                   // closes SizedBox.expand
+  ),                     // closes SafeArea
+);
   }
 }
 
@@ -773,6 +800,11 @@ class _BottomBarState extends State<_BottomBar> {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final chips = widget.suggestionChips;
+    if (chips.isNotEmpty && widget.isEnded) {
+      print(
+        '[chips][ui] chips suppressed by render gate because isEnded=true chips=$chips',
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -788,8 +820,8 @@ class _BottomBarState extends State<_BottomBar> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Suggestion chips (only when conversation is active) ───────────
-          if (!widget.isEnded && chips.isNotEmpty)
+          // ── Suggestion chips ───────────────────────────────────────────────
+          if (chips.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Wrap(
@@ -805,7 +837,9 @@ class _BottomBarState extends State<_BottomBar> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 7),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+                        color: isDark
+                            ? const Color(0xFF1F2937)
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(
                           color: isDark
@@ -838,9 +872,7 @@ class _BottomBarState extends State<_BottomBar> {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF1F2937)
-                          : const Color(0xFFFDFCF9),
+                      color: isDark ? const Color(0xFF1F2937) : const Color(0xFFFDFCF9),
                       borderRadius: BorderRadius.circular(32),
                       border: Border.all(
                         color: colorScheme.outlineVariant,
@@ -870,9 +902,7 @@ class _BottomBarState extends State<_BottomBar> {
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                                  color: isDark
-                                      ? Colors.white
-                                      : const Color(0xFF1F2937),
+                                  color: isDark ? Colors.white : const Color(0xFF1F2937),
                                 ),
                             textAlignVertical: TextAlignVertical.center,
                             minLines: 1,
@@ -880,9 +910,7 @@ class _BottomBarState extends State<_BottomBar> {
                             decoration: InputDecoration(
                               hintText: widget.isEnded
                                   ? "You can't type now, Conversation Ended."
-                                  : (widget.isConnected
-                                      ? 'Type a message…'
-                                      : 'Connecting…'),
+                                  : (widget.isConnected ? 'Type a message…' : 'Connecting…'),
                               hintStyle: Theme.of(context)
                                   .textTheme
                                   .bodyMedium
@@ -903,8 +931,7 @@ class _BottomBarState extends State<_BottomBar> {
                           child: ValueListenableBuilder<TextEditingValue>(
                             valueListenable: _textController,
                             builder: (context, value, _) {
-                              final canSend = widget.isConnected &&
-                                  !widget.isEnded &&
+                              final canSend = widget.isConnected && !widget.isEnded &&
                                   value.text.trim().isNotEmpty;
                               return GestureDetector(
                                 onTap: canSend ? _submit : null,
@@ -934,81 +961,46 @@ class _BottomBarState extends State<_BottomBar> {
                     ),
                   ),
                 ),
-                // ── Right Side Buttons ───────────────────────
-                const SizedBox(width: 12),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Microphone button (only in Voice Mode)
-                    if (!widget.isChatMode) ...[
-                      GestureDetector(
-                        onTap: (widget.isConnected && !widget.isEnded)
-                            ? widget.onToggleMute
-                            : null,
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: (widget.isMuted || widget.isEnded)
-                                ? colorScheme.errorContainer
-                                : const Color(0xFF006CAD),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                // ── Microphone button (voice mode only) ──────────────────
+                if (!widget.isChatMode) ...[
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: (widget.isConnected && !widget.isEnded) ? widget.onToggleMute : null,
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: (widget.isMuted || widget.isEnded)
+                            ? colorScheme.errorContainer
+                            : const Color(0xFF006CAD),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
                           ),
-                          child: Icon(
-                            (widget.isMuted || widget.isEnded)
-                                ? Icons.mic_off_rounded
-                                : Icons.mic_rounded,
-                            size: 22,
-                            color: (widget.isMuted || widget.isEnded)
-                                ? colorScheme.onErrorContainer
-                                : Colors.white,
-                          ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                    ],
-                    /* // Toggle Mode Button (Always on the far right)
-                    GestureDetector(
-                      onTap: widget.onToggleMode,
-                      child: Container(
-                        height: 44,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFC8872A),
-                          borderRadius: BorderRadius.circular(22),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          widget.isChatMode ? "Let's talk" : "Let's chat",
-                          style: const TextStyle(
-                            color: Color(0xFF0A2744),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
+                      child: Icon(
+                        (widget.isMuted || widget.isEnded)
+                            ? Icons.mic_off_rounded
+                            : Icons.mic_rounded,
+                        size: 22,
+                        color: (widget.isMuted || widget.isEnded)
+                            ? colorScheme.onErrorContainer
+                            : Colors.white,
                       ),
-                    ), */
-                  ],
-                ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ],
       ),
     );
+
   }
 }
+
