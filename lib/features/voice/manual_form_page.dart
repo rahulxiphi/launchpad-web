@@ -39,11 +39,11 @@ class _ManualFormPageState extends State<ManualFormPage> {
 
   // Priorities
   final _priorityOptions = [
-    ('Banking & treasury setup', 'Account structure, cash management, yield on reserves'),
+    ('International expansion', 'New markets, FX, cross-border payments'),
     ('Fundraising & investor relations', 'Preparing for a round, cap table, wire management'),
     ('Credit & lending', 'Venture debt, credit lines, equipment financing'),
     ('Payments & operations', 'Vendor payments, payroll, multi-currency'),
-    ('International expansion', 'New markets, FX, cross-border payments'),
+    ('Banking & treasury setup', 'Account structure, cash management, yield on reserves'),
   ];
   final Set<String> _selectedPriorities = {};
 
@@ -109,7 +109,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
           // Background image
@@ -142,7 +142,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                   physics: const BouncingScrollPhysics(),
                   child: Center(
                     child: Container(
-                      width: isMobile ? double.infinity : 760,
+                      width: isMobile ? double.infinity : 840,
                       margin: EdgeInsets.symmetric(
                         horizontal: isMobile ? 0 : 24,
                         vertical: isMobile ? 0 : 32,
@@ -172,9 +172,9 @@ class _ManualFormPageState extends State<ManualFormPage> {
                           Padding(
                             padding: EdgeInsets.fromLTRB(
                               isMobile ? 24 : 36,
-                              24,
+                              16,
                               isMobile ? 24 : 36,
-                              24,
+                              20,
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,22 +284,25 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                 ),
                                 const SizedBox(height: 16),
 
-                                Wrap(
-                                  spacing: 16,
-                                  runSpacing: 10,
-                                  children: _priorityOptions.map((entry) {
-                                    final title = entry.$1;
-                                    final subtitle = entry.$2;
-                                    final isSelected =
-                                        _selectedPriorities.contains(title);
-                                    final isDisabled =
-                                        !isSelected && _selectedPriorities.length >= 3;
-                                    return SizedBox(
-                                      width: isMobile ? double.infinity : 336,
-                                      child: GestureDetector(
-                                        onTap: isDisabled
-                                            ? null
-                                            : () => _togglePriority(title),
+                                LayoutBuilder(
+                                  builder: (context, boxConstraints) {
+                                    final cardWidth = (boxConstraints.maxWidth - 16) / 2;
+                                    return Wrap(
+                                      spacing: 16,
+                                      runSpacing: 12,
+                                      children: _priorityOptions.map((entry) {
+                                        final title = entry.$1;
+                                        final subtitle = entry.$2;
+                                        final isSelected =
+                                            _selectedPriorities.contains(title);
+                                        final isDisabled =
+                                            !isSelected && _selectedPriorities.length >= 3;
+                                        return SizedBox(
+                                          width: isMobile ? double.infinity : cardWidth,
+                                          child: GestureDetector(
+                                            onTap: isDisabled
+                                                ? null
+                                                : () => _togglePriority(title),
                                         child: AnimatedOpacity(
                                           duration:
                                               const Duration(milliseconds: 200),
@@ -307,8 +310,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                           child: AnimatedContainer(
                                             duration:
                                                 const Duration(milliseconds: 180),
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 16, vertical: 12),
+                                            padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
                                             decoration: BoxDecoration(
                                               color: isSelected
                                                   ? (isDark
@@ -382,8 +384,6 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                                       const SizedBox(height: 2),
                                                       Text(
                                                         subtitle,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
                                                         style: TextStyle(
                                                           fontSize: 12,
                                                           color: isDark
@@ -402,7 +402,9 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                         ),
                                       ),
                                     );
-                                  }).toList(),
+                                      }).toList(),
+                                    );
+                                  },
                                 ),
 
                                 const SizedBox(height: 24),
@@ -423,7 +425,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                                   ? jpmcGold
                                                   : Colors.white,
                                             ),
-                                      label: const Text('GO TO HUB'),
+                                      label: const Text('GO TO RELATIONSHIP HUB'),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: jpmcBlue,
                                         foregroundColor: Colors.white,
@@ -471,17 +473,19 @@ class _ManualFormPageState extends State<ManualFormPage> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: jpmcGold.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: jpmcGold.withOpacity(0.3)),
-            ),
-            child: const Center(
-              child: Text('✦',
-                  style: TextStyle(color: Color(0xFFD4AD46), fontSize: 14)),
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: jpmcGold.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: jpmcGold.withOpacity(0.3)),
+              ),
+              child: const Center(
+                child: Icon(Icons.arrow_back, color: Color(0xFFD4AD46), size: 18),
+              ),
             ),
           ),
           const SizedBox(width: 14),

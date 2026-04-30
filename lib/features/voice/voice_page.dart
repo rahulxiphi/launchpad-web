@@ -954,7 +954,7 @@ class _BottomBarState extends State<_BottomBar> {
                       ),
                       const SizedBox(width: 8),
                     ],
-                    // Toggle Mode Button (Always on the far right)
+                    /* // Toggle Mode Button (Always on the far right)
                     GestureDetector(
                       onTap: widget.onToggleMode,
                       child: Container(
@@ -981,7 +981,7 @@ class _BottomBarState extends State<_BottomBar> {
                           ),
                         ),
                       ),
-                    ),
+                    ), */
                   ],
                 ),
               ],

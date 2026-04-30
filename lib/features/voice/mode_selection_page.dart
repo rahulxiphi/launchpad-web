@@ -102,7 +102,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
           Positioned.fill(
@@ -133,7 +133,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
                   physics: const BouncingScrollPhysics(),
                   child: Center(
                     child: Container(
-                      width: isMobile ? double.infinity : 760,
+                      width: isMobile ? double.infinity : 840,
                       margin: EdgeInsets.symmetric(
                         horizontal: isMobile ? 0 : 24,
                         vertical: isMobile ? 0 : 32,
@@ -159,9 +159,9 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
                           // ── Body ────────────────────────────────────────
                           Padding(
                             padding: EdgeInsets.fromLTRB(
-                              isMobile ? 24 : 48,
+                              isMobile ? 24 : 36,
                               16,
-                              isMobile ? 24 : 48,
+                              isMobile ? 24 : 36,
                               32,
                             ),
                             child: Column(
@@ -243,12 +243,12 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
                                     color: isDark ? Colors.white54 : const Color(0xFF6B7280),
                                   ),
                                 ),
-                                const SizedBox(height: 32),
-
+                                const SizedBox(height: 40),
+                                
                                 // Checkbox for Manual form
                                 Container(
                                   width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                   decoration: BoxDecoration(
                                     color: isDark ? const Color(0xFF2C261A) : const Color(0xFFFDF8E1),
                                     borderRadius: BorderRadius.circular(12),
@@ -261,11 +261,11 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
                                     isDark,
                                   ),
                                 ),
-                                const SizedBox(height: 32),
+                                const SizedBox(height: 24),
 
                                 // Footer row
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     TextButton.icon(
                                       onPressed: _preferManual ? _goToManualForm : null,
@@ -284,13 +284,42 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
                                         disabledForegroundColor: Colors.grey,
                                       ),
                                     ),
+                                    const SizedBox(width: 22),
+                                    Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          height: 12,
+                                          width: 1,
+                                          color: isDark ? Colors.white24 : Colors.grey.shade300,
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 4),
+                                          child: Text(
+                                            'OR',
+                                            style: textTheme.labelSmall?.copyWith(
+                                              color: isDark ? Colors.white38 : Colors.grey.shade500,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 10,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          height: 12,
+                                          width: 1,
+                                          color: isDark ? Colors.white24 : Colors.grey.shade300,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(width: 32),
                                     ElevatedButton(
                                       onPressed: _isFetchingToken ? null : () => _startSession(isChatMode: true),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: jpmcGold,
                                         foregroundColor: jpmcNavy,
                                         elevation: 0,
-                                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+                                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
                                       ),
                                       child: const Text(
@@ -325,17 +354,19 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
       ),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: jpmcGold.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: jpmcGold.withOpacity(0.3)),
-            ),
-            child: const Center(
-              child: Text('✦',
-                  style: TextStyle(color: Color(0xFFD4AD46), fontSize: 14)),
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: jpmcGold.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: jpmcGold.withOpacity(0.3)),
+              ),
+              child: const Center(
+                child: Icon(Icons.arrow_back, color: Color(0xFFD4AD46), size: 18),
+              ),
             ),
           ),
           const SizedBox(width: 14),
@@ -429,12 +460,11 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
       onTap: () => onChanged(!value),
       behavior: HitTestBehavior.opaque,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 20,
             height: 20,
-            margin: const EdgeInsets.only(top: 2),
             decoration: BoxDecoration(
               color: value ? jpmcBlue : Colors.transparent,
               borderRadius: BorderRadius.circular(5),
