@@ -392,20 +392,21 @@ class _VoicePageState extends State<VoicePage> {
   // ---------------------------------------------------------------------------
   Future<void> _startSession() async {
     try {
+      final dynamicVariables =
+          Map<String, dynamic>.from(widget.dynamicVariables);
+      dynamicVariables['initial_mode'] = widget.initialMode;
+
       await _client.startSession(
         conversationToken: widget.conversationToken,
-        dynamicVariables: widget.dynamicVariables.isNotEmpty
-            ? widget.dynamicVariables
+        dynamicVariables: dynamicVariables,
+        overrides: widget.initialMode == 'chat'
+            ? ConversationOverrides(
+                conversation: ConversationSettingsOverrides(
+                  textOnly: true,
+                ),
+              )
             : null,
       );
-      
-      // If we started in chat mode, make sure mic is muted just in case
-      // textOnly doesn't automatically mute it in the SDK state
-      if (widget.initialMode == 'chat') {
-        // Wait briefly to ensure LiveKit has fully grabbed the mic track
-        await Future.delayed(const Duration(milliseconds: 500));
-        await _client.setMicMuted(true);
-      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -955,74 +956,39 @@ class _BottomBarState extends State<_BottomBar> {
                     ),
                   ),
                 ),
-                // ── Right Side Buttons ───────────────────────
-                const SizedBox(width: 12),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Microphone button (only in Voice Mode)
-                    if (!widget.isChatMode) ...[
-                      GestureDetector(
-                        onTap: (widget.isConnected && !widget.isEnded) ? widget.onToggleMute : null,
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: (widget.isMuted || widget.isEnded)
-                                ? colorScheme.errorContainer
-                                : const Color(0xFF006CAD),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                // ── Microphone button (voice mode only) ──────────────────
+                if (!widget.isChatMode) ...[
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: (widget.isConnected && !widget.isEnded) ? widget.onToggleMute : null,
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: (widget.isMuted || widget.isEnded)
+                            ? colorScheme.errorContainer
+                            : const Color(0xFF006CAD),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
                           ),
-                          child: Icon(
-                            (widget.isMuted || widget.isEnded)
-                                ? Icons.mic_off_rounded
-                                : Icons.mic_rounded,
-                            size: 22,
-                            color: (widget.isMuted || widget.isEnded)
-                                ? colorScheme.onErrorContainer
-                                : Colors.white,
-                          ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                    ],
-                    // Toggle Mode Button (Always on the far right)
-                    GestureDetector(
-                      onTap: widget.onToggleMode,
-                      child: Container(
-                        height: 44,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFC8872A),
-                          borderRadius: BorderRadius.circular(22),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          widget.isChatMode ? "Let's talk" : "Let's chat",
-                          style: const TextStyle(
-                            color: Color(0xFF0A2744),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
+                      child: Icon(
+                        (widget.isMuted || widget.isEnded)
+                            ? Icons.mic_off_rounded
+                            : Icons.mic_rounded,
+                        size: 22,
+                        color: (widget.isMuted || widget.isEnded)
+                            ? colorScheme.onErrorContainer
+                            : Colors.white,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ],
             ),
           ),
