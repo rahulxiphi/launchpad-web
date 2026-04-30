@@ -100,8 +100,7 @@ class _VoicePageState extends State<VoicePage> {
     final phaseStr = widget.dynamicVariables['conversation_phase']?.toString();
     _activePhase = int.tryParse(phaseStr ?? '1') ?? 1;
 
-    _client = ConversationClient(
-      clientTools: {
+    final clientTools = <String, ClientTool>{
         'capture_need': CaptureNeedTool(prospectId: widget.prospectId),
         'search_products': SearchProductsTool(prospectId: widget.prospectId),
         'record_off_ramp': RecordOffRampTool(prospectId: widget.prospectId),
@@ -130,9 +129,15 @@ class _VoicePageState extends State<VoicePage> {
             _applyResponseChips(payload);
           },
         ),
-      },
+      };
+
+    print('[chips][ui] registering client tools: ${clientTools.keys.toList()}');
+
+    _client = ConversationClient(
+      clientTools: clientTools,
       callbacks: ConversationCallbacks(
         onConnect: ({required conversationId}) {
+          print('[chips][ui] onConnect conversationId=$conversationId mode=${_isChatMode ? 'chat' : 'voice'}');
           if (!mounted) return;
           setState(() => _statusText = _isChatMode ? 'Chatting' : 'Listening');
         },
