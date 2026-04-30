@@ -81,6 +81,7 @@ class _VoicePageState extends State<VoicePage> {
   String? _selectedStageChoice;
   _ResponseChipsState _responseChips = _ResponseChipsState.empty;
   int _chipsEpoch = 0;
+  int _disconnectClearEpoch = 0;
   late bool _isChatMode;
 
   // Track the current phase locally so we can update it via tool calls
@@ -119,7 +120,13 @@ class _VoicePageState extends State<VoicePage> {
         'record_handoff': RecordHandoffTool(prospectId: widget.prospectId),
         'set_response_chips': SetResponseChipsTool(
           onUpdate: (payload) {
-            if (!mounted) return;
+            if (!mounted) {
+              print('[chips][ui] onUpdate ignored because widget is not mounted');
+              return;
+            }
+            print(
+              '[chips][ui] onUpdate received showChips=${payload.showChips} chips=${payload.chips} category=${payload.category} ttlMs=${payload.ttlMs}',
+            );
             _applyResponseChips(payload);
           },
         ),
@@ -131,6 +138,9 @@ class _VoicePageState extends State<VoicePage> {
         },
         onDisconnect: (_) {
           if (!mounted || _conversationEnded) return;
+          print(
+            '[chips][ui] onDisconnect triggered; clearing chips and marking conversation ended',
+          );
           // Inject the return link as the final AI message
           final uri = Uri.base;
           final origin = uri.origin;
@@ -142,7 +152,6 @@ class _VoicePageState extends State<VoicePage> {
           setState(() {
             _conversationEnded = true;
             _statusText = 'Conversation ended';
-            _responseChips = _ResponseChipsState.empty;
             if (returnUrl != null) {
               final email = widget.dynamicVariables['userEmail']?.toString() ?? '';
               final emailNote = email.isNotEmpty
@@ -169,6 +178,17 @@ class _VoicePageState extends State<VoicePage> {
                 }
               }
             }
+          });
+          // Keep chips briefly so late tool callbacks can render final options.
+          _disconnectClearEpoch += 1;
+          final scheduledEpoch = _disconnectClearEpoch;
+          Future<void>.delayed(const Duration(seconds: 2), () {
+            if (!mounted) return;
+            if (scheduledEpoch != _disconnectClearEpoch) return;
+            setState(() {
+              _responseChips = _ResponseChipsState.empty;
+            });
+            print('[chips][ui] delayed disconnect clear executed');
           });
           _loadClassificationSummary();
           _scrollToBottom();
@@ -286,8 +306,8 @@ class _VoicePageState extends State<VoicePage> {
     if (exactBlocked.contains(normalized)) return true;
 
     const keywordBlocked = <String>[
-      'company',
-      'founder',
+      'company_name',
+      'founder_name',
       'email',
       'phone',
       'website',
@@ -295,7 +315,9 @@ class _VoicePageState extends State<VoicePage> {
       'identity',
       'contact',
     ];
-    return keywordBlocked.any(normalized.contains);
+    return keywordBlocked.any(
+      (keyword) => normalized == keyword || normalized.startsWith('${keyword}_'),
+    );
   }
 
   void _applyResponseChips(SetResponseChipsPayload payload) {
@@ -304,10 +326,15 @@ class _VoicePageState extends State<VoicePage> {
         ? now.add(Duration(milliseconds: payload.ttlMs!))
         : null;
 
+    final blockedByCategory = _isIdentityCategory(payload.category);
+
     final shouldShow = payload.showChips &&
         payload.chips.isNotEmpty &&
-        !_isIdentityCategory(payload.category) &&
-        !_conversationEnded;
+      !blockedByCategory;
+
+    print(
+      '[chips][ui] apply start show=${payload.showChips} chipsNotEmpty=${payload.chips.isNotEmpty} blockedByCategory=$blockedByCategory conversationEnded=$_conversationEnded => shouldShow=$shouldShow',
+    );
 
     final next = _ResponseChipsState(
       show: shouldShow,
@@ -320,6 +347,7 @@ class _VoicePageState extends State<VoicePage> {
         _responseChips.expiresAt == next.expiresAt &&
         _responseChips.chips.length == next.chips.length &&
         _responseChips.chips.join('|') == next.chips.join('|')) {
+      print('[chips][ui] skip state update (no effective change)');
       return;
     }
 
@@ -328,8 +356,13 @@ class _VoicePageState extends State<VoicePage> {
       _chipsEpoch += 1;
     });
 
+    print(
+      '[chips][ui] state applied show=${_responseChips.show} chips=${_responseChips.chips} expiresAt=${_responseChips.expiresAt} epoch=$_chipsEpoch',
+    );
+
     if (next.expiresAt != null) {
       final int scheduledEpoch = _chipsEpoch;
+      print('[chips][ui] expiry timer scheduled epoch=$scheduledEpoch expiresAt=${next.expiresAt}');
       Future<void>.delayed(next.expiresAt!.difference(now), () {
         if (!mounted) return;
         if (scheduledEpoch != _chipsEpoch) return;
@@ -340,6 +373,7 @@ class _VoicePageState extends State<VoicePage> {
           _responseChips = _ResponseChipsState.empty;
           _chipsEpoch += 1;
         });
+        print('[chips][ui] expiry timer cleared chips epoch=$_chipsEpoch');
       });
     }
   }
@@ -760,6 +794,11 @@ class _BottomBarState extends State<_BottomBar> {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final chips = widget.suggestionChips;
+    if (chips.isNotEmpty && widget.isEnded) {
+      print(
+        '[chips][ui] chips suppressed by render gate because isEnded=true chips=$chips',
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -775,8 +814,8 @@ class _BottomBarState extends State<_BottomBar> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Suggestion chips (only when conversation is active) ───────────
-          if (!widget.isEnded && chips.isNotEmpty)
+          // ── Suggestion chips ───────────────────────────────────────────────
+          if (chips.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Wrap(
