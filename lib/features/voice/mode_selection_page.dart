@@ -22,7 +22,8 @@ class ModeSelectionPage extends StatefulWidget {
   State<ModeSelectionPage> createState() => _ModeSelectionPageState();
 }
 
-class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTickerProviderStateMixin {
+class _ModeSelectionPageState extends State<ModeSelectionPage>
+    with SingleTickerProviderStateMixin {
   bool _isFetchingToken = false;
   bool _preferManual = false;
   late AnimationController _pulseController;
@@ -39,7 +40,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: false);
-    
+
     _pulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
     );
@@ -58,10 +59,11 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
         widget.stageBucket,
         prospectId: widget.prospectId ?? ProspectIdProvider.of(context),
       );
-      
+
       final vars = Map<String, dynamic>.from(widget.dynamicVariables);
       vars.addAll(tokenResult.dynamicVariables);
-      
+      vars['initial_mode'] = isChatMode ? 'chat' : 'voice';
+
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -142,13 +144,15 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
                       decoration: BoxDecoration(
                         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                         borderRadius: BorderRadius.circular(isMobile ? 0 : 20),
-                        boxShadow: isMobile ? null : [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.22),
-                            blurRadius: 48,
-                            offset: const Offset(0, 16),
-                          )
-                        ],
+                        boxShadow: isMobile
+                            ? null
+                            : [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.22),
+                                  blurRadius: 48,
+                                  offset: const Offset(0, 16),
+                                )
+                              ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,12 +177,14 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
                                   const SizedBox(
                                     height: 180,
                                     child: Center(
-                                      child: CircularProgressIndicator(color: jpmcBlue),
+                                      child: CircularProgressIndicator(
+                                          color: jpmcBlue),
                                     ),
                                   )
                                 else
                                   GestureDetector(
-                                    onTap: () => _startSession(isChatMode: false),
+                                    onTap: () =>
+                                        _startSession(isChatMode: false),
                                     behavior: HitTestBehavior.opaque,
                                     child: SizedBox(
                                       height: 180,
@@ -192,12 +198,28 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
                                               // Outer rings
                                               for (int i = 0; i < 3; i++)
                                                 Container(
-                                                  width: 60 + (120 * ((_pulseAnimation.value + (i * 0.33)) % 1.0)),
-                                                  height: 60 + (120 * ((_pulseAnimation.value + (i * 0.33)) % 1.0)),
+                                                  width: 60 +
+                                                      (120 *
+                                                          ((_pulseAnimation
+                                                                      .value +
+                                                                  (i * 0.33)) %
+                                                              1.0)),
+                                                  height: 60 +
+                                                      (120 *
+                                                          ((_pulseAnimation
+                                                                      .value +
+                                                                  (i * 0.33)) %
+                                                              1.0)),
                                                   decoration: BoxDecoration(
                                                     shape: BoxShape.circle,
                                                     border: Border.all(
-                                                      color: jpmcGold.withOpacity(0.4 * (1.0 - ((_pulseAnimation.value + (i * 0.33)) % 1.0))),
+                                                      color: jpmcGold.withOpacity(0.4 *
+                                                          (1.0 -
+                                                              ((_pulseAnimation
+                                                                          .value +
+                                                                      (i *
+                                                                          0.33)) %
+                                                                  1.0))),
                                                       width: 1.5,
                                                     ),
                                                   ),
@@ -211,9 +233,11 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
                                                   shape: BoxShape.circle,
                                                   boxShadow: [
                                                     BoxShadow(
-                                                      color: jpmcNavy.withOpacity(0.3),
+                                                      color: jpmcNavy
+                                                          .withOpacity(0.3),
                                                       blurRadius: 12,
-                                                      offset: const Offset(0, 4),
+                                                      offset:
+                                                          const Offset(0, 4),
                                                     )
                                                   ],
                                                 ),
@@ -241,23 +265,32 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
                                 Text(
                                   '~10 min · Nova asks, you answer',
                                   style: textTheme.bodySmall?.copyWith(
-                                    color: isDark ? Colors.white54 : const Color(0xFF6B7280),
+                                    color: isDark
+                                        ? Colors.white54
+                                        : const Color(0xFF6B7280),
                                   ),
                                 ),
                                 const SizedBox(height: 40),
-                                
+
                                 // Checkbox for Manual form
                                 Container(
                                   width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 10),
                                   decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF2C261A) : const Color(0xFFFDF8E1),
+                                    color: isDark
+                                        ? const Color(0xFF2C261A)
+                                        : const Color(0xFFFDF8E1),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: isDark ? const Color(0xFF423C2B) : const Color(0xFFF0E6C5)),
+                                    border: Border.all(
+                                        color: isDark
+                                            ? const Color(0xFF423C2B)
+                                            : const Color(0xFFF0E6C5)),
                                   ),
                                   child: _buildCheckbox(
                                     _preferManual,
-                                    (val) => setState(() => _preferManual = val ?? false),
+                                    (val) => setState(
+                                        () => _preferManual = val ?? false),
                                     'I prefer to fill in the form manually — I understand this may result in slower matching and less tailored recommendations',
                                     isDark,
                                   ),
@@ -269,18 +302,24 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     TextButton.icon(
-                                      onPressed: _preferManual ? _goToManualForm : null,
+                                      onPressed: _preferManual
+                                          ? _goToManualForm
+                                          : null,
                                       icon: Icon(
                                         Icons.description_outlined,
                                         size: 18,
-                                        color: _preferManual ? jpmcBlue : Colors.grey,
+                                        color: _preferManual
+                                            ? jpmcBlue
+                                            : Colors.grey,
                                       ),
                                       label: const Text(
                                         'Fill Manual Form',
-                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold),
                                       ),
                                       style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 14),
                                         foregroundColor: jpmcBlue,
                                         disabledForegroundColor: Colors.grey,
                                       ),
@@ -292,14 +331,20 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
                                         Container(
                                           height: 12,
                                           width: 1,
-                                          color: isDark ? Colors.white24 : Colors.grey.shade300,
+                                          color: isDark
+                                              ? Colors.white24
+                                              : Colors.grey.shade300,
                                         ),
                                         Padding(
-                                          padding: const EdgeInsets.symmetric(vertical: 4),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 4),
                                           child: Text(
                                             'OR',
-                                            style: textTheme.labelSmall?.copyWith(
-                                              color: isDark ? Colors.white38 : Colors.grey.shade500,
+                                            style:
+                                                textTheme.labelSmall?.copyWith(
+                                              color: isDark
+                                                  ? Colors.white38
+                                                  : Colors.grey.shade500,
                                               fontWeight: FontWeight.bold,
                                               fontSize: 10,
                                               letterSpacing: 0.5,
@@ -309,23 +354,32 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
                                         Container(
                                           height: 12,
                                           width: 1,
-                                          color: isDark ? Colors.white24 : Colors.grey.shade300,
+                                          color: isDark
+                                              ? Colors.white24
+                                              : Colors.grey.shade300,
                                         ),
                                       ],
                                     ),
                                     const SizedBox(width: 32),
                                     ElevatedButton(
-                                      onPressed: _isFetchingToken ? null : () => _startSession(isChatMode: true),
+                                      onPressed: _isFetchingToken
+                                          ? null
+                                          : () =>
+                                              _startSession(isChatMode: true),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: jpmcGold,
                                         foregroundColor: jpmcNavy,
                                         elevation: 0,
-                                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 24, vertical: 18),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(13)),
                                       ),
                                       child: const Text(
                                         "Let's Chat",
-                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                   ],
@@ -346,7 +400,8 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
     );
   }
 
-  Widget _buildTopHeader(BuildContext context, bool isDark, TextTheme textTheme) {
+  Widget _buildTopHeader(
+      BuildContext context, bool isDark, TextTheme textTheme) {
     return Container(
       padding: const EdgeInsets.fromLTRB(36, 24, 36, 20),
       decoration: const BoxDecoration(
@@ -373,7 +428,8 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
                 border: Border.all(color: jpmcGold.withOpacity(0.3)),
               ),
               child: const Center(
-                child: Icon(Icons.arrow_back, color: Color(0xFFD4AD46), size: 18),
+                child:
+                    Icon(Icons.arrow_back, color: Color(0xFFD4AD46), size: 18),
               ),
             ),
           ),
@@ -406,7 +462,8 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
     );
   }
 
-  Widget _buildStepHeader(BuildContext context, bool isDark, TextTheme textTheme) {
+  Widget _buildStepHeader(
+      BuildContext context, bool isDark, TextTheme textTheme) {
     return Container(
       padding: const EdgeInsets.fromLTRB(36, 24, 36, 12),
       decoration: BoxDecoration(
@@ -424,15 +481,19 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
             ),
           ),
           const SizedBox(height: 12),
-          _buildCoverItem(context, isDark, textTheme, 'Your startup stage, business model, and key priorities'),
-          _buildCoverItem(context, isDark, textTheme, 'Banking, payments, treasury, and credit options for your stage'),
-          _buildCoverItem(context, isDark, textTheme, 'Personalised JPMC product recommendations and next steps'),
+          _buildCoverItem(context, isDark, textTheme,
+              'Your startup stage, business model, and key priorities'),
+          _buildCoverItem(context, isDark, textTheme,
+              'Banking, payments, treasury, and credit options for your stage'),
+          _buildCoverItem(context, isDark, textTheme,
+              'Personalised JPMC product recommendations and next steps'),
         ],
       ),
     );
   }
 
-  Widget _buildCoverItem(BuildContext context, bool isDark, TextTheme textTheme, String text) {
+  Widget _buildCoverItem(
+      BuildContext context, bool isDark, TextTheme textTheme, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -463,7 +524,8 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
     );
   }
 
-  Widget _buildCheckbox(bool value, ValueChanged<bool?> onChanged, String label, bool isDark) {
+  Widget _buildCheckbox(
+      bool value, ValueChanged<bool?> onChanged, String label, bool isDark) {
     return GestureDetector(
       onTap: () => onChanged(!value),
       behavior: HitTestBehavior.opaque,
@@ -477,11 +539,15 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
               color: value ? jpmcBlue : Colors.transparent,
               borderRadius: BorderRadius.circular(5),
               border: Border.all(
-                color: value ? jpmcBlue : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+                color: value
+                    ? jpmcBlue
+                    : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
                 width: 1.5,
               ),
             ),
-            child: value ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+            child: value
+                ? const Icon(Icons.check, size: 14, color: Colors.white)
+                : null,
           ),
           const SizedBox(width: 12),
           Expanded(

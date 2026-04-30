@@ -92,7 +92,7 @@ class _VoicePageState extends State<VoicePage> {
   @override
   void initState() {
     super.initState();
-    
+
     _isChatMode = widget.initialMode == 'chat';
 
     // Initialize active phase from dynamic variables
@@ -144,7 +144,8 @@ class _VoicePageState extends State<VoicePage> {
             _statusText = 'Conversation ended';
             _responseChips = _ResponseChipsState.empty;
             if (returnUrl != null) {
-              final email = widget.dynamicVariables['userEmail']?.toString() ?? '';
+              final email =
+                  widget.dynamicVariables['userEmail']?.toString() ?? '';
               final emailNote = email.isNotEmpty
                   ? "We've also sent this link to $email"
                   : "Save this link to come back anytime";
@@ -217,8 +218,7 @@ class _VoicePageState extends State<VoicePage> {
                 ..text = transcript
                 ..isTentative = false;
             } else {
-              _transcript.add(
-                  _TranscriptEntry(isUser: true, text: transcript));
+              _transcript.add(_TranscriptEntry(isUser: true, text: transcript));
             }
           });
           _scrollToBottom();
@@ -248,8 +248,7 @@ class _VoicePageState extends State<VoicePage> {
                   ..text = message
                   ..isTentative = false;
               } else {
-                _transcript.add(
-                    _TranscriptEntry(isUser: false, text: message));
+                _transcript.add(_TranscriptEntry(isUser: false, text: message));
               }
             });
             _scrollToBottom();
@@ -266,11 +265,8 @@ class _VoicePageState extends State<VoicePage> {
 
   bool _isIdentityCategory(String? category) {
     if (category == null || category.isEmpty) return false;
-    final normalized = category
-        .trim()
-        .toLowerCase()
-        .replaceAll('-', '_')
-        .replaceAll(' ', '_');
+    final normalized =
+        category.trim().toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
 
     const exactBlocked = <String>{
       'company_name',
@@ -358,20 +354,21 @@ class _VoicePageState extends State<VoicePage> {
   // ---------------------------------------------------------------------------
   Future<void> _startSession() async {
     try {
+      final dynamicVariables =
+          Map<String, dynamic>.from(widget.dynamicVariables);
+      dynamicVariables['initial_mode'] = widget.initialMode;
+
       await _client.startSession(
         conversationToken: widget.conversationToken,
-        dynamicVariables: widget.dynamicVariables.isNotEmpty
-            ? widget.dynamicVariables
+        dynamicVariables: dynamicVariables,
+        overrides: widget.initialMode == 'chat'
+            ? ConversationOverrides(
+                conversation: ConversationSettingsOverrides(
+                  textOnly: true,
+                ),
+              )
             : null,
       );
-      
-      // If we started in chat mode, make sure mic is muted just in case
-      // textOnly doesn't automatically mute it in the SDK state
-      if (widget.initialMode == 'chat') {
-        // Wait briefly to ensure LiveKit has fully grabbed the mic track
-        await Future.delayed(const Duration(milliseconds: 500));
-        await _client.setMicMuted(true);
-      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -432,12 +429,12 @@ class _VoicePageState extends State<VoicePage> {
     });
 
     try {
-      final prospect = await _conversationService.getProspect(widget.prospectId!);
+      final prospect =
+          await _conversationService.getProspect(widget.prospectId!);
       if (!mounted) return;
       setState(() {
         _classification = prospect.classification;
-        _selectedStageChoice =
-            prospect.classification?.confirmedStageBucket ??
+        _selectedStageChoice = prospect.classification?.confirmedStageBucket ??
             prospect.classification?.inferredStageBucket;
       });
     } catch (e) {
@@ -482,7 +479,8 @@ class _VoicePageState extends State<VoicePage> {
         // Convert snake_case to Title Case (e.g. 'super_agent_stage' → 'Super Agent Stage')
         return widget.stageBucket
             .split('_')
-            .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+            .map((w) =>
+                w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
             .join(' ');
     }
   }
@@ -580,127 +578,142 @@ class _VoicePageState extends State<VoicePage> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: SizedBox(
                 height: double.infinity,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 848),
-                child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Chat container ────────────────────────────────────────
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF1E1E1E)
-                            : const Color(0xFFF5F3EE),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isDark
-                              ? Colors.grey.shade800
-                              : const Color(0xFFE5E0D4),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 848),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Chat container ────────────────────────────────────────
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF1E1E1E)
+                                : const Color(0xFFF5F3EE),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.grey.shade800
+                                  : const Color(0xFFE5E0D4),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 20,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              VoiceHeader(
+                                agentName: _agentName,
+                                stageLabel: _stageLabel,
+                                statusText: _statusText,
+                                currentPhase: _activePhase,
+                                isSpeaking: _client.isSpeaking,
+                                isEnded: _conversationEnded,
+                                onEnd: _endSession,
+                                onStartNew: _startNewSession,
+                                colorScheme: colorScheme,
+                              ),
+                              Expanded(
+                                child: _transcript.isEmpty
+                                    ? Center(
+                                        child: Text(
+                                          _client.status ==
+                                                  ConversationStatus.connecting
+                                              ? 'Connecting to $_agentName…'
+                                              : (_isChatMode
+                                                  ? '$_agentName is ready.\nType your first message below.'
+                                                  : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.'),
+                                          textAlign: TextAlign.center,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                color: colorScheme
+                                                    .onSurfaceVariant,
+                                                height: 1.6,
+                                              ),
+                                        ),
+                                      )
+                                    : ListView.builder(
+                                        controller: _scrollController,
+                                        padding: const EdgeInsets.fromLTRB(
+                                            16, 8, 16, 16),
+                                        itemCount: _transcript.length,
+                                        itemBuilder: (context, index) {
+                                          final entry = _transcript[index];
+                                          final prevEntry = index > 0
+                                              ? _transcript[index - 1]
+                                              : null;
+                                          final nextEntry =
+                                              index < _transcript.length - 1
+                                                  ? _transcript[index + 1]
+                                                  : null;
+                                          final isPrevSame = prevEntry !=
+                                                  null &&
+                                              prevEntry.isUser == entry.isUser;
+                                          final isNextSame = nextEntry !=
+                                                  null &&
+                                              nextEntry.isUser == entry.isUser;
+
+                                          return VoiceBubbleRow(
+                                            isUser: entry.isUser,
+                                            text: entry.text,
+                                            isTentative: entry.isTentative,
+                                            isPrevSame: isPrevSame,
+                                            isNextSame: isNextSame,
+                                            agentInitial: _agentName.isNotEmpty
+                                                ? _agentName[0].toUpperCase()
+                                                : 'A',
+                                          );
+                                        },
+                                      ),
+                              ),
+                              if (_conversationEnded)
+                                _buildClassificationSummary(),
+                              _BottomBar(
+                                isConnected: isConnected,
+                                isMuted: _client.isMuted,
+                                isEnded: _conversationEnded,
+                                isChatMode: _isChatMode,
+                                prospectId: widget.prospectId,
+                                suggestionChips: _responseChips.show
+                                    ? _responseChips.chips
+                                    : const <String>[],
+                                onToggleMute: () => _client.toggleMute(),
+                                onToggleMode: () async {
+                                  final newMode = !_isChatMode;
+                                  setState(() {
+                                    _isChatMode = newMode;
+                                    if (_statusText == 'Listening' ||
+                                        _statusText == 'Chatting') {
+                                      _statusText =
+                                          newMode ? 'Chatting' : 'Listening';
+                                    }
+                                  });
+                                  if (isConnected && !_conversationEnded) {
+                                    await _client.setMicMuted(newMode);
+                                  }
+                                },
+                                onSend: _sendTextMessage,
+                                onStartNew: _startNewSession,
+                              ),
+                            ],
+                          ),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
-                            blurRadius: 20,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
                       ),
-                      child: Column(
-                        children: [
-                          VoiceHeader(
-                            agentName: _agentName,
-                            stageLabel: _stageLabel,
-                            statusText: _statusText,
-                            currentPhase: _activePhase,
-                            isSpeaking: _client.isSpeaking,
-                            isEnded: _conversationEnded,
-                            onEnd: _endSession,
-                            onStartNew: _startNewSession,
-                            colorScheme: colorScheme,
-                          ),
-                          Expanded(
-                            child: _transcript.isEmpty
-                                ? Center(
-                                    child: Text(
-                                      _client.status ==
-                                              ConversationStatus.connecting
-                                          ? 'Connecting to $_agentName…'
-                                          : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.',
-                                      textAlign: TextAlign.center,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            color:
-                                                colorScheme.onSurfaceVariant,
-                                            height: 1.6,
-                                          ),
-                                    ),
-                                  )
-                                : ListView.builder(
-                                    controller: _scrollController,
-                                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                                    itemCount: _transcript.length,
-                                    itemBuilder: (context, index) {
-                                      final entry = _transcript[index];
-                                      final prevEntry = index > 0 ? _transcript[index - 1] : null;
-                                      final nextEntry = index < _transcript.length - 1 ? _transcript[index + 1] : null;
-                                      final isPrevSame = prevEntry != null && prevEntry.isUser == entry.isUser;
-                                      final isNextSame = nextEntry != null && nextEntry.isUser == entry.isUser;
-                                      
-                                      return VoiceBubbleRow(
-                                        isUser: entry.isUser,
-                                        text: entry.text,
-                                        isTentative: entry.isTentative,
-                                        isPrevSame: isPrevSame,
-                                        isNextSame: isNextSame,
-                                        agentInitial: _agentName.isNotEmpty
-                                            ? _agentName[0].toUpperCase()
-                                            : 'A',
-                                      );
-                                    },
-                                  ),
-                          ),
-                                  if (_conversationEnded) _buildClassificationSummary(),
-                          _BottomBar(
-                            isConnected: isConnected,
-                            isMuted: _client.isMuted,
-                            isEnded: _conversationEnded,
-                            isChatMode: _isChatMode,
-                            prospectId: widget.prospectId,
-                            suggestionChips: _responseChips.show
-                                ? _responseChips.chips
-                                : const <String>[],
-                            onToggleMute: () => _client.toggleMute(),
-                            onToggleMode: () async {
-                              final newMode = !_isChatMode;
-                              setState(() {
-                                _isChatMode = newMode;
-                                if (_statusText == 'Listening' || _statusText == 'Chatting') {
-                                  _statusText = newMode ? 'Chatting' : 'Listening';
-                                }
-                              });
-                              if (isConnected && !_conversationEnded) {
-                                await _client.setMicMuted(newMode);
-                              }
-                            },
-                            onSend: _sendTextMessage,
-                            onStartNew: _startNewSession,
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),           // closes ConstrainedBox
-          ),             // closes SizedBox(height)
-        ),               // closes Padding
-      ),                 // closes Center
-    ),                   // closes SizedBox.expand
-  ),                     // closes SafeArea
-);
+                ), // closes ConstrainedBox
+              ), // closes SizedBox(height)
+            ), // closes Padding
+          ), // closes Center
+        ), // closes SizedBox.expand
+      ), // closes SafeArea
+    );
   }
 }
 
@@ -792,9 +805,7 @@ class _BottomBarState extends State<_BottomBar> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 7),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF1F2937)
-                            : Colors.white,
+                        color: isDark ? const Color(0xFF1F2937) : Colors.white,
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(
                           color: isDark
@@ -827,7 +838,9 @@ class _BottomBarState extends State<_BottomBar> {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1F2937) : const Color(0xFFFDFCF9),
+                      color: isDark
+                          ? const Color(0xFF1F2937)
+                          : const Color(0xFFFDFCF9),
                       borderRadius: BorderRadius.circular(32),
                       border: Border.all(
                         color: colorScheme.outlineVariant,
@@ -857,7 +870,9 @@ class _BottomBarState extends State<_BottomBar> {
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                                  color: isDark ? Colors.white : const Color(0xFF1F2937),
+                                  color: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF1F2937),
                                 ),
                             textAlignVertical: TextAlignVertical.center,
                             minLines: 1,
@@ -865,7 +880,9 @@ class _BottomBarState extends State<_BottomBar> {
                             decoration: InputDecoration(
                               hintText: widget.isEnded
                                   ? "You can't type now, Conversation Ended."
-                                  : (widget.isConnected ? 'Type a message…' : 'Connecting…'),
+                                  : (widget.isConnected
+                                      ? 'Type a message…'
+                                      : 'Connecting…'),
                               hintStyle: Theme.of(context)
                                   .textTheme
                                   .bodyMedium
@@ -886,7 +903,8 @@ class _BottomBarState extends State<_BottomBar> {
                           child: ValueListenableBuilder<TextEditingValue>(
                             valueListenable: _textController,
                             builder: (context, value, _) {
-                              final canSend = widget.isConnected && !widget.isEnded &&
+                              final canSend = widget.isConnected &&
+                                  !widget.isEnded &&
                                   value.text.trim().isNotEmpty;
                               return GestureDetector(
                                 onTap: canSend ? _submit : null,
@@ -924,7 +942,9 @@ class _BottomBarState extends State<_BottomBar> {
                     // Microphone button (only in Voice Mode)
                     if (!widget.isChatMode) ...[
                       GestureDetector(
-                        onTap: (widget.isConnected && !widget.isEnded) ? widget.onToggleMute : null,
+                        onTap: (widget.isConnected && !widget.isEnded)
+                            ? widget.onToggleMute
+                            : null,
                         child: Container(
                           width: 44,
                           height: 44,
@@ -990,7 +1010,5 @@ class _BottomBarState extends State<_BottomBar> {
         ],
       ),
     );
-
   }
 }
-
