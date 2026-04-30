@@ -30,15 +30,50 @@ class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
+class ProspectIdProvider extends InheritedWidget {
+  final String? prospectId;
+  const ProspectIdProvider({
+    super.key,
+    required this.prospectId,
+    required super.child,
+  });
+
+  static String? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<ProspectIdProvider>()?.prospectId;
+  }
+
+  @override
+  bool updateShouldNotify(ProspectIdProvider oldWidget) =>
+      prospectId != oldWidget.prospectId;
+}
+
 class _AppShellState extends ConsumerState<AppShell> {
-  // Key for the inner navigator that owns the conversation flow.
   final _innerNavKey = GlobalKey<NavigatorState>();
-
   final _service = ConversationService();
+  
+  String? _prospectId;
 
-  // ---------------------------------------------------------------------------
-  // Auth helpers (TopBar still shows sign-in/out)
-  // ---------------------------------------------------------------------------
+  @override
+  void initState() {
+    super.initState();
+    _prospectId = widget.prospectId;
+    if (_prospectId == null) {
+      _initLazyProspect();
+    }
+  }
+
+  Future<void> _initLazyProspect() async {
+    try {
+      final pid = await _service.createProspect(widget.stageBucket);
+      if (mounted) {
+        setState(() {
+          _prospectId = pid;
+        });
+      }
+    } catch (e) {
+      debugPrint('Lazy prospect init failed: $e');
+    }
+  }
 
   Map<String, dynamic> get _authRouteExtra => {
     'stageBucket': widget.stageBucket,
@@ -71,7 +106,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       MaterialPageRoute(
         builder: (_) => ConversationIntroPage(
           stageBucket: widget.stageBucket,
-          prospectId: widget.prospectId,
+          prospectId: _prospectId,
           dynamicVariables: widget.dynamicVariables,
           onStartNew: _handleStartNew,
         ),
@@ -80,34 +115,33 @@ class _AppShellState extends ConsumerState<AppShell> {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
-
   @override
   Widget build(BuildContext context) {
     final isAuthenticated = ref.watch(isAuthenticatedProvider);
 
-    return Scaffold(
-      appBar: AppTopBar(
-        onSignIn: _handleSignIn,
-        onSignOut: _handleSignOut,
-        onProfileTap: _handleProfileTap,
-        isAuthenticated: isAuthenticated,
-      ),
-      body: Navigator(
-        key: _innerNavKey,
-        onGenerateRoute: (settings) {
-          return MaterialPageRoute(
-            settings: settings,
-            builder: (_) => ConversationIntroPage(
-              stageBucket: widget.stageBucket,
-              prospectId: widget.prospectId,
-              dynamicVariables: widget.dynamicVariables,
-              onStartNew: _handleStartNew,
-            ),
-          );
-        },
+    return ProspectIdProvider(
+      prospectId: _prospectId,
+      child: Scaffold(
+        appBar: AppTopBar(
+          onSignIn: _handleSignIn,
+          onSignOut: _handleSignOut,
+          onProfileTap: _handleProfileTap,
+          isAuthenticated: isAuthenticated,
+        ),
+        body: Navigator(
+          key: _innerNavKey,
+          onGenerateRoute: (settings) {
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (_) => ConversationIntroPage(
+                stageBucket: widget.stageBucket,
+                prospectId: _prospectId,
+                dynamicVariables: widget.dynamicVariables,
+                onStartNew: _handleStartNew,
+              ),
+            );
+          },
+        ),
       ),
     );
   }

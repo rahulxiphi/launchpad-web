@@ -3,6 +3,7 @@ import '../../services/conversation_service.dart';
 import 'voice_page.dart';
 import 'mode_selection_page.dart';
 import 'manual_form_page.dart';
+import '../../shared/widgets/app_shell.dart';
 
 class _StageContent {
   final String heading;
@@ -182,7 +183,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
           // Background Image
@@ -218,7 +219,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                     constraints: BoxConstraints(minHeight: constraints.maxHeight),
                     child: Center(
                       child: Container(
-                        width: isMobile ? double.infinity : 760,
+                        width: isMobile ? double.infinity : 840,
                         margin: EdgeInsets.symmetric(
                           horizontal: isMobile ? 0 : 24, 
                           vertical: isMobile ? 0 : 32
@@ -247,7 +248,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                               Padding(
                                 padding: EdgeInsets.fromLTRB(
                                   isMobile ? 24 : 36,
-                                  24,
+                                  16,
                                   isMobile ? 24 : 36,
                                   24,
                                 ),
@@ -364,7 +365,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                     MaterialPageRoute(
                                                       builder: (_) => ModeSelectionPage(
                                                         stageBucket: widget.stageBucket,
-                                                        prospectId: widget.prospectId,
+                                                        prospectId: widget.prospectId ?? ProspectIdProvider.of(context),
                                                         dynamicVariables: vars,
                                                         onStartNew: widget.onStartNew,
                                                       ),
@@ -426,17 +427,26 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: jpmcGold.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: jpmcGold.withOpacity(0.3)),
-            ),
-            child: const Center(
-              child: Text('✦',
-                  style: TextStyle(color: Color(0xFFD4AD46), fontSize: 14)),
+          GestureDetector(
+            onTap: () {
+              final nav = Navigator.of(context);
+              if (nav.canPop()) {
+                nav.pop();
+              } else {
+                Navigator.of(context, rootNavigator: true).pop();
+              }
+            },
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: jpmcGold.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: jpmcGold.withOpacity(0.3)),
+              ),
+              child: const Center(
+                child: Icon(Icons.arrow_back, color: Color(0xFFD4AD46), size: 18),
+              ),
             ),
           ),
           const SizedBox(width: 14),

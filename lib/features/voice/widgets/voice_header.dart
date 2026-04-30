@@ -149,21 +149,21 @@ class VoiceHeader extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEE2E2),
+                  color: const Color(0xFFEBF4FF),
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                  border: Border.all(color: const Color(0xFFBEE3F8)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: const [
-                    Icon(Icons.refresh_rounded, size: 14, color: Color(0xFFDC2626)),
-                    SizedBox(width: 5),
+                    Icon(Icons.dashboard_rounded, size: 14, color: Color(0xFF006CAD)),
+                    SizedBox(width: 6),
                     Text(
-                      'Start new session',
+                      'Go to Relationship Hub',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFFDC2626),
+                        color: Color(0xFF006CAD),
                       ),
                     ),
                   ],
