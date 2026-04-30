@@ -100,14 +100,13 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
 
     try {
       const stageBucket = 'super_agent';
-      final prospectId = await _service.createProspect(stageBucket);
-
-      if (!mounted) return;
+      // Navigate immediately to the conversation shell.
+      // AppShell will now handle prospect creation lazily if none is provided.
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => AppShell(
+          builder: (_) => const AppShell(
             stageBucket: stageBucket,
-            prospectId: prospectId,
+            prospectId: null,
           ),
         ),
       );

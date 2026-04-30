@@ -3,6 +3,7 @@ import '../../services/conversation_service.dart';
 import 'voice_page.dart';
 import 'mode_selection_page.dart';
 import 'manual_form_page.dart';
+import '../../shared/widgets/app_shell.dart';
 
 class _StageContent {
   final String heading;
@@ -364,7 +365,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                     MaterialPageRoute(
                                                       builder: (_) => ModeSelectionPage(
                                                         stageBucket: widget.stageBucket,
-                                                        prospectId: widget.prospectId,
+                                                        prospectId: widget.prospectId ?? ProspectIdProvider.of(context),
                                                         dynamicVariables: vars,
                                                         onStartNew: widget.onStartNew,
                                                       ),
@@ -427,7 +428,14 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () {
+              final nav = Navigator.of(context);
+              if (nav.canPop()) {
+                nav.pop();
+              } else {
+                Navigator.of(context, rootNavigator: true).pop();
+              }
+            },
             child: Container(
               width: 36,
               height: 36,

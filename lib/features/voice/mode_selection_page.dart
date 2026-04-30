@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/conversation_service.dart';
 import 'voice_page.dart';
 import 'manual_form_page.dart';
+import '../../shared/widgets/app_shell.dart';
 
 class ModeSelectionPage extends StatefulWidget {
   final String stageBucket;
@@ -55,7 +56,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
     try {
       final tokenResult = await ConversationService().getVoiceToken(
         widget.stageBucket,
-        prospectId: widget.prospectId,
+        prospectId: widget.prospectId ?? ProspectIdProvider.of(context),
       );
       
       final vars = Map<String, dynamic>.from(widget.dynamicVariables);
@@ -88,7 +89,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
       MaterialPageRoute(
         builder: (_) => ManualFormPage(
           stageBucket: widget.stageBucket,
-          prospectId: widget.prospectId,
+          prospectId: widget.prospectId ?? ProspectIdProvider.of(context),
           dynamicVariables: widget.dynamicVariables,
           onStartNew: widget.onStartNew,
         ),
@@ -355,7 +356,14 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> with SingleTicker
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () {
+              final nav = Navigator.of(context);
+              if (nav.canPop()) {
+                nav.pop();
+              } else {
+                Navigator.of(context, rootNavigator: true).pop();
+              }
+            },
             child: Container(
               width: 36,
               height: 36,

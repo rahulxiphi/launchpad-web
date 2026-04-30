@@ -474,7 +474,14 @@ class _ManualFormPageState extends State<ManualFormPage> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () {
+              final nav = Navigator.of(context);
+              if (nav.canPop()) {
+                nav.pop();
+              } else {
+                Navigator.of(context, rootNavigator: true).pop();
+              }
+            },
             child: Container(
               width: 36,
               height: 36,
