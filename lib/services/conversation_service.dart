@@ -90,6 +90,35 @@ class ConversationService {
     return response.data['prospect_id'] as String;
   }
 
+  Future<void> updateProspectProfile(
+    String prospectId, {
+    required String email,
+    String? fullName,
+    String? phoneNumber,
+    String? companyName,
+    bool? incorporated,
+    String? companyStage,
+    String? industry,
+    String? headcount,
+    Map<String, bool>? selectedPrioritiesJson,
+  }) async {
+    await _dio.patch(
+      '${ApiConfig.baseUrl}/conversations/prospect/$prospectId/profile',
+      data: {
+        'email': email,
+        if (fullName != null) 'full_name': fullName,
+        if (phoneNumber != null) 'phone_number': phoneNumber,
+        if (companyName != null) 'company_name': companyName,
+        if (incorporated != null) 'incorporated': incorporated,
+        if (companyStage != null) 'company_stage': companyStage,
+        if (industry != null) 'industry': industry,
+        if (headcount != null) 'headcount': headcount,
+        if (selectedPrioritiesJson != null)
+          'selected_priorities_json': selectedPrioritiesJson,
+      },
+    );
+  }
+
   /// Initialize a prospect session from an invitation code.
   /// Resolves the invitation code to a stage_bucket and agent.
   Future<ProspectInitResult> initProspect(

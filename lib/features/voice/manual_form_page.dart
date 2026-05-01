@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/conversation_service.dart';
+import '../../shared/widgets/app_shell.dart';
 import '../../shared/widgets/no_transition_page_route.dart';
-import 'voice_page.dart';
+import 'mode_selection_page.dart';
 import '../../theme/app_theme.dart';
 
 class ManualFormPage extends StatefulWidget {
@@ -24,6 +25,7 @@ class ManualFormPage extends StatefulWidget {
 
 class _ManualFormPageState extends State<ManualFormPage> {
   bool _isFetchingToken = false;
+  final _service = ConversationService();
 
   // Stage
   String? _selectedStage;
@@ -43,6 +45,14 @@ class _ManualFormPageState extends State<ManualFormPage> {
     ('Banking & treasury setup', 'Account structure, cash management, yield on reserves'),
   ];
   final Set<String> _selectedPriorities = {};
+
+  static const Map<String, String> _stageValueMap = {
+    'Pre-seed': 'pre_seed',
+    'Seed': 'seed',
+    'Series A': 'series_a',
+    'Series B+': 'series_b_plus',
+    'Revenue-generating, no VC': 'revenue_generating_no_vc',
+  };
 
   bool get _canSubmit =>
       _selectedStage != null && _selectedPriorities.isNotEmpty;
@@ -69,26 +79,40 @@ class _ManualFormPageState extends State<ManualFormPage> {
   Future<void> _submit() async {
     setState(() => _isFetchingToken = true);
     try {
-      final tokenResult = await ConversationService().getVoiceToken(
-        widget.stageBucket,
-        prospectId: widget.prospectId,
+      final prospectId = widget.prospectId ?? ProspectIdProvider.of(context);
+      if (prospectId == null) {
+        throw Exception('Prospect session is not ready yet.');
+      }
+
+      final prioritySelectionMap = <String, bool>{
+        for (final option in _priorityOptions) option.$1: _selectedPriorities.contains(option.$1),
+      };
+
+      await _service.updateProspectProfile(
+        prospectId,
+        email: (widget.dynamicVariables['userEmail']?.toString() ?? '').trim(),
+        companyStage: _stageValueMap[_selectedStage!],
+        industry: _industryController.text.trim().isEmpty
+            ? null
+            : _industryController.text.trim(),
+        headcount: _headcount,
+        selectedPrioritiesJson: prioritySelectionMap,
       );
 
       final vars = Map<String, dynamic>.from(widget.dynamicVariables);
-      vars.addAll(tokenResult.dynamicVariables);
-      vars['stage'] = _selectedStage;
+      vars['stage'] = _stageValueMap[_selectedStage!];
       vars['industry'] = _industryController.text.trim();
       vars['headcount'] = _headcount;
       vars['priorities'] = _selectedPriorities.toList();
+      vars['selectedPriorities'] = prioritySelectionMap;
       vars['preferManual'] = true;
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         NoTransitionPageRoute(
-          builder: (_) => VoicePage(
-            conversationToken: tokenResult.conversationToken,
+          builder: (_) => ModeSelectionPage(
             stageBucket: widget.stageBucket,
-            prospectId: widget.prospectId,
+            prospectId: prospectId,
             dynamicVariables: vars,
             onStartNew: widget.onStartNew,
           ),

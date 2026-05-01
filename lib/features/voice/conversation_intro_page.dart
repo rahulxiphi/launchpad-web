@@ -137,7 +137,9 @@ class ConversationIntroPage extends StatefulWidget {
 
 class _ConversationIntroPageState extends State<ConversationIntroPage> {
   final _formKey = GlobalKey<FormState>();
+  final _service = ConversationService();
   bool _isPostIncorporated = false;
+  bool _isSavingProfile = false;
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -164,6 +166,69 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
       nav.pop();
     } else {
       Navigator.of(context, rootNavigator: true).pop();
+    }
+  }
+
+  Future<void> _submitProfileAndContinue() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final prospectId = widget.prospectId ?? ProspectIdProvider.of(context);
+    if (prospectId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Prospect session is not ready yet.')),
+      );
+      return;
+    }
+
+    setState(() => _isSavingProfile = true);
+    try {
+      await _service.updateProspectProfile(
+        prospectId,
+        email: _emailController.text.trim(),
+        fullName: _nameController.text.trim().isEmpty
+            ? null
+            : _nameController.text.trim(),
+        phoneNumber: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
+        companyName: _companyController.text.trim().isEmpty
+            ? null
+            : _companyController.text.trim(),
+        incorporated: _isPostIncorporated,
+      );
+
+      final vars = Map<String, dynamic>.from(widget.dynamicVariables);
+      if (_nameController.text.trim().isNotEmpty) {
+        vars['userName'] = _nameController.text.trim();
+      }
+      vars['userEmail'] = _emailController.text.trim();
+      if (_phoneController.text.trim().isNotEmpty) {
+        vars['userPhone'] = _phoneController.text.trim();
+      }
+      if (_companyController.text.trim().isNotEmpty) {
+        vars['companyName'] = _companyController.text.trim();
+      }
+      vars['isPostIncorporated'] = _isPostIncorporated;
+      vars['preferManual'] = _preferManual;
+
+      if (!mounted) return;
+      Navigator.of(context).push(
+        NoTransitionPageRoute(
+          builder: (_) => ModeSelectionPage(
+            stageBucket: widget.stageBucket,
+            prospectId: prospectId,
+            dynamicVariables: vars,
+            onStartNew: widget.onStartNew,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save your details: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSavingProfile = false);
     }
   }
 
@@ -373,82 +438,31 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                 ? double.infinity
                                                 : 320,
                                             child: ElevatedButton.icon(
-                                              onPressed: _canSubmit
-                                                  ? () {
-                                                      if (_formKey.currentState!
-                                                          .validate()) {
-                                                        final vars = Map<String,
-                                                            dynamic>.from(widget
-                                                            .dynamicVariables);
-                                                        if (_nameController.text
-                                                            .trim()
-                                                            .isNotEmpty) {
-                                                          vars['userName'] =
-                                                              _nameController
-                                                                  .text
-                                                                  .trim();
-                                                        }
-                                                        if (_emailController
-                                                            .text
-                                                            .trim()
-                                                            .isNotEmpty) {
-                                                          vars['userEmail'] =
-                                                              _emailController
-                                                                  .text
-                                                                  .trim();
-                                                        }
-                                                        if (_phoneController.text
-                                                            .trim()
-                                                            .isNotEmpty) {
-                                                          vars['userPhone'] =
-                                                              _phoneController
-                                                                  .text
-                                                                  .trim();
-                                                        }
-                                                        if (_companyController
-                                                            .text
-                                                            .trim()
-                                                            .isNotEmpty) {
-                                                          vars['companyName'] =
-                                                              _companyController
-                                                                  .text
-                                                                  .trim();
-                                                        }
-                                                        vars[
-                                                                'isPostIncorporated'] =
-                                                            _isPostIncorporated;
-                                                        vars['preferManual'] =
-                                                            _preferManual;
-
-                                                        Navigator.of(context)
-                                                            .push(
-                                                          NoTransitionPageRoute(
-                                                            builder: (_) =>
-                                                                ModeSelectionPage(
-                                                              stageBucket: widget
-                                                                  .stageBucket,
-                                                              prospectId: widget
-                                                                      .prospectId ??
-                                                                  ProspectIdProvider.of(
-                                                                      context),
-                                                              dynamicVariables:
-                                                                  vars,
-                                                              onStartNew: widget
-                                                                  .onStartNew,
-                                                            ),
-                                                          ),
-                                                        );
-                                                      }
-                                                    }
+                                              onPressed: _canSubmit &&
+                                                      !_isSavingProfile
+                                                  ? _submitProfileAndContinue
                                                   : null,
-                                              icon: Icon(
-                                                Icons.auto_awesome,
-                                                size: 18,
-                                                color: _canSubmit
-                                                    ? AppThemeTokens.goldAccent
-                                                    : Colors.white,
-                                              ),
-                                              label: const Text('GET STARTED'),
+                                              icon: _isSavingProfile
+                                                  ? const SizedBox(
+                                                      width: 18,
+                                                      height: 18,
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        color: Colors.white,
+                                                      ),
+                                                    )
+                                                  : Icon(
+                                                      Icons.auto_awesome,
+                                                      size: 18,
+                                                      color: _canSubmit
+                                                          ? AppThemeTokens
+                                                              .goldAccent
+                                                          : Colors.white,
+                                                    ),
+                                              label: Text(_isSavingProfile
+                                                  ? 'SAVING...'
+                                                  : 'GET STARTED'),
                                               style: Theme.of(context)
                                                   .elevatedButtonTheme
                                                   .style
