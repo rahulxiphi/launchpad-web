@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/conversation_service.dart';
+import '../../shared/widgets/no_transition_page_route.dart';
 import 'voice_page.dart';
 import '../../theme/app_theme.dart';
 
@@ -83,7 +84,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
+        NoTransitionPageRoute(
           builder: (_) => VoicePage(
             conversationToken: tokenResult.conversationToken,
             stageBucket: widget.stageBucket,
@@ -145,31 +146,35 @@ class _ManualFormPageState extends State<ManualFormPage> {
                 final isMobile = constraints.maxWidth < 640;
                 return SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
-                  child: Center(
-                    child: Container(
-                      width: isMobile ? double.infinity : 840,
-                      margin: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 0 : 24,
-                        vertical: isMobile ? 0 : 32,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF1E1E1E)
-                            : Colors.white.withOpacity(0.96),
-                        borderRadius: BorderRadius.circular(isMobile ? 0 : 20),
-                        boxShadow: isMobile
-                            ? null
-                            : [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.22),
-                                  blurRadius: 48,
-                                  offset: const Offset(0, 16),
-                                )
-                              ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                  child: ConstrainedBox(
+                    constraints:
+                        BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Center(
+                      child: Container(
+                        width: isMobile ? double.infinity : 840,
+                        margin: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 0 : 24,
+                          vertical: isMobile ? 0 : 32,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF1E1E1E)
+                              : Colors.white.withOpacity(0.96),
+                          borderRadius:
+                              BorderRadius.circular(isMobile ? 0 : 20),
+                          boxShadow: isMobile
+                              ? null
+                              : [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.22),
+                                    blurRadius: 48,
+                                    offset: const Offset(0, 16),
+                                  )
+                                ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                           // ── Header bar ──────────────────────────────────
                           _buildHeader(context, isDark, textTheme),
 
@@ -493,7 +498,8 @@ class _ManualFormPageState extends State<ManualFormPage> {
                               ],
                             ),
                           ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),

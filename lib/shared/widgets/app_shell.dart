@@ -6,6 +6,7 @@ import '../../core/auth/auth_provider.dart';
 import '../../router/app_router.dart';
 import '../../features/voice/conversation_intro_page.dart';
 import '../../services/conversation_service.dart';
+import 'no_transition_page_route.dart';
 import 'top_bar.dart';
 
 /// Prospect conversation shell — full-width, no SideNav.
@@ -103,7 +104,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   /// the inner navigator stack with a new ConversationIntroPage.
   Future<void> _handleStartNew() async {
     _innerNavKey.currentState?.pushAndRemoveUntil(
-      MaterialPageRoute(
+      NoTransitionPageRoute(
         builder: (_) => ConversationIntroPage(
           stageBucket: widget.stageBucket,
           prospectId: _prospectId,
@@ -131,7 +132,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         body: Navigator(
           key: _innerNavKey,
           onGenerateRoute: (settings) {
-            return MaterialPageRoute(
+            return NoTransitionPageRoute(
               settings: settings,
               builder: (_) => ConversationIntroPage(
                 stageBucket: widget.stageBucket,

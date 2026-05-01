@@ -1,6 +1,5 @@
 import 'package:elevenlabs_agents/elevenlabs_agents.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import '../../tools/client_tools.dart';
 import '../../services/conversation_service.dart';
@@ -610,30 +609,51 @@ class _VoicePageState extends State<VoicePage> {
     final colorScheme = Theme.of(context).colorScheme;
     final isConnected = _client.status == ConversationStatus.connected;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0f172a) : const Color(0xFFF4F1EB);
 
     return Scaffold(
-      backgroundColor: bgColor,
-      body: SafeArea(
-        child: SizedBox.expand(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: SizedBox(
-                height: double.infinity,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 848),
-                child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Chat container ────────────────────────────────────────
-                  Expanded(
-                    child: Container(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.network(
+              'https://images.unsplash.com/photo-1556761175-b413da4baf72?q=80&w=2000&auto=format&fit=crop',
+              fit: BoxFit.cover,
+            ),
+          ),
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.3),
+                    Colors.black.withOpacity(0.6),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: SizedBox.expand(
+              child: Center(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  child: SizedBox(
+                    height: double.infinity,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 848),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Container(
                       decoration: BoxDecoration(
                         color: isDark
                             ? const Color(0xFF1E1E1E)
-                            : const Color(0xFFF5F3EE),
-                        borderRadius: BorderRadius.circular(16),
+                            : Colors.white.withOpacity(0.96),
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: isDark
                               ? Colors.grey.shade800
@@ -659,6 +679,7 @@ class _VoicePageState extends State<VoicePage> {
                             onEnd: _endSession,
                             onStartNew: _startNewSession,
                             colorScheme: colorScheme,
+                            isChatMode: _isChatMode,
                           ),
                           Expanded(
                             child: _transcript.isEmpty
@@ -732,16 +753,18 @@ class _VoicePageState extends State<VoicePage> {
                         ],
                       ),
                     ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ],
+                ),
               ),
-            ),           // closes ConstrainedBox
-          ),             // closes SizedBox(height)
-        ),               // closes Padding
-      ),                 // closes Center
-    ),                   // closes SizedBox.expand
-  ),                     // closes SafeArea
-);
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -876,7 +899,9 @@ class _BottomBarState extends State<_BottomBar> {
                       color: isDark ? const Color(0xFF1F2937) : const Color(0xFFFDFCF9),
                       borderRadius: BorderRadius.circular(32),
                       border: Border.all(
-                        color: colorScheme.outlineVariant,
+                        color: isDark
+                            ? Colors.grey.shade700
+                            : const Color(0xFFD1D5DB),
                         width: 1,
                       ),
                       boxShadow: [
@@ -942,7 +967,9 @@ class _BottomBarState extends State<_BottomBar> {
                                   decoration: BoxDecoration(
                                     color: canSend
                                         ? AppThemeTokens.modalHeader
-                                        : colorScheme.surfaceContainerHigh,
+                                        : (isDark
+                                            ? const Color(0xFF374151)
+                                            : const Color(0xFFE5E7EB)),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
@@ -950,8 +977,9 @@ class _BottomBarState extends State<_BottomBar> {
                                     size: 20,
                                     color: canSend
                                         ? AppThemeTokens.goldAccent
-                                        : colorScheme.onSurfaceVariant
-                                            .withOpacity(0.4),
+                                        : (isDark
+                                            ? Colors.grey.shade300
+                                            : const Color(0xFF9CA3AF)),
                                   ),
                                 ),
                               );

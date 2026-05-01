@@ -4,6 +4,7 @@ import 'voice_page.dart';
 import 'mode_selection_page.dart';
 import 'manual_form_page.dart';
 import '../../shared/widgets/app_shell.dart';
+import '../../shared/widgets/no_transition_page_route.dart';
 import '../../theme/app_theme.dart';
 
 class _StageContent {
@@ -421,7 +422,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
 
                                                         Navigator.of(context)
                                                             .push(
-                                                          MaterialPageRoute(
+                                                          NoTransitionPageRoute(
                                                             builder: (_) =>
                                                                 ModeSelectionPage(
                                                               stageBucket: widget

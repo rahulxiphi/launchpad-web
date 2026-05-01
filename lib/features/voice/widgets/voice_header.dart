@@ -11,6 +11,7 @@ class VoiceHeader extends StatelessWidget {
   final VoidCallback onEnd;
   final VoidCallback onStartNew;
   final ColorScheme colorScheme;
+  final bool isChatMode;
 
   const VoiceHeader({
     super.key,
@@ -23,6 +24,7 @@ class VoiceHeader extends StatelessWidget {
     required this.onEnd,
     required this.onStartNew,
     required this.colorScheme,
+    required this.isChatMode,
   });
 
   @override
@@ -35,11 +37,6 @@ class VoiceHeader extends StatelessWidget {
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(16),
           topRight: Radius.circular(16),
-        ),
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? Colors.grey.shade800 : const Color(0xFFE5E0D4),
-          ),
         ),
       ),
       child: Row(
@@ -183,12 +180,12 @@ class VoiceHeader extends StatelessWidget {
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.call_end_rounded, size: 14, color: Color(0xFFDC2626)),
-                    SizedBox(width: 5),
+                  children: [
+                    const Icon(Icons.call_end_rounded, size: 14, color: Color(0xFFDC2626)),
+                    const SizedBox(width: 5),
                     Text(
-                      'End',
-                      style: TextStyle(
+                      isChatMode ? 'End chat' : 'End',
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFFDC2626),

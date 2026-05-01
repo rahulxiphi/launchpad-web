@@ -3,6 +3,7 @@ import '../../services/conversation_service.dart';
 import 'voice_page.dart';
 import 'manual_form_page.dart';
 import '../../shared/widgets/app_shell.dart';
+import '../../shared/widgets/no_transition_page_route.dart';
 import '../../theme/app_theme.dart';
 
 class ModeSelectionPage extends StatefulWidget {
@@ -73,7 +74,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
+        NoTransitionPageRoute(
           builder: (_) => VoicePage(
             conversationToken: tokenResult.conversationToken,
             stageBucket: widget.stageBucket,
@@ -95,7 +96,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
 
   void _goToManualForm() {
     Navigator.of(context).push(
-      MaterialPageRoute(
+      NoTransitionPageRoute(
         builder: (_) => ManualFormPage(
           stageBucket: widget.stageBucket,
           prospectId: widget.prospectId ?? ProspectIdProvider.of(context),
@@ -141,29 +142,35 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                 final isMobile = constraints.maxWidth < 640;
                 return SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
-                  child: Center(
-                    child: Container(
-                      width: isMobile ? double.infinity : 840,
-                      margin: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 0 : 24,
-                        vertical: isMobile ? 0 : 32,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                        borderRadius: BorderRadius.circular(isMobile ? 0 : 20),
-                        boxShadow: isMobile
-                            ? null
-                            : [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.22),
-                                  blurRadius: 48,
-                                  offset: const Offset(0, 16),
-                                )
-                              ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                  child: ConstrainedBox(
+                    constraints:
+                        BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Center(
+                      child: Container(
+                        width: isMobile ? double.infinity : 840,
+                        margin: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 0 : 24,
+                          vertical: isMobile ? 0 : 32,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF1E1E1E)
+                              : Colors.white,
+                          borderRadius:
+                              BorderRadius.circular(isMobile ? 0 : 20),
+                          boxShadow: isMobile
+                              ? null
+                              : [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.22),
+                                    blurRadius: 48,
+                                    offset: const Offset(0, 16),
+                                  )
+                                ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                           // ── Header bar ──────────────────────────────────
                           _buildTopHeader(context, isDark, textTheme),
                           _buildStepHeader(context, isDark, textTheme),
@@ -447,7 +454,8 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                               ],
                             ),
                           ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
