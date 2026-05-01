@@ -43,15 +43,24 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
   final _service = ConversationService();
   bool _isLoading = false;
   String? _errorMessage;
+  ProspectInitResult? _resolvedProspect;
+  bool _startAtModeSelection = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.returnProspectId != null) {
-      _handleReturnVisit(widget.returnProspectId!);
-    } else if (widget.invitationCode != null) {
-      _handleInviteCode(widget.invitationCode!);
-    }
+    final returnProspectId =
+        widget.returnProspectId ?? Uri.base.queryParameters['p'];
+    final invitationCode =
+        widget.invitationCode ?? Uri.base.queryParameters['invite'];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (returnProspectId != null && returnProspectId.isNotEmpty) {
+        _handleReturnVisit(returnProspectId);
+      } else if (invitationCode != null && invitationCode.isNotEmpty) {
+        _handleInviteCode(invitationCode);
+      }
+    });
   }
 
   Future<void> _handleReturnVisit(String prospectId) async {
@@ -59,12 +68,10 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
     try {
       final prospect = await _service.getProspect(prospectId);
       if (!mounted) return;
-      await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => AppShell(
-          stageBucket: prospect.stageBucket,
-          prospectId: prospectId,
-        ),
-      ));
+      setState(() {
+        _resolvedProspect = prospect;
+        _startAtModeSelection = true;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _errorMessage = 'Could not resume session.');
@@ -78,12 +85,10 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
     try {
       final initResult = await _service.initProspect(invitationCode);
       if (!mounted) return;
-      await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => AppShell(
-          stageBucket: initResult.stageBucket,
-          prospectId: initResult.prospectId,
-        ),
-      ));
+      setState(() {
+        _resolvedProspect = initResult;
+        _startAtModeSelection = false;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _errorMessage = 'Invalid link.');
@@ -121,6 +126,18 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_resolvedProspect != null) {
+      final resolved = _resolvedProspect!;
+      return AppShell(
+        stageBucket: resolved.stageBucket,
+        prospectId: resolved.prospectId,
+        dynamicVariables: resolved.toDynamicVariables(
+          lockProfileFields: _startAtModeSelection,
+        ),
+        startAtModeSelection: _startAtModeSelection,
+      );
+    }
+
     const navy = AppThemeTokens.modalHeader;
     const gold = AppThemeTokens.goldAccent;
     const textGray = Color(0xFF6B6B6B);

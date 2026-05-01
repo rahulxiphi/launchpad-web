@@ -149,9 +149,19 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   // Core JPMC aesthetic colors
   static const jpmcDarkNavy = Color(0xFF131F2E);
 
+  bool get _isReadOnly =>
+      widget.dynamicVariables['lock_profile_fields'] == true;
+
   @override
   void initState() {
     super.initState();
+    _nameController.text = widget.dynamicVariables['userName']?.toString() ?? '';
+    _emailController.text = widget.dynamicVariables['userEmail']?.toString() ?? '';
+    _phoneController.text = widget.dynamicVariables['userPhone']?.toString() ?? '';
+    _companyController.text = widget.dynamicVariables['companyName']?.toString() ?? '';
+    _isPostIncorporated =
+        widget.dynamicVariables['isPostIncorporated'] == true;
+    _preferManual = widget.dynamicVariables['preferManual'] == true;
     _emailController.addListener(_onFormChanged);
     _companyController.addListener(_onFormChanged);
   }
@@ -356,8 +366,8 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              _buildTextField('Name', _nameController, false, hint: 'Alex Rivera', onChanged: (_) => _onFormChanged()),
-                                              _buildTextField('Email', _emailController, true, hint: 'alex@yourcompany.com', onChanged: (_) => _onFormChanged()),
+                                              _buildTextField('Name', _nameController, false, hint: 'Alex Rivera', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
+                                              _buildTextField('Email', _emailController, true, hint: 'alex@yourcompany.com', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
                                             ],
                                           ),
                                         ),
@@ -368,15 +378,16 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              _buildTextField('Phone number', _phoneController, false, hint: '+1 (555) 000-0000', onChanged: (_) => _onFormChanged()),
+                                              _buildTextField('Phone number', _phoneController, false, hint: '+1 (555) 000-0000', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
                                               _buildTextField(
                                                 'Company',
                                                 _companyController,
                                                 _isPostIncorporated,
                                                 hint: 'e.g. Northline AI',
                                                 onChanged: (_) => _onFormChanged(),
+                                                readOnly: _isReadOnly,
                                                 trailingLabelWidget: GestureDetector(
-                                                  onTap: () {
+                                                  onTap: _isReadOnly ? null : () {
                                                     setState(() => _isPostIncorporated = !_isPostIncorporated);
                                                     _onFormChanged();
                                                   },
@@ -462,7 +473,9 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                     ),
                                               label: Text(_isSavingProfile
                                                   ? 'SAVING...'
-                                                  : 'GET STARTED'),
+                                                  : (_isReadOnly
+                                                      ? 'CONTINUE'
+                                                      : 'GET STARTED')),
                                               style: Theme.of(context)
                                                   .elevatedButtonTheme
                                                   .style
@@ -605,7 +618,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, bool isMandatory, {String? hint, void Function(String)? onChanged, Widget? trailingLabelWidget}) {
+  Widget _buildTextField(String label, TextEditingController controller, bool isMandatory, {String? hint, void Function(String)? onChanged, Widget? trailingLabelWidget, bool readOnly = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Column(
@@ -631,7 +644,8 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
           const SizedBox(height: 8),
           TextFormField(
             controller: controller,
-            onChanged: onChanged,
+            onChanged: readOnly ? null : onChanged,
+            readOnly: readOnly,
             validator: (value) {
               if (isMandatory && (value == null || value.trim().isEmpty)) {
                 return 'This field is mandatory';

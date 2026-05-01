@@ -43,6 +43,15 @@ class ProspectInitResult {
   final String agentDisplayName;
   final int conversationPhase;
   final bool isReturning;
+  final String? email;
+  final String? fullName;
+  final String? phoneNumber;
+  final String? companyName;
+  final bool incorporated;
+  final String? companyStage;
+  final String? industry;
+  final String? headcount;
+  final Map<String, bool> selectedPrioritiesJson;
   final ProspectClassification? classification;
 
   ProspectInitResult({
@@ -51,8 +60,40 @@ class ProspectInitResult {
     required this.agentDisplayName,
     this.conversationPhase = 1,
     this.isReturning = false,
+    this.email,
+    this.fullName,
+    this.phoneNumber,
+    this.companyName,
+    this.incorporated = false,
+    this.companyStage,
+    this.industry,
+    this.headcount,
+    this.selectedPrioritiesJson = const {},
     this.classification,
   });
+
+  Map<String, dynamic> toDynamicVariables({bool lockProfileFields = false}) {
+    final selectedPriorities = selectedPrioritiesJson.entries
+        .where((entry) => entry.value)
+        .map((entry) => entry.key)
+        .toList();
+
+    return {
+      'is_return_visit': isReturning,
+      'lock_profile_fields': lockProfileFields,
+      if (fullName != null) 'userName': fullName,
+      if (email != null) 'userEmail': email,
+      if (phoneNumber != null) 'userPhone': phoneNumber,
+      if (companyName != null) 'companyName': companyName,
+      'isPostIncorporated': incorporated,
+      if (companyStage != null) 'stage': companyStage,
+      if (industry != null) 'industry': industry,
+      if (headcount != null) 'headcount': headcount,
+      if (selectedPrioritiesJson.isNotEmpty)
+        'selectedPriorities': selectedPrioritiesJson,
+      if (selectedPriorities.isNotEmpty) 'priorities': selectedPriorities,
+    };
+  }
 }
 
 /// Response from the voice-token endpoint.
@@ -139,6 +180,22 @@ class ConversationService {
       agentDisplayName: data['agent_display_name'] as String,
       conversationPhase: data['conversation_phase'] as int? ?? 1,
       isReturning: data['is_returning'] as bool? ?? false,
+      email: data['email'] as String?,
+      fullName: data['full_name'] as String?,
+      phoneNumber: data['phone_number'] as String?,
+      companyName: data['company_name'] as String?,
+      incorporated: data['incorporated'] as bool? ?? false,
+      companyStage: data['company_stage'] as String?,
+      industry: data['industry'] as String?,
+      headcount: data['headcount'] as String?,
+      selectedPrioritiesJson:
+          (data['selected_priorities_json'] as Map?)?.map(
+                (key, value) => MapEntry(
+                  key.toString(),
+                  value == true,
+                ),
+              ) ??
+              const {},
     );
   }
 
@@ -156,6 +213,22 @@ class ConversationService {
       agentDisplayName: data['agent_display_name'] as String? ?? 'your JPMC AI Advisor',
       conversationPhase: data['conversation_phase'] as int? ?? 1,
       isReturning: true,
+      email: data['email'] as String?,
+      fullName: data['full_name'] as String?,
+      phoneNumber: data['phone_number'] as String?,
+      companyName: data['company_name'] as String?,
+      incorporated: data['incorporated'] as bool? ?? false,
+      companyStage: data['company_stage'] as String?,
+      industry: data['industry'] as String?,
+      headcount: data['headcount'] as String?,
+      selectedPrioritiesJson:
+          (data['selected_priorities_json'] as Map?)?.map(
+                (key, value) => MapEntry(
+                  key.toString(),
+                  value == true,
+                ),
+              ) ??
+              const {},
       classification: classificationData == null
         ? null
         : ProspectClassification(

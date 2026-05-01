@@ -32,6 +32,8 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
+  bool get _isReturnVisit => widget.dynamicVariables['is_return_visit'] == true;
+
   @override
   void initState() {
     super.initState();
@@ -288,7 +290,9 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                                   ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'Tap to start conversation',
+                                  _isReturnVisit
+                                      ? 'Tap to continue conversation'
+                                      : 'Tap to start conversation',
                                   style: textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: isDark
@@ -298,7 +302,9 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  '~10 min · Nova asks, you answer',
+                                  _isReturnVisit
+                                      ? 'Continue where Nova left off'
+                                      : '~10 min · Nova asks, you answer',
                                   style: textTheme.bodySmall?.copyWith(
                                     color: isDark
                                         ? Colors.white54
@@ -439,9 +445,11 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                                                     ),
                                                   ),
                                                 ),
-                                            child: const Text(
-                                              "Let's Chat",
-                                              style: TextStyle(
+                                            child: Text(
+                                              _isReturnVisit
+                                                  ? 'Continue Chat'
+                                                  : "Let's Chat",
+                                              style: const TextStyle(
                                                   fontWeight:
                                                       FontWeight.bold),
                                             ),

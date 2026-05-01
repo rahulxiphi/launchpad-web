@@ -57,6 +57,36 @@ class _ManualFormPageState extends State<ManualFormPage> {
   bool get _canSubmit =>
       _selectedStage != null && _selectedPriorities.isNotEmpty;
 
+  bool get _isReadOnly =>
+      widget.dynamicVariables['lock_profile_fields'] == true;
+
+  @override
+  void initState() {
+    super.initState();
+    final savedStage = widget.dynamicVariables['stage']?.toString();
+    _selectedStage = _stageValueMap.entries
+        .firstWhere(
+          (entry) => entry.value == savedStage,
+          orElse: () => const MapEntry('', ''),
+        )
+        .key;
+    if (_selectedStage == '') {
+      _selectedStage = null;
+    }
+    _industryController.text =
+        widget.dynamicVariables['industry']?.toString() ?? '';
+    _headcount = widget.dynamicVariables['headcount']?.toString();
+    final selectedPriorities =
+        widget.dynamicVariables['selectedPriorities'] as Map?;
+    if (selectedPriorities != null) {
+      for (final entry in selectedPriorities.entries) {
+        if (entry.value == true) {
+          _selectedPriorities.add(entry.key.toString());
+        }
+      }
+    }
+  }
+
   void _handleBack() {
     final nav = Navigator.of(context);
     if (nav.canPop()) {
@@ -230,7 +260,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                   children: _stages.map((stage) {
                                     final selected = _selectedStage == stage;
                                     return GestureDetector(
-                                      onTap: () =>
+                                      onTap: _isReadOnly ? null : () =>
                                           setState(() => _selectedStage = stage),
                                       child: AnimatedContainer(
                                         duration:
@@ -284,6 +314,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                         optional: true,
                                         isDark: isDark,
                                         controller: _industryController,
+                                        readOnly: _isReadOnly,
                                         hint: 'e.g. B2B SaaS, Fintech…',
                                       ),
                                     ),
@@ -294,8 +325,9 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                         isDark: isDark,
                                         value: _headcount,
                                         items: _headcounts,
-                                        onChanged: (v) =>
+                                        onChanged: _isReadOnly ? (_) {} : (v) =>
                                             setState(() => _headcount = v),
+                                        enabled: !_isReadOnly,
                                       ),
                                     ),
                                   ],
@@ -335,6 +367,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                           width: isMobile ? double.infinity : cardWidth,
                                           child: GestureDetector(
                                             onTap: isDisabled
+                                                || _isReadOnly
                                                 ? null
                                                 : () => _togglePriority(title),
                                         child: AnimatedOpacity(
@@ -634,6 +667,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
     required TextEditingController controller,
     String? hint,
     bool optional = false,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -662,6 +696,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
+          readOnly: readOnly,
           decoration: InputDecoration(
             filled: true,
             fillColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9FAFB),
@@ -697,6 +732,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
     required String? value,
     required List<String> items,
     required ValueChanged<String?> onChanged,
+    bool enabled = true,
   }) {
     final key = GlobalKey();
     return Column(
@@ -713,7 +749,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: value,
-          onChanged: onChanged,
+          onChanged: enabled ? onChanged : null,
           icon: Icon(Icons.keyboard_arrow_down_rounded,
               size: 20,
               color: isDark ? Colors.white.withOpacity(0.54) : Colors.grey.shade500),

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../router/app_router.dart';
 import '../../features/voice/conversation_intro_page.dart';
+import '../../features/voice/mode_selection_page.dart';
 import '../../services/conversation_service.dart';
 import 'no_transition_page_route.dart';
 import 'top_bar.dart';
@@ -19,12 +20,14 @@ class AppShell extends ConsumerStatefulWidget {
   final String stageBucket;
   final String? prospectId;
   final Map<String, dynamic> dynamicVariables;
+  final bool startAtModeSelection;
 
   const AppShell({
     super.key,
     required this.stageBucket,
     this.prospectId,
     this.dynamicVariables = const {},
+    this.startAtModeSelection = false,
   });
 
   @override
@@ -53,13 +56,18 @@ class _AppShellState extends ConsumerState<AppShell> {
   final _service = ConversationService();
   
   String? _prospectId;
+  late Map<String, dynamic> _resolvedDynamicVariables;
+  bool _isHydratingReturnProspect = false;
 
   @override
   void initState() {
     super.initState();
     _prospectId = widget.prospectId;
+    _resolvedDynamicVariables = Map<String, dynamic>.from(widget.dynamicVariables);
     if (_prospectId == null) {
       _initLazyProspect();
+    } else if (widget.startAtModeSelection) {
+      _hydrateReturnProspect();
     }
   }
 
@@ -73,6 +81,29 @@ class _AppShellState extends ConsumerState<AppShell> {
       }
     } catch (e) {
       debugPrint('Lazy prospect init failed: $e');
+    }
+  }
+
+  Future<void> _hydrateReturnProspect() async {
+    if (_prospectId == null) return;
+    setState(() {
+      _isHydratingReturnProspect = true;
+    });
+    try {
+      final prospect = await _service.getProspect(_prospectId!);
+      if (!mounted) return;
+      setState(() {
+        _resolvedDynamicVariables =
+            prospect.toDynamicVariables(lockProfileFields: true);
+      });
+    } catch (e) {
+      debugPrint('Return prospect hydration failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isHydratingReturnProspect = false;
+        });
+      }
     }
   }
 
@@ -120,6 +151,21 @@ class _AppShellState extends ConsumerState<AppShell> {
   Widget build(BuildContext context) {
     final isAuthenticated = ref.watch(isAuthenticatedProvider);
 
+    if (_isHydratingReturnProspect) {
+      return ProspectIdProvider(
+        prospectId: _prospectId,
+        child: Scaffold(
+          appBar: AppTopBar(
+            onSignIn: _handleSignIn,
+            onSignOut: _handleSignOut,
+            onProfileTap: _handleProfileTap,
+            isAuthenticated: isAuthenticated,
+          ),
+          body: const Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
     return ProspectIdProvider(
       prospectId: _prospectId,
       child: Scaffold(
@@ -131,13 +177,39 @@ class _AppShellState extends ConsumerState<AppShell> {
         ),
         body: Navigator(
           key: _innerNavKey,
+          onGenerateInitialRoutes: (navigator, initialRoute) {
+            final introRoute = NoTransitionPageRoute(
+              builder: (_) => ConversationIntroPage(
+                stageBucket: widget.stageBucket,
+                prospectId: _prospectId,
+                dynamicVariables: _resolvedDynamicVariables,
+                onStartNew: _handleStartNew,
+              ),
+            );
+
+            if (!widget.startAtModeSelection) {
+              return [introRoute];
+            }
+
+            return [
+              introRoute,
+              NoTransitionPageRoute(
+                builder: (_) => ModeSelectionPage(
+                  stageBucket: widget.stageBucket,
+                  prospectId: _prospectId,
+                  dynamicVariables: _resolvedDynamicVariables,
+                  onStartNew: _handleStartNew,
+                ),
+              ),
+            ];
+          },
           onGenerateRoute: (settings) {
             return NoTransitionPageRoute(
               settings: settings,
               builder: (_) => ConversationIntroPage(
                 stageBucket: widget.stageBucket,
                 prospectId: _prospectId,
-                dynamicVariables: widget.dynamicVariables,
+                dynamicVariables: _resolvedDynamicVariables,
                 onStartNew: _handleStartNew,
               ),
             );
