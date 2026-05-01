@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../theme/app_theme.dart';
 
 class VoiceBubbleRow extends StatelessWidget {
   final bool isUser;
@@ -23,15 +24,14 @@ class VoiceBubbleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    const jpmcDarkNavy = Color(0xFF131F2E);
     final aiBubbleColor = isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB);
     final aiTextColor = isDark ? Colors.white : const Color(0xFF1F2937);
 
     final screenWidth = MediaQuery.of(context).size.width;
     final containerWidth = screenWidth > 800 ? 800.0 : screenWidth;
 
-    final aiAvatarBg = jpmcDarkNavy;
-    final userBubbleBg = const Color(0xFF006CAD); // Same as "Get Started" button
+    final aiAvatarBg = AppThemeTokens.modalHeader;
+    final userBubbleBg = AppThemeTokens.buttonPrimary;
     final userAvatarBg = aiBubbleColor;
 
     Widget avatar(Color bg, Widget child) => Container(
@@ -48,7 +48,7 @@ class VoiceBubbleRow extends StatelessWidget {
         style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: Color(0xFFc9a84c),
+          color: AppThemeTokens.goldAccent,
         ),
       ),
     );
@@ -135,7 +135,9 @@ class VoiceBubbleRow extends StatelessWidget {
                       url,
                       style: TextStyle(
                         fontSize: 13,
-                        color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF006CAD),
+                        color: isDark
+                            ? const Color(0xFF60A5FA)
+                            : AppThemeTokens.buttonPrimary,
                         fontFamily: 'monospace',
                         fontWeight: FontWeight.w600,
                       ),
@@ -210,7 +212,9 @@ class _CopyLinkButtonState extends State<_CopyLinkButton> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: _copied ? const Color(0xFF1d9e75) : const Color(0xFF04213d),
+          color: _copied
+              ? const Color(0xFF1d9e75)
+              : AppThemeTokens.modalHeader,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -219,7 +223,7 @@ class _CopyLinkButtonState extends State<_CopyLinkButton> {
             Icon(
               _copied ? Icons.check_rounded : Icons.copy_rounded,
               size: 14,
-              color: _copied ? Colors.white : const Color(0xFFc9a84c),
+              color: _copied ? Colors.white : AppThemeTokens.goldAccent,
             ),
             const SizedBox(width: 6),
             Text(
@@ -227,7 +231,7 @@ class _CopyLinkButtonState extends State<_CopyLinkButton> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: _copied ? Colors.white : const Color(0xFFc9a84c),
+                color: _copied ? Colors.white : AppThemeTokens.goldAccent,
               ),
             ),
           ],

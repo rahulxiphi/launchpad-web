@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/conversation_service.dart';
 import '../../shared/widgets/app_shell.dart';
+import '../../theme/app_theme.dart';
 
 class JpmcLandingPage extends StatefulWidget {
   final String? invitationCode;
@@ -120,8 +121,8 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
 
   @override
   Widget build(BuildContext context) {
-    const navy = Color(0xFF0A2744);
-    const gold = Color(0xFFC8872A);
+    const navy = AppThemeTokens.modalHeader;
+    const gold = AppThemeTokens.goldAccent;
     const textGray = Color(0xFF6B6B6B);
     const lpIndigo = Color(0xFF4F46E5);
     const lpIndigoDk = Color(0xFF3730A3);
@@ -145,7 +146,6 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
                   child: Text(
                     '🔵 Demo mockup — LaunchPad simulation${isMobile ? '' : ' of the J.P. Morgan startups page.'}',
                     style: const TextStyle(
-                      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
                       fontSize: 12,
                       color: Color(0xD9C8CDFF),
                     ),
@@ -169,7 +169,7 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
                             children: [
                               RichText(
                                 text: const TextSpan(
-                                  style: TextStyle(fontFamily: 'Georgia, serif', fontSize: 22, color: Colors.white, letterSpacing: 0.5),
+                                  style: TextStyle(fontSize: 22, color: Colors.white, letterSpacing: 0.5),
                                   children: [
                                     TextSpan(text: 'J.P. '),
                                     TextSpan(text: 'Morgan', style: TextStyle(color: gold)),
@@ -190,13 +190,21 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
                                   ],
                                   ElevatedButton(
                                     onPressed: _startSession,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF006CAD),
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
-                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                                      elevation: 0,
-                                    ),
+                                    style: Theme.of(context)
+                                        .elevatedButtonTheme
+                                        .style
+                                        ?.copyWith(
+                                          shape: WidgetStateProperty.all(
+                                            RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(2),
+                                            ),
+                                          ),
+                                          padding: WidgetStateProperty.all(
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 20, vertical: 14),
+                                          ),
+                                        ),
                                     child: const Text('GET IN TOUCH', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.9)),
                                   ),
                                 ],
@@ -288,7 +296,7 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
                                 children: [
                                   const Text('INNOVATION ECONOMY BANKING', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 2.2, color: gold)),
                                   const SizedBox(height: 18),
-                                  Text('Banking the Innovation\nEconomy', style: TextStyle(fontFamily: 'Georgia, serif', fontSize: isMobile ? 38 : 52, fontWeight: FontWeight.w400, color: Colors.white, height: 1.12)),
+                                  Text('Banking the Innovation\nEconomy', style: TextStyle(fontSize: isMobile ? 38 : 52, fontWeight: FontWeight.w400, color: Colors.white, height: 1.12)),
                                   const SizedBox(height: 22),
                                   Text('Streamlined financial solutions and expert guidance to support your\nstartup from seed to IPO and beyond.', style: TextStyle(fontSize: isMobile ? 15 : 17, color: const Color(0xB7FFFFFF), height: 1.7)),
                                   const SizedBox(height: 38),
@@ -298,13 +306,23 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
                                     children: [
                                       ElevatedButton(
                                         onPressed: _startSession,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFF006CAD),
-                                          foregroundColor: Colors.white,
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
-                                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
-                                          elevation: 0,
-                                        ),
+                                        style: Theme.of(context)
+                                            .elevatedButtonTheme
+                                            .style
+                                            ?.copyWith(
+                                              shape: WidgetStateProperty.all(
+                                                RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(2),
+                                                ),
+                                              ),
+                                              padding:
+                                                  WidgetStateProperty.all(
+                                                const EdgeInsets.symmetric(
+                                                    horizontal: 28,
+                                                    vertical: 20),
+                                              ),
+                                            ),
                                         child: const Text('GET IN TOUCH', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
                                       ),
                                       OutlinedButton(
@@ -388,9 +406,9 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('BANKING SOLUTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 2, color: Color(0xFF006CAD))),
+                                  const Text('BANKING SOLUTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 2, color: AppThemeTokens.buttonPrimary)),
                                   const SizedBox(height: 12),
-                                  Text('Banking solutions to match your scale and needs', style: TextStyle(fontFamily: 'Georgia, serif', fontSize: isMobile ? 26 : 34, fontWeight: FontWeight.w400, color: navy)),
+                                  Text('Banking solutions to match your scale and needs', style: TextStyle(fontSize: isMobile ? 26 : 34, fontWeight: FontWeight.w400, color: navy)),
                                   const SizedBox(height: 16),
                                   Text('Our products help you reduce costs, save time and make more\ninformed decisions — so you can focus on growing your business.', style: TextStyle(fontSize: 16, color: textGray, height: 1.65)),
                                   const SizedBox(height: 48),
@@ -463,9 +481,9 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('YOUR STAGE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 2, color: Color(0xFF006CAD))),
+                                  const Text('YOUR STAGE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 2, color: AppThemeTokens.buttonPrimary)),
                                   const SizedBox(height: 12),
-                                  Text('Expertise supporting your growth at every stage', style: TextStyle(fontFamily: 'Georgia, serif', fontSize: isMobile ? 26 : 34, fontWeight: FontWeight.w400, color: navy)),
+                                  Text('Expertise supporting your growth at every stage', style: TextStyle(fontSize: isMobile ? 26 : 34, fontWeight: FontWeight.w400, color: navy)),
                                   const SizedBox(height: 48),
 
                                   // Stage Tabs
@@ -494,19 +512,31 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            const Text('From pre-seed to seed', style: TextStyle(fontFamily: 'Georgia, serif', fontSize: 28, fontWeight: FontWeight.w400, color: navy)),
+                                            const Text('From pre-seed to seed', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w400, color: navy)),
                                             const SizedBox(height: 16),
                                             const Text('We offer comprehensive support including operating accounts, liquidity management, card and merchant processing, cap table management, Startup Offers, and financing alternatives to help you grow.', style: TextStyle(fontSize: 15, color: textGray, height: 1.72)),
                                             const SizedBox(height: 28),
                                             ElevatedButton(
                                               onPressed: _startSession,
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: const Color(0xFF006CAD),
-                                                foregroundColor: Colors.white,
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
-                                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                                                elevation: 0,
-                                              ),
+                                              style: Theme.of(context)
+                                                  .elevatedButtonTheme
+                                                  .style
+                                                  ?.copyWith(
+                                                    shape:
+                                                        WidgetStateProperty.all(
+                                                      RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                                2),
+                                                      ),
+                                                    ),
+                                                    padding:
+                                                        WidgetStateProperty.all(
+                                                      const EdgeInsets.symmetric(
+                                                          horizontal: 24,
+                                                          vertical: 18),
+                                                    ),
+                                                  ),
                                               child: const Text('EARLY STAGE STARTUPS →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
                                             ),
                                           ],
@@ -575,7 +605,7 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
                                           ),
                                         ),
                                         const SizedBox(height: 22),
-                                        Text('Meet LaunchPad — your startup intelligence partner', style: TextStyle(fontFamily: 'Georgia, serif', fontSize: isMobile ? 28 : 40, color: Colors.white, height: 1.18)),
+                                        Text('Meet LaunchPad — your startup intelligence partner', style: TextStyle(fontSize: isMobile ? 28 : 40, color: Colors.white, height: 1.18)),
                                         const SizedBox(height: 18),
                                         Text('We\'ve partnered with LaunchPad to give J.P. Morgan startup clients access to a personalised AI advisor that understands your business and maps your needs to exactly the right financial products — no forms, no waiting.', style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.72), height: 1.68)),
                                         const SizedBox(height: 28),
@@ -608,14 +638,33 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
                                         children: [
                                           ElevatedButton(
                                             onPressed: _startSession,
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.white,
-                                              foregroundColor: lpIndigo,
-                                              padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 32),
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                              elevation: 10,
-                                              minimumSize: const Size(double.infinity, 50),
-                                            ),
+                                            style: Theme.of(context)
+                                                .elevatedButtonTheme
+                                                .style
+                                                ?.copyWith(
+                                                  padding:
+                                                      WidgetStateProperty.all(
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 17,
+                                                        horizontal: 32),
+                                                  ),
+                                                  shape:
+                                                      WidgetStateProperty.all(
+                                                    RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              6),
+                                                    ),
+                                                  ),
+                                                  elevation:
+                                                      WidgetStateProperty.all(
+                                                          10),
+                                                  minimumSize:
+                                                      WidgetStateProperty.all(
+                                                    const Size(
+                                                        double.infinity, 50),
+                                                  ),
+                                                ),
                                             child: const Text('Get Started with LaunchPad', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                                           ),
                                           const SizedBox(height: 12),
@@ -718,7 +767,7 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
   Widget _subNavLink(String text, {bool isActive = false, bool hasDropdown = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: isActive ? const Color(0xFFC8872A) : Colors.transparent, width: 2))),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: isActive ? AppThemeTokens.goldAccent : Colors.transparent, width: 2))),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -765,8 +814,8 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
   Widget _stageTab(String text, {bool isActive = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: isActive ? const Color(0xFFC8872A) : Colors.transparent, width: 2))),
-      child: Text(text, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isActive ? const Color(0xFF0A2744) : const Color(0xFF6B6B6B))),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: isActive ? AppThemeTokens.goldAccent : Colors.transparent, width: 2))),
+      child: Text(text, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isActive ? AppThemeTokens.modalHeader : const Color(0xFF6B6B6B))),
     );
   }
 
@@ -785,20 +834,20 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
         children: [
           Container(width: 46, height: 46, decoration: BoxDecoration(color: iconColor, shape: BoxShape.circle), alignment: Alignment.center, child: Text(icon, style: const TextStyle(fontSize: 20))),
           const SizedBox(height: 20),
-          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF0A2744))),
+          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppThemeTokens.modalHeader)),
           const SizedBox(height: 14),
           ...points.map((p) => Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('• ', style: TextStyle(color: Color(0xFF006CAD))),
+                const Text('• ', style: TextStyle(color: AppThemeTokens.buttonPrimary)),
                 Expanded(child: Text(p, style: const TextStyle(fontSize: 13, color: Color(0xFF6B6B6B), height: 1.5)))
               ]
             )
           )),
           const SizedBox(height: 24),
-          const Text('LEARN MORE →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF006CAD), letterSpacing: 0.4)),
+          const Text('LEARN MORE →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppThemeTokens.buttonPrimary, letterSpacing: 0.4)),
         ],
       ),
     );

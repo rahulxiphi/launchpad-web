@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/conversation_service.dart';
 import 'voice_page.dart';
+import '../../theme/app_theme.dart';
 
 class ManualFormPage extends StatefulWidget {
   final String stageBucket;
@@ -21,11 +22,6 @@ class ManualFormPage extends StatefulWidget {
 }
 
 class _ManualFormPageState extends State<ManualFormPage> {
-  // JPMC Colors
-  static const jpmcNavy = Color(0xFF0A2744);
-  static const jpmcBlue = Color(0xFF006CAD);
-  static const jpmcGold = Color(0xFFC8872A);
-
   bool _isFetchingToken = false;
 
   // Stage
@@ -49,6 +45,15 @@ class _ManualFormPageState extends State<ManualFormPage> {
 
   bool get _canSubmit =>
       _selectedStage != null && _selectedPriorities.isNotEmpty;
+
+  void _handleBack() {
+    final nav = Navigator.of(context);
+    if (nav.canPop()) {
+      nav.pop();
+    } else {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+  }
 
   void _togglePriority(String title) {
     setState(() {
@@ -205,7 +210,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                             horizontal: 12, vertical: 6),
                                         decoration: BoxDecoration(
                                           color: selected
-                                              ? jpmcNavy
+                                              ? AppThemeTokens.modalHeader
                                               : (isDark
                                                   ? const Color(0xFF2C2C2C)
                                                   : Colors.white),
@@ -213,7 +218,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                               BorderRadius.circular(999),
                                           border: Border.all(
                                             color: selected
-                                                ? jpmcNavy
+                                                ? AppThemeTokens.modalHeader
                                                 : (isDark
                                                     ? Colors.white.withOpacity(0.24)
                                                     : const Color(0xFFD1D5DB)),
@@ -228,7 +233,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                                 ? FontWeight.w600
                                                 : FontWeight.w400,
                                             color: selected
-                                                ? jpmcGold
+                                                ? AppThemeTokens.goldAccent
                                                 : (isDark
                                                     ? Colors.white.withOpacity(0.60)
                                                     : const Color(0xFF374151)),
@@ -314,7 +319,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                             decoration: BoxDecoration(
                                               color: isSelected
                                                   ? (isDark
-                                                      ? const Color(0xFF0A2744)
+                                                      ? AppThemeTokens.modalHeader
                                                           .withOpacity(0.5)
                                                       : const Color(0xFFEBF4FF))
                                                   : (isDark
@@ -324,7 +329,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                                   BorderRadius.circular(10),
                                               border: Border.all(
                                                 color: isSelected
-                                                    ? jpmcBlue
+                                                    ? AppThemeTokens.buttonPrimary
                                                     : (isDark
                                                         ? Colors.white.withOpacity(0.12)
                                                         : const Color(0xFFE5E7EB)),
@@ -343,13 +348,13 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                                   height: 20,
                                                   decoration: BoxDecoration(
                                                     color: isSelected
-                                                        ? jpmcBlue
+                                                        ? AppThemeTokens.buttonPrimary
                                                         : Colors.transparent,
                                                     borderRadius:
                                                         BorderRadius.circular(5),
                                                     border: Border.all(
                                                       color: isSelected
-                                                          ? jpmcBlue
+                                                          ? AppThemeTokens.buttonPrimary
                                                           : (isDark
                                                               ? Colors.white.withOpacity(0.38)
                                                               : const Color(
@@ -378,7 +383,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                                               FontWeight.w600,
                                                           color: isDark
                                                               ? Colors.white.withOpacity(0.87)
-                                                              : jpmcNavy,
+                                                              : AppThemeTokens.brandInk,
                                                         ),
                                                       ),
                                                       const SizedBox(height: 2),
@@ -410,41 +415,79 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                 const SizedBox(height: 24),
 
                                 // ── Footer: Submit ─────────────────────────
-                                Center(
-                                  child: SizedBox(
-                                    height: 52,
-                                    width: isMobile ? double.infinity : 360,
-                                    child: ElevatedButton.icon(
-                                      onPressed: _canSubmit && !_isFetchingToken ? _submit : null,
-                                      icon: _isFetchingToken
-                                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                          : Icon(
-                                              Icons.auto_awesome,
-                                              size: 18,
-                                              color: _canSubmit
-                                                  ? jpmcGold
-                                                  : Colors.white,
-                                            ),
-                                      label: const Text('GO TO RELATIONSHIP HUB'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: jpmcBlue,
-                                        foregroundColor: Colors.white,
-                                        disabledBackgroundColor: jpmcBlue,
-                                        disabledForegroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        elevation: _canSubmit ? 4 : 0,
-                                        shadowColor:
-                                            jpmcBlue.withOpacity(0.4),
-                                        textStyle: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 1.0,
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child:
+                                            _buildBottomBackButton(context),
+                                      ),
+                                      SizedBox(
+                                        height: 52,
+                                        width: isMobile
+                                            ? double.infinity
+                                            : 360,
+                                        child: ElevatedButton.icon(
+                                          onPressed: _canSubmit &&
+                                                  !_isFetchingToken
+                                              ? _submit
+                                              : null,
+                                          icon: _isFetchingToken
+                                              ? const SizedBox(
+                                                  width: 18,
+                                                  height: 18,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    color: Colors.white,
+                                                  ))
+                                              : Icon(
+                                                  Icons.auto_awesome,
+                                                  size: 18,
+                                                  color: _canSubmit
+                                                      ? AppThemeTokens
+                                                          .goldAccent
+                                                      : Colors.white,
+                                                ),
+                                          label: const Text(
+                                              'GO TO RELATIONSHIP HUB'),
+                                          style: Theme.of(context)
+                                              .elevatedButtonTheme
+                                              .style
+                                              ?.copyWith(
+                                                shape:
+                                                    WidgetStateProperty.all(
+                                                  RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12),
+                                                  ),
+                                                ),
+                                                elevation:
+                                                    WidgetStateProperty.all(
+                                                  _canSubmit ? 4 : 0,
+                                                ),
+                                                shadowColor:
+                                                    WidgetStateProperty.all(
+                                                  AppThemeTokens.buttonPrimary
+                                                      .withOpacity(0.4),
+                                                ),
+                                                textStyle:
+                                                    WidgetStateProperty.all(
+                                                  const TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                    letterSpacing: 1.0,
+                                                  ),
+                                                ),
+                                              ),
                                         ),
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -468,33 +511,12 @@ class _ManualFormPageState extends State<ManualFormPage> {
     return Container(
       padding: const EdgeInsets.fromLTRB(36, 24, 36, 20),
       decoration: BoxDecoration(
-        color: jpmcNavy,
+        color: AppThemeTokens.modalHeader,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () {
-              final nav = Navigator.of(context);
-              if (nav.canPop()) {
-                nav.pop();
-              } else {
-                Navigator.of(context, rootNavigator: true).pop();
-              }
-            },
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: jpmcGold.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: jpmcGold.withOpacity(0.3)),
-              ),
-              child: const Center(
-                child: Icon(Icons.arrow_back, color: Color(0xFFD4AD46), size: 18),
-              ),
-            ),
-          ),
+          _buildHeaderAiBadge(),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -503,7 +525,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                 Text(
                   'ABOUT YOUR COMPANY',
                   style: textTheme.titleMedium?.copyWith(
-                    color: const Color(0xFFD4AD46),
+                    color: AppThemeTokens.goldAccent,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -523,6 +545,47 @@ class _ManualFormPageState extends State<ManualFormPage> {
     );
   }
 
+  Widget _buildHeaderAiBadge() {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6).withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFE5E7EB).withOpacity(0.22),
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.auto_awesome_rounded,
+          color: Colors.white,
+          size: 18,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomBackButton(BuildContext context) {
+    return TextButton(
+      onPressed: _handleBack,
+      child: const Icon(Icons.chevron_left_rounded, size: 22),
+      style: TextButton.styleFrom(
+        foregroundColor: const Color(0xFF4B5563),
+        backgroundColor: const Color(0xFFF3F4F6),
+        minimumSize: const Size(48, 48),
+        padding: const EdgeInsets.all(0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(
+            color: Color(0xFFD1D5DB),
+            width: 1,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _sectionLabel(String label, bool isDark) {
     return Text(
       label,
@@ -530,7 +593,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
         fontSize: 11,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.1,
-        color: jpmcGold,
+        color: AppThemeTokens.goldAccent,
       ),
     );
   }
@@ -587,7 +650,10 @@ class _ManualFormPageState extends State<ManualFormPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: jpmcBlue, width: 1.5),
+              borderSide: const BorderSide(
+                color: AppThemeTokens.buttonPrimary,
+                width: 1.5,
+              ),
             ),
           ),
         ),
@@ -638,7 +704,10 @@ class _ManualFormPageState extends State<ManualFormPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: jpmcBlue, width: 1.5),
+              borderSide: const BorderSide(
+                color: AppThemeTokens.buttonPrimary,
+                width: 1.5,
+              ),
             ),
           ),
           items: items.map((e) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../theme/app_theme.dart';
 
 /// Top application bar shown across all shell pages.
 /// Height: 64 px (implements PreferredSizeWidget).
@@ -35,8 +36,6 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 768;
     final isDesktop = screenWidth >= 1024;
-    const jpmcBrown = Color(0xFF4A3C31);
-
     return AppBar(
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
@@ -57,9 +56,8 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
             child: const Text(
               'J.P.Morgan',
               style: TextStyle(
-                fontFamily: 'Georgia, serif',
                 fontSize: 26,
-                color: jpmcBrown,
+                color: AppThemeTokens.brandInk,
                 letterSpacing: 1.2,
                 fontWeight: FontWeight.bold,
               ),
@@ -130,7 +128,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
           text,
           style: const TextStyle(
             fontSize: 12,
-            color: Color(0xFF9E3A30),
+            color: AppThemeTokens.goldAccent,
             fontWeight: FontWeight.w500,
           ),
         ),

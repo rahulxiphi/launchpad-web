@@ -4,6 +4,7 @@ import 'voice_page.dart';
 import 'mode_selection_page.dart';
 import 'manual_form_page.dart';
 import '../../shared/widgets/app_shell.dart';
+import '../../theme/app_theme.dart';
 
 class _StageContent {
   final String heading;
@@ -143,10 +144,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   bool _preferManual = false;
 
   // Core JPMC aesthetic colors
-  static const jpmcNavy = Color(0xFF0A2744);
   static const jpmcDarkNavy = Color(0xFF131F2E);
-  static const jpmcBlue = Color(0xFF006CAD);
-  static const jpmcGold = Color(0xFFC8872A);
 
   @override
   void initState() {
@@ -157,6 +155,15 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
 
   void _onFormChanged() {
     setState(() {});
+  }
+
+  void _handleBack() {
+    final nav = Navigator.of(context);
+    if (nav.canPop()) {
+      nav.pop();
+    } else {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
   }
 
   bool get _canSubmit {
@@ -260,7 +267,9 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                       'Let\'s start with you',
                                       style: textTheme.titleLarge?.copyWith(
                                         fontWeight: FontWeight.bold,
-                                        color: isDark ? Colors.white : jpmcNavy,
+                                        color: isDark
+                                            ? Colors.white
+                                            : AppThemeTokens.brandInk,
                                       ),
                                     ),
                                     const SizedBox(height: 6),
@@ -313,10 +322,14 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                         width: 16,
                                                         height: 16,
                                                         decoration: BoxDecoration(
-                                                          color: _isPostIncorporated ? jpmcBlue : Colors.transparent,
+                                                          color: _isPostIncorporated
+                                                              ? AppThemeTokens.buttonPrimary
+                                                              : Colors.transparent,
                                                           borderRadius: BorderRadius.circular(4),
                                                           border: Border.all(
-                                                            color: _isPostIncorporated ? jpmcBlue : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+                                                            color: _isPostIncorporated
+                                                                ? AppThemeTokens.buttonPrimary
+                                                                : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
                                                             width: 1.5,
                                                           ),
                                                         ),
@@ -343,57 +356,136 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                       ],
                                     ),
                                     const SizedBox(height: 32),
-                                    Center(
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: Stack(
+                                        alignment: Alignment.center,
                                         children: [
+                                          Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: _buildBottomBackButton(
+                                                context),
+                                          ),
                                           SizedBox(
                                             height: 48,
-                                            width: isMobile ? double.infinity : 320,
+                                            width: isMobile
+                                                ? double.infinity
+                                                : 320,
                                             child: ElevatedButton.icon(
-                                              onPressed: _canSubmit ? () {
-                                                if (_formKey.currentState!.validate()) {
-                                                  final vars = Map<String, dynamic>.from(widget.dynamicVariables);
-                                                  if (_nameController.text.trim().isNotEmpty) vars['userName'] = _nameController.text.trim();
-                                                  if (_emailController.text.trim().isNotEmpty) vars['userEmail'] = _emailController.text.trim();
-                                                  if (_phoneController.text.trim().isNotEmpty) vars['userPhone'] = _phoneController.text.trim();
-                                                  if (_companyController.text.trim().isNotEmpty) vars['companyName'] = _companyController.text.trim();
-                                                  vars['isPostIncorporated'] = _isPostIncorporated;
-                                                  vars['preferManual'] = _preferManual;
-                                                  
-                                                  Navigator.of(context).push(
-                                                    MaterialPageRoute(
-                                                      builder: (_) => ModeSelectionPage(
-                                                        stageBucket: widget.stageBucket,
-                                                        prospectId: widget.prospectId ?? ProspectIdProvider.of(context),
-                                                        dynamicVariables: vars,
-                                                        onStartNew: widget.onStartNew,
+                                              onPressed: _canSubmit
+                                                  ? () {
+                                                      if (_formKey.currentState!
+                                                          .validate()) {
+                                                        final vars = Map<String,
+                                                            dynamic>.from(widget
+                                                            .dynamicVariables);
+                                                        if (_nameController.text
+                                                            .trim()
+                                                            .isNotEmpty) {
+                                                          vars['userName'] =
+                                                              _nameController
+                                                                  .text
+                                                                  .trim();
+                                                        }
+                                                        if (_emailController
+                                                            .text
+                                                            .trim()
+                                                            .isNotEmpty) {
+                                                          vars['userEmail'] =
+                                                              _emailController
+                                                                  .text
+                                                                  .trim();
+                                                        }
+                                                        if (_phoneController.text
+                                                            .trim()
+                                                            .isNotEmpty) {
+                                                          vars['userPhone'] =
+                                                              _phoneController
+                                                                  .text
+                                                                  .trim();
+                                                        }
+                                                        if (_companyController
+                                                            .text
+                                                            .trim()
+                                                            .isNotEmpty) {
+                                                          vars['companyName'] =
+                                                              _companyController
+                                                                  .text
+                                                                  .trim();
+                                                        }
+                                                        vars[
+                                                                'isPostIncorporated'] =
+                                                            _isPostIncorporated;
+                                                        vars['preferManual'] =
+                                                            _preferManual;
+
+                                                        Navigator.of(context)
+                                                            .push(
+                                                          MaterialPageRoute(
+                                                            builder: (_) =>
+                                                                ModeSelectionPage(
+                                                              stageBucket: widget
+                                                                  .stageBucket,
+                                                              prospectId: widget
+                                                                      .prospectId ??
+                                                                  ProspectIdProvider.of(
+                                                                      context),
+                                                              dynamicVariables:
+                                                                  vars,
+                                                              onStartNew: widget
+                                                                  .onStartNew,
+                                                            ),
+                                                          ),
+                                                        );
+                                                      }
+                                                    }
+                                                  : null,
+                                              icon: Icon(
+                                                Icons.auto_awesome,
+                                                size: 18,
+                                                color: _canSubmit
+                                                    ? AppThemeTokens.goldAccent
+                                                    : Colors.white,
+                                              ),
+                                              label: const Text('GET STARTED'),
+                                              style: Theme.of(context)
+                                                  .elevatedButtonTheme
+                                                  .style
+                                                  ?.copyWith(
+                                                    padding:
+                                                        WidgetStateProperty.all(
+                                                      const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 32),
+                                                    ),
+                                                    shape:
+                                                        WidgetStateProperty.all(
+                                                      RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(12),
                                                       ),
                                                     ),
-                                                  );
-                                                }
-                                              } : null,
-                                              icon: Icon(
-                                                      Icons.auto_awesome,
-                                                      size: 18,
-                                                      color: _canSubmit ? jpmcGold : Colors.white,
+                                                    elevation:
+                                                        WidgetStateProperty.all(
+                                                      _canSubmit ? 4 : 0,
                                                     ),
-                                              label: const Text('GET STARTED'),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: jpmcBlue, 
-                                                foregroundColor: Colors.white,
-                                                disabledBackgroundColor: jpmcBlue,
-                                                disabledForegroundColor: Colors.white,
-                                                padding: const EdgeInsets.symmetric(horizontal: 32),
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                                elevation: _canSubmit ? 4 : 0,
-                                                shadowColor: jpmcBlue.withOpacity(0.4),
-                                                textStyle: const TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.bold,
-                                                  letterSpacing: 1.0,
-                                                ),
-                                              ),
+                                                    shadowColor:
+                                                        WidgetStateProperty.all(
+                                                      AppThemeTokens
+                                                          .buttonPrimary
+                                                          .withOpacity(0.4),
+                                                    ),
+                                                    textStyle:
+                                                        WidgetStateProperty.all(
+                                                      const TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        letterSpacing: 1.0,
+                                                      ),
+                                                    ),
+                                                  ),
                                             ),
                                           ),
                                         ],
@@ -422,33 +514,12 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
     return Container(
       padding: const EdgeInsets.fromLTRB(36, 24, 36, 20),
       decoration: const BoxDecoration(
-        color: jpmcNavy,
+        color: AppThemeTokens.modalHeader,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () {
-              final nav = Navigator.of(context);
-              if (nav.canPop()) {
-                nav.pop();
-              } else {
-                Navigator.of(context, rootNavigator: true).pop();
-              }
-            },
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: jpmcGold.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: jpmcGold.withOpacity(0.3)),
-              ),
-              child: const Center(
-                child: Icon(Icons.arrow_back, color: Color(0xFFD4AD46), size: 18),
-              ),
-            ),
-          ),
+          _buildHeaderAiBadge(),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -457,7 +528,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                 Text(
                   title,
                   style: textTheme.titleMedium?.copyWith(
-                    color: const Color(0xFFD4AD46),
+                    color: AppThemeTokens.goldAccent,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -474,6 +545,47 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderAiBadge() {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6).withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFE5E7EB).withOpacity(0.22),
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.auto_awesome_rounded,
+          color: Colors.white,
+          size: 18,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomBackButton(BuildContext context) {
+    return TextButton(
+      onPressed: _handleBack,
+      child: const Icon(Icons.chevron_left_rounded, size: 22),
+      style: TextButton.styleFrom(
+        foregroundColor: const Color(0xFF4B5563),
+        backgroundColor: const Color(0xFFF3F4F6),
+        minimumSize: const Size(48, 48),
+        padding: const EdgeInsets.all(0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(
+            color: Color(0xFFD1D5DB),
+            width: 1,
+          ),
+        ),
       ),
     );
   }
@@ -527,7 +639,10 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: jpmcBlue, width: 1.5),
+                borderSide: const BorderSide(
+                  color: AppThemeTokens.buttonPrimary,
+                  width: 1.5,
+                ),
               ),
             ),
           ),
@@ -548,10 +663,12 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
             height: 20,
             margin: EdgeInsets.only(top: isMultiLine ? 2 : 0),
             decoration: BoxDecoration(
-              color: value ? jpmcBlue : Colors.transparent,
+              color: value ? AppThemeTokens.buttonPrimary : Colors.transparent,
               borderRadius: BorderRadius.circular(5),
               border: Border.all(
-                color: value ? jpmcBlue : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+                color: value
+                    ? AppThemeTokens.buttonPrimary
+                    : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
                 width: 1.5,
               ),
             ),

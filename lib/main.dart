@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/auth/auth_provider.dart';
 import 'router/app_router.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(const ProviderScope(child: LaunchPadApp()));
@@ -52,13 +53,7 @@ class _LaunchPadAppState extends ConsumerState<LaunchPadApp> {
       title: 'LaunchPad',
       debugShowCheckedModeBanner: false,
       routerConfig: _router,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1A56DB),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light(),
     );
   }
 }

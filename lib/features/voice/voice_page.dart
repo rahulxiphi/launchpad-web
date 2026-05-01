@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import '../../tools/client_tools.dart';
 import '../../services/conversation_service.dart';
+import '../../theme/app_theme.dart';
 import 'widgets/voice_bubble_row.dart';
 import 'widgets/voice_classification_panel.dart';
 import 'widgets/voice_header.dart';
@@ -940,7 +941,7 @@ class _BottomBarState extends State<_BottomBar> {
                                   height: 40,
                                   decoration: BoxDecoration(
                                     color: canSend
-                                        ? const Color(0xFF131F2E)
+                                        ? AppThemeTokens.modalHeader
                                         : colorScheme.surfaceContainerHigh,
                                     shape: BoxShape.circle,
                                   ),
@@ -948,7 +949,7 @@ class _BottomBarState extends State<_BottomBar> {
                                     Icons.arrow_upward_rounded,
                                     size: 20,
                                     color: canSend
-                                        ? const Color(0xFFC8872A)
+                                        ? AppThemeTokens.goldAccent
                                         : colorScheme.onSurfaceVariant
                                             .withOpacity(0.4),
                                   ),
@@ -972,7 +973,7 @@ class _BottomBarState extends State<_BottomBar> {
                       decoration: BoxDecoration(
                         color: (widget.isMuted || widget.isEnded)
                             ? colorScheme.errorContainer
-                            : const Color(0xFF006CAD),
+                            : AppThemeTokens.buttonPrimary,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
@@ -1003,4 +1004,3 @@ class _BottomBarState extends State<_BottomBar> {
 
   }
 }
-

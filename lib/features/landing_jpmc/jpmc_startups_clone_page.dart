@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/conversation_service.dart';
 import '../../shared/widgets/app_shell.dart';
+import '../../theme/app_theme.dart';
 
 class JpmcStartupsClonePage extends StatefulWidget {
   final String? invitationCode;
@@ -125,12 +126,12 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
     final isDesktop = screenWidth >= 1024;
 
     const jpmcBrown = Color(0xFF4A3C31);
-    const jpmcLightBrown = Color(0xFFC8872A);
+    const jpmcLightBrown = AppThemeTokens.goldAccent;
     const jpmcDarkNavy = Color(0xFF131F2E);
-    const jpmcTeal = Color(0xFF167899);
+    const jpmcTeal = AppThemeTokens.buttonPrimary;
     const lpIndigo = Color(0xFF4F46E5);
     const lpIndigoDk = Color(0xFF3730A3);
-    const navy = Color(0xFF0A2744);
+    const navy = AppThemeTokens.modalHeader;
     final isTablet = screenWidth >= 768 && screenWidth < 1024;
     const darkGreyBar = Color(0xFF333A43);
 
@@ -149,7 +150,6 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
                   child: Text(
                     '🔵 Demo mockup — LaunchPad simulation${isMobile ? '' : ' of the J.P. Morgan startups page.'}',
                     style: const TextStyle(
-                      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
                       fontSize: 12,
                       color: Color(0xD9C8CDFF),
                     ),
@@ -179,7 +179,6 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
                           child: const Text(
                             'J.P.Morgan',
                             style: TextStyle(
-                              fontFamily: 'Georgia, serif',
                               fontSize: 26,
                               color: jpmcBrown,
                               letterSpacing: 1.2,
@@ -281,7 +280,6 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
                             Text(
                               'Banking the innovation\neconomy',
                               style: TextStyle(
-                                fontFamily: 'Georgia, serif',
                                 fontSize: isMobile ? 40 : 64,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w400,
@@ -303,13 +301,20 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
                             const SizedBox(height: 48),
                             ElevatedButton(
                               onPressed: _startSession,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: jpmcTeal,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
-                                elevation: 0,
-                              ),
+                              style: Theme.of(context)
+                                  .elevatedButtonTheme
+                                  .style
+                                  ?.copyWith(
+                                    padding: WidgetStateProperty.all(
+                                      const EdgeInsets.symmetric(
+                                          horizontal: 32, vertical: 18),
+                                    ),
+                                    shape: WidgetStateProperty.all(
+                                      RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(0),
+                                      ),
+                                    ),
+                                  ),
                               child: const Text(
                                 'GET STARTED',
                                 style: TextStyle(
@@ -396,7 +401,6 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
                         child: RichText(
                           text: const TextSpan(
                             style: TextStyle(
-                              fontFamily: 'Georgia, serif',
                               fontSize: 54,
                               color: Color(0xFF4A5568),
                               fontWeight: FontWeight.w300,
@@ -503,7 +507,6 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
                             RichText(
                               text: const TextSpan(
                                 style: TextStyle(
-                                  fontFamily: 'Georgia, serif',
                                   fontSize: 48,
                                   color: Color(0xFF4A5568),
                                   fontWeight: FontWeight.w300,
@@ -627,7 +630,6 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
                         child: RichText(
                           text: const TextSpan(
                             style: TextStyle(
-                              fontFamily: 'Georgia, serif',
                               fontSize: 48,
                               color: Color(0xFF4A5568),
                               fontWeight: FontWeight.w300,
@@ -785,7 +787,6 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
                           child: RichText(
                             text: const TextSpan(
                               style: TextStyle(
-                                fontFamily: 'Georgia, serif',
                                 fontSize: 42,
                                 color: Color(0xFF4A5568),
                                 fontWeight: FontWeight.w300,
@@ -862,7 +863,7 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
                                     ),
                                   ),
                                   const SizedBox(height: 22),
-                                  Text('Meet LaunchPad — your startup intelligence partner', style: TextStyle(fontFamily: 'Georgia, serif', fontSize: isMobile ? 28 : 40, color: Colors.white, height: 1.18)),
+                                  Text('Meet LaunchPad — your startup intelligence partner', style: TextStyle(fontSize: isMobile ? 28 : 40, color: Colors.white, height: 1.18)),
                                   const SizedBox(height: 18),
                                   Text('We\'ve partnered with LaunchPad to give J.P. Morgan startup clients access to a personalised AI advisor that understands your business and maps your needs to exactly the right financial products — no forms, no waiting.', style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.72), height: 1.68)),
                                   const SizedBox(height: 28),
@@ -895,14 +896,28 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
                                   children: [
                                     ElevatedButton(
                                       onPressed: _startSession,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.white,
-                                        foregroundColor: lpIndigo,
-                                        padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 32),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                        elevation: 10,
-                                        minimumSize: const Size(double.infinity, 50),
-                                      ),
+                                      style: Theme.of(context)
+                                          .elevatedButtonTheme
+                                          .style
+                                          ?.copyWith(
+                                            padding: WidgetStateProperty.all(
+                                              const EdgeInsets.symmetric(
+                                                  vertical: 17,
+                                                  horizontal: 32),
+                                            ),
+                                            shape: WidgetStateProperty.all(
+                                              RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                            ),
+                                            elevation:
+                                                WidgetStateProperty.all(10),
+                                            minimumSize:
+                                                WidgetStateProperty.all(
+                                              const Size(double.infinity, 50),
+                                            ),
+                                          ),
                                       child: const Text('Get Started with LaunchPad', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                                     ),
                                     const SizedBox(height: 12),
@@ -987,7 +1002,6 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
                                   child: const Text(
                                     'J.P.Morgan',
                                     style: TextStyle(
-                                      fontFamily: 'Georgia, serif',
                                       fontSize: 32,
                                       color: jpmcBrown,
                                       letterSpacing: 1.2,
@@ -1129,7 +1143,6 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
         Text(
           number,
           style: TextStyle(
-            fontFamily: 'Georgia, serif',
             fontSize: 64,
             fontWeight: FontWeight.w400,
             color: color,
@@ -1213,7 +1226,7 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: isActive ? const Color(0xFFC8872A) : Colors.transparent,
+            color: isActive ? AppThemeTokens.goldAccent : Colors.transparent,
             width: 3,
           ),
         ),
@@ -1222,7 +1235,9 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
         text,
         style: TextStyle(
           fontSize: 14,
-          color: isActive ? const Color(0xFFC8872A) : Colors.white.withOpacity(0.5),
+          color: isActive
+              ? AppThemeTokens.goldAccent
+              : Colors.white.withOpacity(0.5),
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -1284,7 +1299,7 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
               ),
             ),
           ),
-          const Icon(Icons.add, color: Color(0xFF167899), size: 20),
+          const Icon(Icons.add, color: AppThemeTokens.buttonPrimary, size: 20),
         ],
       ),
     );

@@ -3,6 +3,7 @@ import '../../services/conversation_service.dart';
 import 'voice_page.dart';
 import 'manual_form_page.dart';
 import '../../shared/widgets/app_shell.dart';
+import '../../theme/app_theme.dart';
 
 class ModeSelectionPage extends StatefulWidget {
   final String stageBucket;
@@ -26,12 +27,9 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
     with SingleTickerProviderStateMixin {
   bool _isFetchingToken = false;
   bool _preferManual = false;
+  bool _isVoiceTriggerHovered = false;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
-
-  static const jpmcNavy = Color(0xFF0A2744);
-  static const jpmcBlue = Color(0xFF006CAD);
-  static const jpmcGold = Color(0xFFC8872A);
 
   @override
   void initState() {
@@ -50,6 +48,15 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
   void dispose() {
     _pulseController.dispose();
     super.dispose();
+  }
+
+  void _handleBack() {
+    final nav = Navigator.of(context);
+    if (nav.canPop()) {
+      nav.pop();
+    } else {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
   }
 
   Future<void> _startSession({required bool isChatMode}) async {
@@ -178,78 +185,97 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                                     height: 180,
                                     child: Center(
                                       child: CircularProgressIndicator(
-                                          color: jpmcBlue),
+                                          color: AppThemeTokens.buttonPrimary),
                                     ),
                                   )
                                 else
-                                  GestureDetector(
-                                    onTap: () =>
-                                        _startSession(isChatMode: false),
-                                    behavior: HitTestBehavior.opaque,
-                                    child: SizedBox(
-                                      height: 180,
-                                      width: 180,
-                                      child: AnimatedBuilder(
-                                        animation: _pulseAnimation,
-                                        builder: (context, child) {
-                                          return Stack(
-                                            alignment: Alignment.center,
-                                            children: [
-                                              // Outer rings
-                                              for (int i = 0; i < 3; i++)
-                                                Container(
-                                                  width: 60 +
-                                                      (120 *
-                                                          ((_pulseAnimation
-                                                                      .value +
-                                                                  (i * 0.33)) %
-                                                              1.0)),
-                                                  height: 60 +
-                                                      (120 *
-                                                          ((_pulseAnimation
-                                                                      .value +
-                                                                  (i * 0.33)) %
-                                                              1.0)),
-                                                  decoration: BoxDecoration(
-                                                    shape: BoxShape.circle,
-                                                    border: Border.all(
-                                                      color: jpmcGold.withOpacity(0.4 *
-                                                          (1.0 -
-                                                              ((_pulseAnimation
-                                                                          .value +
-                                                                      (i *
-                                                                          0.33)) %
-                                                                  1.0))),
-                                                      width: 1.5,
+                                  MouseRegion(
+                                    cursor: _isFetchingToken
+                                        ? SystemMouseCursors.basic
+                                        : SystemMouseCursors.click,
+                                    onEnter: (_) => setState(
+                                        () => _isVoiceTriggerHovered = true),
+                                    onExit: (_) => setState(
+                                        () => _isVoiceTriggerHovered = false),
+                                    child: GestureDetector(
+                                      onTap: _isFetchingToken
+                                          ? null
+                                          : () =>
+                                              _startSession(isChatMode: false),
+                                      behavior: HitTestBehavior.opaque,
+                                      child: SizedBox(
+                                        height: 180,
+                                        width: 180,
+                                        child: AnimatedBuilder(
+                                          animation: _pulseAnimation,
+                                          builder: (context, child) {
+                                            final triggerColor =
+                                                _isVoiceTriggerHovered
+                                                    ? AppThemeTokens
+                                                        .buttonPrimaryHover
+                                                    : AppThemeTokens
+                                                        .buttonPrimary;
+                                            return Stack(
+                                              alignment: Alignment.center,
+                                              children: [
+                                                for (int i = 0; i < 3; i++)
+                                                  Container(
+                                                    width: 60 +
+                                                        (120 *
+                                                            ((_pulseAnimation
+                                                                        .value +
+                                                                    (i *
+                                                                        0.33)) %
+                                                                1.0)),
+                                                    height: 60 +
+                                                        (120 *
+                                                            ((_pulseAnimation
+                                                                        .value +
+                                                                    (i *
+                                                                        0.33)) %
+                                                                1.0)),
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      border: Border.all(
+                                                        color: AppThemeTokens
+                                                            .buttonPrimary
+                                                            .withOpacity(0.35 *
+                                                                (1.0 -
+                                                                    ((_pulseAnimation.value +
+                                                                            (i * 0.33)) %
+                                                                        1.0))),
+                                                        width: 1.5,
+                                                      ),
                                                     ),
                                                   ),
+                                                AnimatedContainer(
+                                                  duration: const Duration(
+                                                      milliseconds: 140),
+                                                  width: 60,
+                                                  height: 60,
+                                                  decoration: BoxDecoration(
+                                                    color: triggerColor,
+                                                    shape: BoxShape.circle,
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: triggerColor
+                                                            .withOpacity(0.3),
+                                                        blurRadius: 12,
+                                                        offset:
+                                                            const Offset(0, 4),
+                                                      )
+                                                    ],
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.graphic_eq_rounded,
+                                                    color: Colors.white,
+                                                    size: 28,
+                                                  ),
                                                 ),
-                                              // Inner button
-                                              Container(
-                                                width: 60,
-                                                height: 60,
-                                                decoration: BoxDecoration(
-                                                  color: jpmcNavy,
-                                                  shape: BoxShape.circle,
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: jpmcNavy
-                                                          .withOpacity(0.3),
-                                                      blurRadius: 12,
-                                                      offset:
-                                                          const Offset(0, 4),
-                                                    )
-                                                  ],
-                                                ),
-                                                child: const Icon(
-                                                  Icons.graphic_eq_rounded,
-                                                  color: jpmcGold,
-                                                  size: 28,
-                                                ),
-                                              ),
-                                            ],
-                                          );
-                                        },
+                                              ],
+                                            );
+                                          },
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -258,7 +284,9 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                                   'Tap to start conversation',
                                   style: textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.w700,
-                                    color: isDark ? Colors.white : jpmcNavy,
+                                    color: isDark
+                                        ? Colors.white
+                                        : AppThemeTokens.brandInk,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
@@ -298,91 +326,123 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                                 const SizedBox(height: 24),
 
                                 // Footer row
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    TextButton.icon(
-                                      onPressed: _preferManual
-                                          ? _goToManualForm
-                                          : null,
-                                      icon: Icon(
-                                        Icons.description_outlined,
-                                        size: 18,
-                                        color: _preferManual
-                                            ? jpmcBlue
-                                            : Colors.grey,
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child:
+                                            _buildBottomBackButton(context),
                                       ),
-                                      label: const Text(
-                                        'Fill Manual Form',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 14),
-                                        foregroundColor: jpmcBlue,
-                                        disabledForegroundColor: Colors.grey,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 22),
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Container(
-                                          height: 12,
-                                          width: 1,
-                                          color: isDark
-                                              ? Colors.white24
-                                              : Colors.grey.shade300,
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                              vertical: 4),
-                                          child: Text(
-                                            'OR',
-                                            style:
-                                                textTheme.labelSmall?.copyWith(
-                                              color: isDark
-                                                  ? Colors.white38
-                                                  : Colors.grey.shade500,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 10,
-                                              letterSpacing: 0.5,
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          TextButton.icon(
+                                            onPressed: _preferManual
+                                                ? _goToManualForm
+                                                : null,
+                                            icon: Icon(
+                                              Icons.description_outlined,
+                                              size: 18,
+                                              color: _preferManual
+                                                  ? AppThemeTokens
+                                                      .buttonPrimary
+                                                  : Colors.grey,
+                                            ),
+                                            label: const Text(
+                                              'Fill Manual Form',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold),
+                                            ),
+                                            style: TextButton.styleFrom(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 14),
+                                              foregroundColor:
+                                                  AppThemeTokens
+                                                      .buttonPrimary,
+                                              disabledForegroundColor:
+                                                  Colors.grey,
                                             ),
                                           ),
-                                        ),
-                                        Container(
-                                          height: 12,
-                                          width: 1,
-                                          color: isDark
-                                              ? Colors.white24
-                                              : Colors.grey.shade300,
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(width: 32),
-                                    ElevatedButton(
-                                      onPressed: _isFetchingToken
-                                          ? null
-                                          : () =>
-                                              _startSession(isChatMode: true),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: jpmcGold,
-                                        foregroundColor: jpmcNavy,
-                                        elevation: 0,
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 24, vertical: 18),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(13)),
+                                          const SizedBox(width: 22),
+                                          Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                height: 12,
+                                                width: 1,
+                                                color: isDark
+                                                    ? Colors.white24
+                                                    : Colors.grey.shade300,
+                                              ),
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 4),
+                                                child: Text(
+                                                  'OR',
+                                                  style: textTheme.labelSmall
+                                                      ?.copyWith(
+                                                    color: isDark
+                                                        ? Colors.white38
+                                                        : Colors.grey.shade500,
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                    fontSize: 10,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                              ),
+                                              Container(
+                                                height: 12,
+                                                width: 1,
+                                                color: isDark
+                                                    ? Colors.white24
+                                                    : Colors.grey.shade300,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(width: 32),
+                                          ElevatedButton(
+                                            onPressed: _isFetchingToken
+                                                ? null
+                                                : () => _startSession(
+                                                    isChatMode: true),
+                                            style: Theme.of(context)
+                                                .elevatedButtonTheme
+                                                .style
+                                                ?.copyWith(
+                                                  padding:
+                                                      WidgetStateProperty.all(
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 24,
+                                                        vertical: 18),
+                                                  ),
+                                                  shape:
+                                                      WidgetStateProperty.all(
+                                                    RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius
+                                                              .circular(13),
+                                                    ),
+                                                  ),
+                                                ),
+                                            child: const Text(
+                                              "Let's Chat",
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      child: const Text(
-                                        "Let's Chat",
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -405,34 +465,12 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
     return Container(
       padding: const EdgeInsets.fromLTRB(36, 24, 36, 20),
       decoration: const BoxDecoration(
-        color: jpmcNavy,
+        color: AppThemeTokens.modalHeader,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () {
-              final nav = Navigator.of(context);
-              if (nav.canPop()) {
-                nav.pop();
-              } else {
-                Navigator.of(context, rootNavigator: true).pop();
-              }
-            },
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: jpmcGold.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: jpmcGold.withOpacity(0.3)),
-              ),
-              child: const Center(
-                child:
-                    Icon(Icons.arrow_back, color: Color(0xFFD4AD46), size: 18),
-              ),
-            ),
-          ),
+          _buildHeaderAiBadge(),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -441,7 +479,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                 Text(
                   'Nova — Your JPMC AI Advisor',
                   style: textTheme.titleMedium?.copyWith(
-                    color: const Color(0xFFD4AD46),
+                    color: AppThemeTokens.goldAccent,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -462,6 +500,47 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
     );
   }
 
+  Widget _buildHeaderAiBadge() {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6).withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFE5E7EB).withOpacity(0.22),
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.auto_awesome_rounded,
+          color: Colors.white,
+          size: 18,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomBackButton(BuildContext context) {
+    return TextButton(
+      onPressed: _handleBack,
+      child: const Icon(Icons.chevron_left_rounded, size: 22),
+      style: TextButton.styleFrom(
+        foregroundColor: const Color(0xFF4B5563),
+        backgroundColor: const Color(0xFFF3F4F6),
+        minimumSize: const Size(48, 48),
+        padding: const EdgeInsets.all(0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(
+            color: Color(0xFFD1D5DB),
+            width: 1,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStepHeader(
       BuildContext context, bool isDark, TextTheme textTheme) {
     return Container(
@@ -476,7 +555,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
             'WHAT WE\'LL COVER',
             style: textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w700,
-              color: jpmcGold,
+              color: AppThemeTokens.goldAccent,
               letterSpacing: 1.2,
             ),
           ),
@@ -504,7 +583,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
             width: 4,
             height: 4,
             decoration: BoxDecoration(
-              color: jpmcGold,
+              color: AppThemeTokens.goldAccent,
               shape: BoxShape.circle,
             ),
           ),
@@ -536,11 +615,11 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
             width: 20,
             height: 20,
             decoration: BoxDecoration(
-              color: value ? jpmcBlue : Colors.transparent,
+              color: value ? AppThemeTokens.buttonPrimary : Colors.transparent,
               borderRadius: BorderRadius.circular(5),
               border: Border.all(
                 color: value
-                    ? jpmcBlue
+                    ? AppThemeTokens.buttonPrimary
                     : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
                 width: 1.5,
               ),

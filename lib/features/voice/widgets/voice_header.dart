@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../theme/app_theme.dart';
 
 class VoiceHeader extends StatelessWidget {
   final String agentName;
@@ -27,13 +28,10 @@ class VoiceHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const jpmcNavy = Color(0xFF04213d);
-    const jpmcGold = Color(0xFFc9a84c);
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF111827) : Colors.white,
+        color: isDark ? const Color(0xFF111827) : AppThemeTokens.modalHeader,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(16),
           topRight: Radius.circular(16),
@@ -55,20 +53,18 @@ class VoiceHeader extends StatelessWidget {
                     TextSpan(
                       text: 'JPMC',
                       style: TextStyle(
-                        fontFamily: 'Georgia',
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
-                        color: isDark ? Colors.white : jpmcNavy,
+                        color: Colors.white,
                         letterSpacing: 0.3,
                       ),
                     ),
                     TextSpan(
                       text: '  •  Innovation Economy Advisor',
                       style: TextStyle(
-                        fontFamily: 'Georgia',
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
-                        color: isDark ? const Color(0xFFe8cc7a) : jpmcGold,
+                        color: AppThemeTokens.goldAccent,
                         letterSpacing: 0.2,
                       ),
                     ),
@@ -84,7 +80,7 @@ class VoiceHeader extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.grey.shade300 : jpmcNavy,
+                      color: isDark ? Colors.grey.shade300 : Colors.white,
                       letterSpacing: 0.3,
                     ),
                   ),
@@ -99,7 +95,7 @@ class VoiceHeader extends StatelessWidget {
                         backgroundColor:
                             isDark ? Colors.grey.shade800 : const Color(0xFFE5E0D4),
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          isDark ? const Color(0xFFe8cc7a) : jpmcGold,
+                          AppThemeTokens.goldAccent,
                         ),
                       ),
                     ),
@@ -156,14 +152,18 @@ class VoiceHeader extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: const [
-                    Icon(Icons.dashboard_rounded, size: 14, color: Color(0xFF006CAD)),
+                    Icon(
+                      Icons.dashboard_rounded,
+                      size: 14,
+                      color: AppThemeTokens.buttonPrimary,
+                    ),
                     SizedBox(width: 6),
                     Text(
                       'Go to Relationship Hub',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF006CAD),
+                        color: AppThemeTokens.buttonPrimary,
                       ),
                     ),
                   ],
