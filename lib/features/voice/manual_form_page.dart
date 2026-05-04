@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../services/conversation_service.dart';
-import '../../router/app_router.dart';
 import '../../shared/widgets/app_shell.dart';
 import '../../theme/app_theme.dart';
 
@@ -140,10 +138,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
       vars['preferManual'] = true;
 
       if (!mounted) return;
-      final router = GoRouter.of(context);
-      router.go(
-        '${AppRoutes.relationshipHub}?p=${Uri.encodeComponent(prospectId)}',
-      );
+      await widget.onGoToRelationshipHub();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

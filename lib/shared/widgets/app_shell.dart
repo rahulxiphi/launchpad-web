@@ -153,6 +153,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     final path = _prospectId == null
         ? AppRoutes.relationshipHub
         : '${AppRoutes.relationshipHub}?p=${Uri.encodeComponent(_prospectId!)}';
+    Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
     router.go(path);
   }
 
