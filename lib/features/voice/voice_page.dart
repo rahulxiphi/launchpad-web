@@ -49,12 +49,14 @@ class VoicePage extends StatefulWidget {
   /// Callback owned by AppShell — fetches a fresh token and swaps in a new
   /// ConversationIntroPage on the inner Navigator. Stays on same stage.
   final Future<void> Function() onStartNew;
+  final Future<void> Function() onGoToRelationshipHub;
 
   const VoicePage({
     super.key,
     required this.conversationToken,
     required this.stageBucket,
     required this.onStartNew,
+    required this.onGoToRelationshipHub,
     this.prospectId,
     this.dynamicVariables = const {},
     this.initialMode = 'voice',
@@ -65,7 +67,7 @@ class VoicePage extends StatefulWidget {
 }
 
 class _VoicePageState extends State<VoicePage> {
-  late final ConversationClient _client;
+  ConversationClient? _client;
   final ConversationService _conversationService = ConversationService();
   final List<_TranscriptEntry> _transcript = [];
   final ScrollController _scrollController = ScrollController();
@@ -83,6 +85,12 @@ class _VoicePageState extends State<VoicePage> {
   int _chipsEpoch = 0;
   int _disconnectClearEpoch = 0;
   late bool _isChatMode;
+  bool _manualEndRequested = false;
+  bool _isRecoveringSession = false;
+  bool _isDisposing = false;
+  int _recoveriesAttempted = 0;
+
+  static const int _maxRecoveries = 2;
 
   // Track the current phase locally so we can update it via tool calls
   late int _activePhase;
@@ -100,6 +108,13 @@ class _VoicePageState extends State<VoicePage> {
     final phaseStr = widget.dynamicVariables['conversation_phase']?.toString();
     _activePhase = int.tryParse(phaseStr ?? '1') ?? 1;
 
+    _client = _buildConversationClient();
+
+    // Start the session automatically once the first frame is rendered
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startSession());
+  }
+
+  ConversationClient _buildConversationClient() {
     final clientTools = <String, ClientTool>{
         'capture_need': CaptureNeedTool(prospectId: widget.prospectId),
         'search_products': SearchProductsTool(prospectId: widget.prospectId),
@@ -133,71 +148,37 @@ class _VoicePageState extends State<VoicePage> {
 
     print('[chips][ui] registering client tools: ${clientTools.keys.toList()}');
 
-    _client = ConversationClient(
+    return ConversationClient(
       clientTools: clientTools,
       callbacks: ConversationCallbacks(
         onConnect: ({required conversationId}) {
           print('[chips][ui] onConnect conversationId=$conversationId mode=${_isChatMode ? 'chat' : 'voice'}');
           if (!mounted) return;
-          setState(() => _statusText = _isChatMode ? 'Chatting' : 'Listening');
-        },
-        onDisconnect: (_) {
-          if (!mounted || _conversationEnded) return;
-          print(
-            '[chips][ui] onDisconnect triggered; clearing chips and marking conversation ended',
-          );
-          // Inject the return link as the final AI message
-          final uri = Uri.base;
-          final origin = uri.origin;
-          final returnUrl = widget.prospectId != null
-              ? (uri.fragment.isNotEmpty
-                  ? '$origin/#/?p=${widget.prospectId}'
-                  : '$origin/?p=${widget.prospectId}')
-              : null;
           setState(() {
-            _conversationEnded = true;
-            _statusText = 'Conversation ended';
-            if (returnUrl != null) {
-              final email = widget.dynamicVariables['userEmail']?.toString() ?? '';
-              final emailNote = email.isNotEmpty
-                  ? "We've also sent this link to $email"
-                  : "Save this link to come back anytime";
-              _transcript.add(_TranscriptEntry(
-                isUser: false,
-                text:
-                    "Your return link — come back any time to continue:\n$returnUrl\n\n$emailNote",
-                isTentative: false,
-              ));
-
-              if (email.isNotEmpty) {
-                try {
-                  Dio().post(
-                    'http://localhost:8000/api/v1/conversations/send-return-link',
-                    data: {
-                      'email': email,
-                      'return_url': returnUrl,
-                      'prospect_id': widget.prospectId,
-                    },
-                  );
-                } catch (e) {
-                  // Silently ignore so as not to disrupt the UI if mail sending fails
-                }
-              }
-            }
+            _statusText = _isChatMode ? 'Chatting' : 'Listening';
+            _isRecoveringSession = false;
+            _manualEndRequested = false;
+            _recoveriesAttempted = 0;
           });
-          // Keep chips briefly so late tool callbacks can render final options.
-          _disconnectClearEpoch += 1;
-          final scheduledEpoch = _disconnectClearEpoch;
-          Future<void>.delayed(const Duration(seconds: 2), () {
-            if (!mounted) return;
-            if (scheduledEpoch != _disconnectClearEpoch) return;
-            setState(() {
-              _responseChips = _ResponseChipsState.empty;
-            });
-            print('[chips][ui] delayed disconnect clear executed');
-          });
-          _loadClassificationSummary();
-          _scrollToBottom();
+        },
+        onDisconnect: (details) {
+          if (!mounted || _isDisposing) return;
+          print(
+            '[chips][ui] onDisconnect reason=${details.reason} ended=$_conversationEnded manualEnd=$_manualEndRequested recovering=$_isRecoveringSession',
+          );
+          if (_manualEndRequested) {
+            _finalizeConversationEnded();
+            return;
+          }
+          if (_conversationEnded || _isRecoveringSession) return;
+          if (details.reason != 'user' && _recoveriesAttempted < _maxRecoveries) {
+            _attemptRecovery(details.reason);
+            return;
+          }
+          _finalizeConversationEnded();
+        },
+        onStatusChange: ({required status}) {
+          print('[chips][ui] status changed -> $status');
         },
         onModeChange: ({required mode}) {
           if (!mounted) return;
@@ -208,6 +189,7 @@ class _VoicePageState extends State<VoicePage> {
           });
         },
         onError: (message, [context]) {
+          print('[chips][ui] error message=$message context=$context');
           if (!mounted) return;
           ScaffoldMessenger.of(this.context).showSnackBar(
             SnackBar(
@@ -285,9 +267,6 @@ class _VoicePageState extends State<VoicePage> {
     )..addListener(() {
         if (mounted) setState(() {});
       });
-
-    // Start the session automatically once the first frame is rendered
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startSession());
   }
 
   bool _isIdentityCategory(String? category) {
@@ -384,11 +363,107 @@ class _VoicePageState extends State<VoicePage> {
     }
   }
 
+  void _finalizeConversationEnded() {
+    if (!mounted || _conversationEnded) return;
+    print('[chips][ui] finalizing conversation end');
+    final uri = Uri.base;
+    final origin = uri.origin;
+    final returnUrl = widget.prospectId != null
+        ? (uri.fragment.isNotEmpty
+            ? '$origin/#/?p=${widget.prospectId}'
+            : '$origin/?p=${widget.prospectId}')
+        : null;
+
+    setState(() {
+      _conversationEnded = true;
+      _isRecoveringSession = false;
+      _statusText = 'Conversation ended';
+      if (returnUrl != null) {
+        final email = widget.dynamicVariables['userEmail']?.toString() ?? '';
+        final emailNote = email.isNotEmpty
+            ? "We've also sent this link to $email"
+            : "Save this link to come back anytime";
+        _transcript.add(_TranscriptEntry(
+          isUser: false,
+          text:
+              "Your return link — come back any time to continue:\n$returnUrl\n\n$emailNote",
+          isTentative: false,
+        ));
+
+        if (email.isNotEmpty) {
+          try {
+            Dio().post(
+              'http://localhost:8000/api/v1/conversations/send-return-link',
+              data: {
+                'email': email,
+                'return_url': returnUrl,
+                'prospect_id': widget.prospectId,
+              },
+            );
+          } catch (e) {
+            // Silently ignore so as not to disrupt the UI if mail sending fails
+          }
+        }
+      }
+    });
+
+    _disconnectClearEpoch += 1;
+    final scheduledEpoch = _disconnectClearEpoch;
+    Future<void>.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      if (scheduledEpoch != _disconnectClearEpoch) return;
+      setState(() {
+        _responseChips = _ResponseChipsState.empty;
+      });
+      print('[chips][ui] delayed disconnect clear executed');
+    });
+    _loadClassificationSummary();
+    _scrollToBottom();
+  }
+
+  Future<void> _attemptRecovery(String reason) async {
+    if (!mounted || _isRecoveringSession || widget.prospectId == null) {
+      _finalizeConversationEnded();
+      return;
+    }
+
+    final oldClient = _client;
+    _recoveriesAttempted += 1;
+    setState(() {
+      _isRecoveringSession = true;
+      _statusText = 'Reconnecting…';
+    });
+    print(
+      '[chips][ui] attempting recovery #$_recoveriesAttempted after disconnect reason=$reason',
+    );
+
+    try {
+      oldClient?.dispose();
+
+      final tokenResult = await _conversationService.getVoiceToken(
+        widget.stageBucket,
+        prospectId: widget.prospectId,
+      );
+
+      if (!mounted) return;
+      _client = _buildConversationClient();
+      setState(() {});
+      await _startSession(
+        conversationToken: tokenResult.conversationToken,
+        serverDynamicVariables: tokenResult.dynamicVariables,
+      );
+      print('[chips][ui] recovery succeeded');
+    } catch (e) {
+      print('[chips][ui] recovery failed: $e');
+      if (!mounted) return;
+      _finalizeConversationEnded();
+    }
+  }
+
   @override
   void dispose() {
-    _client
-      ..endSession()
-      ..dispose();
+    _isDisposing = true;
+    _client?.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -396,16 +471,21 @@ class _VoicePageState extends State<VoicePage> {
   // ---------------------------------------------------------------------------
   // Actions
   // ---------------------------------------------------------------------------
-  Future<void> _startSession() async {
+  Future<void> _startSession({
+    String? conversationToken,
+    Map<String, dynamic>? serverDynamicVariables,
+  }) async {
     try {
-      final dynamicVariables =
-          Map<String, dynamic>.from(widget.dynamicVariables);
-      dynamicVariables['initial_mode'] = widget.initialMode;
+      final dynamicVariables = <String, dynamic>{
+        ...widget.dynamicVariables,
+        ...?serverDynamicVariables,
+      };
+      dynamicVariables['initial_mode'] = _isChatMode ? 'chat' : 'voice';
 
-      await _client.startSession(
-        conversationToken: widget.conversationToken,
+      await _client!.startSession(
+        conversationToken: conversationToken ?? widget.conversationToken,
         dynamicVariables: dynamicVariables,
-        overrides: widget.initialMode == 'chat'
+        overrides: _isChatMode
             ? ConversationOverrides(
                 conversation: ConversationSettingsOverrides(
                   textOnly: true,
@@ -425,7 +505,8 @@ class _VoicePageState extends State<VoicePage> {
   }
 
   Future<void> _endSession() async {
-    await _client.endSession();
+    _manualEndRequested = true;
+    await _client?.endSession();
     if (mounted) {
       setState(() {
         _conversationEnded = true;
@@ -438,6 +519,10 @@ class _VoicePageState extends State<VoicePage> {
     // Delegate to AppShell — it fetches a fresh token and replaces the inner
     // navigator stack with a new ConversationIntroPage for the same stage.
     widget.onStartNew();
+  }
+
+  void _goToRelationshipHub() {
+    widget.onGoToRelationshipHub();
   }
 
   void _scrollToBottom() {
@@ -455,7 +540,10 @@ class _VoicePageState extends State<VoicePage> {
   void _sendTextMessage(String text) {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
-    _client.sendUserMessage(trimmed);
+    print(
+      '[chips][ui] sending user message="$trimmed" connected=${_client?.status == ConversationStatus.connected} chatMode=$_isChatMode',
+    );
+    _client?.sendUserMessage(trimmed);
     setState(() {
       _transcript.add(_TranscriptEntry(isUser: true, text: trimmed));
     });
@@ -608,7 +696,7 @@ class _VoicePageState extends State<VoicePage> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isConnected = _client.status == ConversationStatus.connected;
+    final isConnected = _client?.status == ConversationStatus.connected;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -675,10 +763,11 @@ class _VoicePageState extends State<VoicePage> {
                             stageLabel: _stageLabel,
                             statusText: _statusText,
                             currentPhase: _activePhase,
-                            isSpeaking: _client.isSpeaking,
+                            isSpeaking: _client?.isSpeaking ?? false,
                             isEnded: _conversationEnded,
                             onEnd: _endSession,
                             onStartNew: _startNewSession,
+                            onGoToRelationshipHub: _goToRelationshipHub,
                             colorScheme: colorScheme,
                             isChatMode: _isChatMode,
                           ),
@@ -686,10 +775,12 @@ class _VoicePageState extends State<VoicePage> {
                             child: _transcript.isEmpty
                                 ? Center(
                                     child: Text(
-                                      _client.status ==
+                                      _client?.status ==
                                               ConversationStatus.connecting
                                           ? 'Connecting to $_agentName…'
-                                          : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.',
+                                          : _isRecoveringSession
+                                              ? 'Reconnecting to $_agentName…'
+                                              : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.',
                                       textAlign: TextAlign.center,
                                       style: Theme.of(context)
                                           .textTheme
@@ -728,14 +819,14 @@ class _VoicePageState extends State<VoicePage> {
                                   if (_conversationEnded) _buildClassificationSummary(),
                           _BottomBar(
                             isConnected: isConnected,
-                            isMuted: _client.isMuted,
+                            isMuted: _client?.isMuted ?? true,
                             isEnded: _conversationEnded,
                             isChatMode: _isChatMode,
                             prospectId: widget.prospectId,
                             suggestionChips: _responseChips.show
                                 ? _responseChips.chips
                                 : const <String>[],
-                            onToggleMute: () => _client.toggleMute(),
+                            onToggleMute: () => _client?.toggleMute(),
                             onToggleMode: () async {
                               final newMode = !_isChatMode;
                               setState(() {
@@ -745,7 +836,7 @@ class _VoicePageState extends State<VoicePage> {
                                 }
                               });
                               if (isConnected && !_conversationEnded) {
-                                await _client.setMicMuted(newMode);
+                                await _client?.setMicMuted(newMode);
                               }
                             },
                             onSend: _sendTextMessage,

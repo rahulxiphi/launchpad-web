@@ -11,11 +11,13 @@ class ModeSelectionPage extends StatefulWidget {
   final String? prospectId;
   final Map<String, dynamic> dynamicVariables;
   final Future<void> Function() onStartNew;
+  final Future<void> Function() onGoToRelationshipHub;
 
   const ModeSelectionPage({
     super.key,
     required this.stageBucket,
     required this.onStartNew,
+    required this.onGoToRelationshipHub,
     this.prospectId,
     this.dynamicVariables = const {},
   });
@@ -83,6 +85,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
             prospectId: widget.prospectId,
             dynamicVariables: vars,
             onStartNew: widget.onStartNew,
+            onGoToRelationshipHub: widget.onGoToRelationshipHub,
             initialMode: isChatMode ? 'chat' : 'voice',
           ),
         ),
@@ -104,6 +107,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
           prospectId: widget.prospectId ?? ProspectIdProvider.of(context),
           dynamicVariables: widget.dynamicVariables,
           onStartNew: widget.onStartNew,
+          onGoToRelationshipHub: widget.onGoToRelationshipHub,
         ),
       ),
     );
@@ -229,15 +233,15 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                                               children: [
                                                 for (int i = 0; i < 3; i++)
                                                   Container(
-                                                    width: 60 +
-                                                        (120 *
+                                                    width: 104 +
+                                                        (92 *
                                                             ((_pulseAnimation
                                                                         .value +
                                                                     (i *
                                                                         0.33)) %
                                                                 1.0)),
-                                                    height: 60 +
-                                                        (120 *
+                                                    height: 104 +
+                                                        (92 *
                                                             ((_pulseAnimation
                                                                         .value +
                                                                     (i *
@@ -260,8 +264,8 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                                                 AnimatedContainer(
                                                   duration: const Duration(
                                                       milliseconds: 140),
-                                                  width: 60,
-                                                  height: 60,
+                                                  width: 104,
+                                                  height: 104,
                                                   decoration: BoxDecoration(
                                                     color: triggerColor,
                                                     shape: BoxShape.circle,
@@ -278,7 +282,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                                                   child: const Icon(
                                                     Icons.graphic_eq_rounded,
                                                     color: Colors.white,
-                                                    size: 28,
+                                                    size: 46,
                                                   ),
                                                 ),
                                               ],
@@ -291,8 +295,8 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                                 const SizedBox(height: 16),
                                 Text(
                                   _isReturnVisit
-                                      ? 'Tap to continue conversation'
-                                      : 'Tap to start conversation',
+                                      ? 'Tap the Orb to continue conversation'
+                                      : 'Tap the Orb to start conversation',
                                   style: textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: isDark
@@ -599,7 +603,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
             width: 4,
             height: 4,
             decoration: BoxDecoration(
-              color: AppThemeTokens.goldAccent,
+              color: Colors.white,
               shape: BoxShape.circle,
             ),
           ),

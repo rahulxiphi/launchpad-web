@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../services/conversation_service.dart';
+import '../../router/app_router.dart';
 import '../../shared/widgets/app_shell.dart';
-import '../../shared/widgets/no_transition_page_route.dart';
-import 'mode_selection_page.dart';
 import '../../theme/app_theme.dart';
 
 class ManualFormPage extends StatefulWidget {
@@ -10,11 +10,13 @@ class ManualFormPage extends StatefulWidget {
   final String? prospectId;
   final Map<String, dynamic> dynamicVariables;
   final Future<void> Function() onStartNew;
+  final Future<void> Function() onGoToRelationshipHub;
 
   const ManualFormPage({
     super.key,
     required this.stageBucket,
     required this.onStartNew,
+    required this.onGoToRelationshipHub,
     this.prospectId,
     this.dynamicVariables = const {},
   });
@@ -138,15 +140,9 @@ class _ManualFormPageState extends State<ManualFormPage> {
       vars['preferManual'] = true;
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        NoTransitionPageRoute(
-          builder: (_) => ModeSelectionPage(
-            stageBucket: widget.stageBucket,
-            prospectId: prospectId,
-            dynamicVariables: vars,
-            onStartNew: widget.onStartNew,
-          ),
-        ),
+      final router = GoRouter.of(context);
+      router.go(
+        '${AppRoutes.relationshipHub}?p=${Uri.encodeComponent(prospectId)}',
       );
     } catch (e) {
       if (!mounted) return;

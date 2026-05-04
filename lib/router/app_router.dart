@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/login_page.dart';
 import '../features/auth/signup_page.dart';
 import '../features/landing_jpmc/jpmc_startups_clone_page.dart';
+import '../features/relationship_hub/relationship_hub_page.dart';
 import '../features/stage_selector/stage_selector_page.dart';
 
 // ── Route paths ───────────────────────────────────────────────────────────────
@@ -12,6 +13,7 @@ class AppRoutes {
   static const login = '/login';
   static const signup = '/signup';
   static const stageSelector = '/stages';
+  static const relationshipHub = '/relationship-hub';
   static const home = '/';
 }
 
@@ -78,6 +80,17 @@ GoRouter createRouter({
             child: JpmcStartupsClonePage(
               invitationCode: invitationCode,
               returnProspectId: returnProspectId,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.relationshipHub,
+        pageBuilder: (context, state) {
+          final prospectId = state.uri.queryParameters['p'];
+          return NoTransitionPage(
+            child: RelationshipHubPage(
+              prospectId: prospectId,
             ),
           );
         },

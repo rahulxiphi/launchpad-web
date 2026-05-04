@@ -10,6 +10,7 @@ class VoiceHeader extends StatelessWidget {
   final bool isEnded;
   final VoidCallback onEnd;
   final VoidCallback onStartNew;
+  final VoidCallback onGoToRelationshipHub;
   final ColorScheme colorScheme;
   final bool isChatMode;
 
@@ -23,6 +24,7 @@ class VoiceHeader extends StatelessWidget {
     required this.isEnded,
     required this.onEnd,
     required this.onStartNew,
+    required this.onGoToRelationshipHub,
     required this.colorScheme,
     required this.isChatMode,
   });
@@ -138,7 +140,7 @@ class VoiceHeader extends StatelessWidget {
           if (isEnded) ...[
             const SizedBox(width: 10),
             GestureDetector(
-              onTap: onStartNew,
+              onTap: onGoToRelationshipHub,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(

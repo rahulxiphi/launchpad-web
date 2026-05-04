@@ -141,10 +141,19 @@ class _AppShellState extends ConsumerState<AppShell> {
           prospectId: _prospectId,
           dynamicVariables: widget.dynamicVariables,
           onStartNew: _handleStartNew,
+          onGoToRelationshipHub: _handleGoToRelationshipHub,
         ),
       ),
       (_) => false, // clear the old voice/intro pages
     );
+  }
+
+  Future<void> _handleGoToRelationshipHub() async {
+    final router = GoRouter.of(context);
+    final path = _prospectId == null
+        ? AppRoutes.relationshipHub
+        : '${AppRoutes.relationshipHub}?p=${Uri.encodeComponent(_prospectId!)}';
+    router.go(path);
   }
 
   @override
@@ -184,6 +193,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                 prospectId: _prospectId,
                 dynamicVariables: _resolvedDynamicVariables,
                 onStartNew: _handleStartNew,
+                onGoToRelationshipHub: _handleGoToRelationshipHub,
               ),
             );
 
@@ -199,6 +209,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                   prospectId: _prospectId,
                   dynamicVariables: _resolvedDynamicVariables,
                   onStartNew: _handleStartNew,
+                  onGoToRelationshipHub: _handleGoToRelationshipHub,
                 ),
               ),
             ];
@@ -211,6 +222,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                 prospectId: _prospectId,
                 dynamicVariables: _resolvedDynamicVariables,
                 onStartNew: _handleStartNew,
+                onGoToRelationshipHub: _handleGoToRelationshipHub,
               ),
             );
           },

@@ -122,11 +122,13 @@ class ConversationIntroPage extends StatefulWidget {
   /// Called when the user taps "Start new session" after a conversation ends.
   /// Handled by AppShell — fetches a fresh token and replaces the inner nav.
   final Future<void> Function() onStartNew;
+  final Future<void> Function() onGoToRelationshipHub;
 
   const ConversationIntroPage({
     super.key,
     required this.stageBucket,
     required this.onStartNew,
+    required this.onGoToRelationshipHub,
     this.prospectId,
     this.dynamicVariables = const {},
   });
@@ -229,6 +231,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
             prospectId: prospectId,
             dynamicVariables: vars,
             onStartNew: widget.onStartNew,
+            onGoToRelationshipHub: widget.onGoToRelationshipHub,
           ),
         ),
       );
