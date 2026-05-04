@@ -113,6 +113,16 @@ class VoiceTokenResult {
   });
 }
 
+class RelationshipHubChatResult {
+  final String replyMarkdown;
+  final Map<String, dynamic> rawResponse;
+
+  const RelationshipHubChatResult({
+    required this.replyMarkdown,
+    this.rawResponse = const {},
+  });
+}
+
 class ConversationService {
   final Dio _dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 10),
@@ -188,14 +198,13 @@ class ConversationService {
       companyStage: data['company_stage'] as String?,
       industry: data['industry'] as String?,
       headcount: data['headcount'] as String?,
-      selectedPrioritiesJson:
-          (data['selected_priorities_json'] as Map?)?.map(
-                (key, value) => MapEntry(
-                  key.toString(),
-                  value == true,
-                ),
-              ) ??
-              const {},
+      selectedPrioritiesJson: (data['selected_priorities_json'] as Map?)?.map(
+            (key, value) => MapEntry(
+              key.toString(),
+              value == true,
+            ),
+          ) ??
+          const {},
     );
   }
 
@@ -210,7 +219,8 @@ class ConversationService {
     return ProspectInitResult(
       prospectId: data['prospect_id'] as String,
       stageBucket: data['stage_bucket'] as String,
-      agentDisplayName: data['agent_display_name'] as String? ?? 'your JPMC AI Advisor',
+      agentDisplayName:
+          data['agent_display_name'] as String? ?? 'your JPMC AI Advisor',
       conversationPhase: data['conversation_phase'] as int? ?? 1,
       isReturning: true,
       email: data['email'] as String?,
@@ -221,76 +231,79 @@ class ConversationService {
       companyStage: data['company_stage'] as String?,
       industry: data['industry'] as String?,
       headcount: data['headcount'] as String?,
-      selectedPrioritiesJson:
-          (data['selected_priorities_json'] as Map?)?.map(
-                (key, value) => MapEntry(
-                  key.toString(),
-                  value == true,
-                ),
-              ) ??
-              const {},
+      selectedPrioritiesJson: (data['selected_priorities_json'] as Map?)?.map(
+            (key, value) => MapEntry(
+              key.toString(),
+              value == true,
+            ),
+          ) ??
+          const {},
       classification: classificationData == null
-        ? null
-        : ProspectClassification(
-          inferredStageBucket:
-            classificationData['inferred_stage_bucket'] as String?,
-          inferredStageConfidence:
-              (classificationData['inferred_stage_confidence'] as num?)
-                ?.toDouble(),
-            inferredStageConfidenceLabel:
-              classificationData['inferred_stage_confidence_label'] as String?,
-          inferredStageReasons:
-            (classificationData['inferred_stage_reasons'] as List?)
-                ?.whereType<String>()
-                .toList() ??
-              const [],
-          inferredStageUpdatedAt:
-            classificationData['inferred_stage_updated_at'] as String?,
-            confirmedStageBucket:
-              classificationData['confirmed_stage_bucket'] as String?,
-            stageSelectionSource:
-              classificationData['stage_selection_source'] as String?,
-            confirmedStageUpdatedAt:
-              classificationData['confirmed_stage_updated_at'] as String?,
-        ),
+          ? null
+          : ProspectClassification(
+              inferredStageBucket:
+                  classificationData['inferred_stage_bucket'] as String?,
+              inferredStageConfidence:
+                  (classificationData['inferred_stage_confidence'] as num?)
+                      ?.toDouble(),
+              inferredStageConfidenceLabel:
+                  classificationData['inferred_stage_confidence_label']
+                      as String?,
+              inferredStageReasons:
+                  (classificationData['inferred_stage_reasons'] as List?)
+                          ?.whereType<String>()
+                          .toList() ??
+                      const [],
+              inferredStageUpdatedAt:
+                  classificationData['inferred_stage_updated_at'] as String?,
+              confirmedStageBucket:
+                  classificationData['confirmed_stage_bucket'] as String?,
+              stageSelectionSource:
+                  classificationData['stage_selection_source'] as String?,
+              confirmedStageUpdatedAt:
+                  classificationData['confirmed_stage_updated_at'] as String?,
+            ),
     );
   }
 
-      Future<UpdateProspectClassificationResult> updateProspectClassification(
-      String prospectId, {
-      required String selectedStageBucket,
-      }) async {
-      final response = await _dio.post(
-        '${ApiConfig.baseUrl}/conversations/prospect/$prospectId/classification',
-        data: {
+  Future<UpdateProspectClassificationResult> updateProspectClassification(
+    String prospectId, {
+    required String selectedStageBucket,
+  }) async {
+    final response = await _dio.post(
+      '${ApiConfig.baseUrl}/conversations/prospect/$prospectId/classification',
+      data: {
         'selected_stage_bucket': selectedStageBucket,
-        },
-      );
-      final data = response.data as Map<String, dynamic>;
-      final classificationData = data['classification'] as Map<String, dynamic>;
-      return UpdateProspectClassificationResult(
-        prospectId: data['prospect_id'] as String,
-        classification: ProspectClassification(
-        inferredStageBucket: classificationData['inferred_stage_bucket'] as String?,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    final classificationData = data['classification'] as Map<String, dynamic>;
+    return UpdateProspectClassificationResult(
+      prospectId: data['prospect_id'] as String,
+      classification: ProspectClassification(
+        inferredStageBucket:
+            classificationData['inferred_stage_bucket'] as String?,
         inferredStageConfidence:
-          (classificationData['inferred_stage_confidence'] as num?)?.toDouble(),
+            (classificationData['inferred_stage_confidence'] as num?)
+                ?.toDouble(),
         inferredStageConfidenceLabel:
-          classificationData['inferred_stage_confidence_label'] as String?,
+            classificationData['inferred_stage_confidence_label'] as String?,
         inferredStageReasons:
-          (classificationData['inferred_stage_reasons'] as List?)
-              ?.whereType<String>()
-              .toList() ??
-            const [],
+            (classificationData['inferred_stage_reasons'] as List?)
+                    ?.whereType<String>()
+                    .toList() ??
+                const [],
         inferredStageUpdatedAt:
-          classificationData['inferred_stage_updated_at'] as String?,
+            classificationData['inferred_stage_updated_at'] as String?,
         confirmedStageBucket:
-          classificationData['confirmed_stage_bucket'] as String?,
-        stageSelectionSource: classificationData['stage_selection_source'] as String?,
+            classificationData['confirmed_stage_bucket'] as String?,
+        stageSelectionSource:
+            classificationData['stage_selection_source'] as String?,
         confirmedStageUpdatedAt:
-          classificationData['confirmed_stage_updated_at'] as String?,
-        ),
-      );
-      }
+            classificationData['confirmed_stage_updated_at'] as String?,
+      ),
+    );
+  }
 
   /// Calls POST /conversations/voice-token and returns the full result
   /// including dynamic_variables for the SDK.
@@ -313,6 +326,29 @@ class ConversationService {
       prospectId: data['prospect_id'] as String?,
       dynamicVariables:
           (data['dynamic_variables'] as Map<String, dynamic>?) ?? {},
+    );
+  }
+
+  Future<RelationshipHubChatResult> sendRelationshipHubChat(
+    String userMessage, {
+    String? prospectId,
+    Map<String, dynamic> context = const {},
+  }) async {
+    final response = await _dio.post(
+      '${ApiConfig.baseUrl}/conversations/relationship-hub/chat',
+      data: {
+        'user_message': userMessage,
+        if (prospectId != null) 'prospect_id': prospectId,
+        'context': context,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    return RelationshipHubChatResult(
+      replyMarkdown: data['reply_markdown'] as String? ?? '',
+      rawResponse: (data['raw_response'] as Map?)?.map(
+            (key, value) => MapEntry(key.toString(), value),
+          ) ??
+          const {},
     );
   }
 }

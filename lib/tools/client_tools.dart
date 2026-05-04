@@ -309,12 +309,9 @@ class SetResponseChipsTool implements ClientTool {
       onUpdate(payload);
 
       print('[chips][tool] onUpdate dispatched successfully');
-
-      return ClientToolResult.success({
-        'applied': true,
-        'show_chips': payload.showChips,
-        'chips_count': payload.chips.length,
-      });
+      // This tool is registered with expects_response=false, so it should not
+      // emit a tool response back to the ElevenLabs runtime.
+      return null;
     } catch (e) {
       print('[chips][tool] execute failed: $e');
       return ClientToolResult.failure('Failed to set response chips: $e');

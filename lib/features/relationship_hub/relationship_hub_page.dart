@@ -1,7 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 import '../../services/conversation_service.dart';
 import '../../theme/app_theme.dart';
+
+class _GuideMessage {
+  final bool isUser;
+  final String text;
+  final bool isMarkdown;
+
+  const _GuideMessage({
+    required this.isUser,
+    required this.text,
+    this.isMarkdown = false,
+  });
+}
 
 class RelationshipHubPage extends StatefulWidget {
   final String? prospectId;
@@ -89,8 +102,8 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
       'series_b_plus': 'Series B+',
       'revenue_generating_no_vc': 'Revenue-generating, no VC',
     };
-    final raw = _prospect?.companyStage ??
-        widget.dynamicVariables['stage']?.toString();
+    final raw =
+        _prospect?.companyStage ?? widget.dynamicVariables['stage']?.toString();
     return map[raw] ?? 'Founder workspace';
   }
 
@@ -126,7 +139,8 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
                       ? Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Expanded(child: _HubMainColumn(
+                            Expanded(
+                                child: _HubMainColumn(
                               companyName: _companyName,
                               founderName: _founderName,
                               industry: _industry,
@@ -134,10 +148,13 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
                               priorities: _priorities,
                             )),
                             SizedBox(
-                              width: 320,
+                              width: 404,
                               child: _AiGuidePanel(
+                                prospectId: widget.prospectId,
                                 founderName: _founderName,
                                 companyName: _companyName,
+                                industry: _industry,
+                                stageLabel: _stageLabel,
                                 priorities: _priorities,
                               ),
                             ),
@@ -150,8 +167,11 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
                           stageLabel: _stageLabel,
                           priorities: _priorities,
                           trailingPanel: _AiGuidePanel(
+                            prospectId: widget.prospectId,
                             founderName: _founderName,
                             companyName: _companyName,
+                            industry: _industry,
+                            stageLabel: _stageLabel,
                             priorities: _priorities,
                           ),
                         ),
@@ -323,7 +343,8 @@ class _HubMainColumn extends StatelessWidget {
                     iconColor: Color(0xFF7C5410),
                     iconBg: Color(0xFFFBEAD5),
                     title: 'Meeting confirmed',
-                    message: 'Intro call with Sarah on May 6 at 2:00 PM ET. Tap to prep.',
+                    message:
+                        'Intro call with Sarah on May 6 at 2:00 PM ET. Tap to prep.',
                     footer: 'Apr 28 · Click to prepare',
                   ),
                 ),
@@ -334,7 +355,8 @@ class _HubMainColumn extends StatelessWidget {
                     iconColor: Color(0xFF0F6E56),
                     iconBg: Color(0xFFE1F5EE),
                     title: 'Call summary available',
-                    message: 'Apr 29 call with Sarah. Topics, next steps, and new material added.',
+                    message:
+                        'Apr 29 call with Sarah. Topics, next steps, and new material added.',
                     footer: 'Apr 29 · Click to view',
                   ),
                 ),
@@ -345,7 +367,8 @@ class _HubMainColumn extends StatelessWidget {
                     iconColor: Color(0xFF5B55D9),
                     iconBg: Color(0xFFEEEDFE),
                     title: 'New guide added by Sarah',
-                    message: 'Preparing for your first credit facility, based on your call.',
+                    message:
+                        'Preparing for your first credit facility, based on your call.',
                     footer: 'Apr 29 · In your learning path',
                   ),
                 ),
@@ -366,181 +389,184 @@ class _HubMainColumn extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0A2C4E),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF213E5B),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF314C68)),
-                          ),
-                          child: const Icon(Icons.calendar_today_rounded,
-                              color: Color(0xFFE8CC7A), size: 18),
-                        ),
-                        const SizedBox(width: 14),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'UPCOMING MEETING',
-                                style: TextStyle(
-                                  color: Color(0xFFE8CC7A),
-                                  fontSize: 11,
-                                  letterSpacing: 1.1,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              SizedBox(height: 5),
-                              Text(
-                                'Intro call with Sarah Chen',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Tuesday, May 6 · 2:00 PM ET · 30 min',
-                                style: TextStyle(
-                                  color: Color(0xFFB8C3D1),
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFFE2E8F0),
-                            side: const BorderSide(color: Color(0xFF3E5B79)),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(999)),
-                          ),
-                          child: const Text('Add to calendar'),
-                        ),
-                        const SizedBox(width: 10),
-                        FilledButton(
-                          onPressed: () {},
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFFDBB549),
-                            foregroundColor: const Color(0xFF0A2C4E),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(999)),
-                          ),
-                          child: const Text('Prep for call'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Container(
-                  width: 300,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE0D7C8)),
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0A2C4E),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
                         children: [
-                          CircleAvatar(
-                            radius: 24,
-                            backgroundColor: Color(0xFF0A2C4E),
-                            child: Text(
-                              'SC',
-                              style: TextStyle(
-                                color: Color(0xFFE8CC7A),
-                                fontWeight: FontWeight.w700,
-                              ),
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF213E5B),
+                              borderRadius: BorderRadius.circular(12),
+                              border:
+                                  Border.all(color: const Color(0xFF314C68)),
                             ),
+                            child: const Icon(Icons.calendar_today_rounded,
+                                color: Color(0xFFE8CC7A), size: 18),
                           ),
-                          SizedBox(width: 12),
-                          Expanded(
+                          const SizedBox(width: 14),
+                          const Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Sarah Chen',
+                                  'UPCOMING MEETING',
                                   style: TextStyle(
+                                    color: Color(0xFFE8CC7A),
+                                    fontSize: 10,
+                                    letterSpacing: 1.1,
                                     fontWeight: FontWeight.w700,
-                                    fontSize: 20,
                                   ),
                                 ),
-                                SizedBox(height: 2),
+                                SizedBox(height: 5),
                                 Text(
-                                  'Innovation Banking',
+                                  'Intro call with Sarah Chen',
                                   style: TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF6B7280),
+                                    color: Colors.white,
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Icon(Icons.circle,
-                                        size: 8, color: Color(0xFF1D9E75)),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      'Available this week',
-                                      style: TextStyle(
-                                        color: Color(0xFF1D9E75),
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
+                                SizedBox(height: 4),
+                                Text(
+                                  'Tuesday, May 6 · 2:00 PM ET · 30 min',
+                                  style: TextStyle(
+                                    color: Color(0xFFB8C3D1),
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
+                          const SizedBox(width: 12),
+                          OutlinedButton(
+                            onPressed: () {},
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFE2E8F0),
+                              side: const BorderSide(color: Color(0xFF3E5B79)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(999)),
+                            ),
+                            child: const Text('Add to calendar'),
+                          ),
+                          const SizedBox(width: 10),
+                          FilledButton(
+                            onPressed: () {},
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFDBB549),
+                              foregroundColor: const Color(0xFF0A2C4E),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(999)),
+                            ),
+                            child: const Text('Prep for call'),
+                          ),
                         ],
                       ),
-                      SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _MiniActionButton(
-                              label: 'Contact',
-                              dark: true,
-                              icon: Icons.forum_outlined,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: _MiniActionButton(
-                              label: 'Schedule',
-                              dark: false,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 16),
+                  Container(
+                    width: 300,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE0D7C8)),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 24,
+                              backgroundColor: Color(0xFF0A2C4E),
+                              child: Text(
+                                'SC',
+                                style: TextStyle(
+                                  color: Color(0xFFE8CC7A),
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Sarah Chen',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 17,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'Innovation Banking',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.circle,
+                                          size: 8, color: Color(0xFF1D9E75)),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Available this week',
+                                        style: TextStyle(
+                                          color: Color(0xFF1D9E75),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _MiniActionButton(
+                                label: 'Contact',
+                                dark: true,
+                                icon: Icons.forum_outlined,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: _MiniActionButton(
+                                label: 'Schedule',
+                                dark: false,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Container(height: 1, color: const Color(0xFFE7DCC8)),
@@ -570,11 +596,12 @@ class _HubMainColumn extends StatelessWidget {
                     children: [
                       Text(
                         "Explore what's available to you",
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontFamily: 'Georgia',
-                              color: const Color(0xFF0A2C4E),
-                              fontWeight: FontWeight.w700,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontFamily: 'Georgia',
+                                  color: const Color(0xFF0A2C4E),
+                                  fontWeight: FontWeight.w700,
+                                ),
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -697,16 +724,111 @@ class _HubMainColumn extends StatelessWidget {
   }
 }
 
-class _AiGuidePanel extends StatelessWidget {
+class _AiGuidePanel extends StatefulWidget {
+  final String? prospectId;
   final String founderName;
   final String companyName;
+  final String industry;
+  final String stageLabel;
   final List<String> priorities;
 
   const _AiGuidePanel({
+    this.prospectId,
     required this.founderName,
     required this.companyName,
+    required this.industry,
+    required this.stageLabel,
     required this.priorities,
   });
+
+  @override
+  State<_AiGuidePanel> createState() => _AiGuidePanelState();
+}
+
+class _AiGuidePanelState extends State<_AiGuidePanel> {
+  final ConversationService _service = ConversationService();
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  bool _sending = false;
+  late final List<_GuideMessage> _messages = [
+    _GuideMessage(
+      isUser: false,
+      text:
+          "I have context from ${widget.founderName}'s profile and the materials in ${widget.companyName}'s learning path. Ask me anything about the next meeting, Sarah's notes, or what matters most right now.",
+    ),
+  ];
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendMessage(String message) async {
+    final trimmed = message.trim();
+    if (trimmed.isEmpty || _sending) return;
+
+    setState(() {
+      _sending = true;
+      _messages.add(_GuideMessage(isUser: true, text: trimmed));
+    });
+    _controller.clear();
+    _scrollToBottom();
+
+    try {
+      final result = await _service.sendRelationshipHubChat(
+        trimmed,
+        prospectId: widget.prospectId,
+        context: {
+          'founder_name': widget.founderName,
+          'company_name': widget.companyName,
+          'industry': widget.industry,
+          'stage_label': widget.stageLabel,
+          'priorities': widget.priorities,
+        },
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _messages.add(
+          _GuideMessage(
+            isUser: false,
+            text: result.replyMarkdown,
+            isMarkdown: true,
+          ),
+        );
+      });
+      _scrollToBottom();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(
+          const _GuideMessage(
+            isUser: false,
+            text:
+                'I could not reach the guide right now. Please try again in a moment.',
+          ),
+        );
+      });
+      _scrollToBottom();
+    } finally {
+      if (mounted) {
+        setState(() => _sending = false);
+      }
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -725,7 +847,7 @@ class _AiGuidePanel extends StatelessWidget {
             child: Row(
               children: [
                 const Icon(Icons.auto_awesome_rounded,
-                    color: Color(0xFF0A5CA5), size: 18),
+                    color: AppThemeTokens.buttonPrimary, size: 18),
                 const SizedBox(width: 8),
                 const Text(
                   'AI guide',
@@ -740,14 +862,14 @@ class _AiGuidePanel extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE6F1FB),
+                    color: const Color(0xFFE8F5F8),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: const Color(0xFFBCD6F4)),
+                    border: Border.all(color: const Color(0xFF9ED3DF)),
                   ),
                   child: const Text(
                     'Ask about your materials',
                     style: TextStyle(
-                      color: Color(0xFF0A5CA5),
+                      color: AppThemeTokens.buttonPrimary,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
@@ -760,62 +882,56 @@ class _AiGuidePanel extends StatelessWidget {
             child: Container(
               color: const Color(0xFFFAFAF8),
               child: SingleChildScrollView(
+                controller: _scrollController,
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE1D9CB)),
-                      ),
-                      child: Text(
-                        'I have context from $founderName\'s profile and all materials in your learning path — including the new guide Sarah added after your call. Ask me anything.',
-                        style: const TextStyle(
-                          color: Color(0xFF35302A),
-                          fontSize: 13,
-                          height: 1.6,
-                        ),
+                    ..._messages.map(
+                      (message) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _GuideMessageBubble(message: message),
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    _AiBubble(
-                      text:
-                          'Want a quick summary of what matters most for $companyName right now?',
-                    ),
-                    const SizedBox(height: 10),
-                    ...priorities.take(3).map(
-                      (chip) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(999),
-                              border:
-                                  Border.all(color: const Color(0xFFE1D9CB)),
-                            ),
-                            child: Text(
-                              chip,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF1F2937),
+                    if (_messages.length == 1) ...[
+                      const SizedBox(height: 6),
+                      ...widget.priorities.take(3).map(
+                            (chip) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: InkWell(
+                                  onTap: () => _sendMessage(chip),
+                                  borderRadius: BorderRadius.circular(999),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE8F5F8),
+                                      borderRadius: BorderRadius.circular(999),
+                                      border: Border.all(
+                                        color: const Color(0xFF9ED3DF),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      chip,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppThemeTokens.buttonPrimary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                    ],
+                    if (_sending)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: _GuideTypingBubble(),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    const _AiBubble(
-                      text:
-                          'I can also explain what Sarah added, help you prep for the next call, or point you to the most relevant product path.',
-                    ),
                   ],
                 ),
               ),
@@ -829,37 +945,82 @@ class _AiGuidePanel extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Ask about your materials…',
-                      hintStyle: const TextStyle(color: Color(0xFF8D8578)),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            const BorderSide(color: Color(0xFFE1D9CB)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            const BorderSide(color: Color(0xFFE1D9CB)),
-                      ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFDFCF9),
+                      borderRadius: BorderRadius.circular(32),
+                      border: Border.all(color: const Color(0xFFD1D5DB)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _controller,
+                            enabled: !_sending,
+                            onSubmitted: _sendMessage,
+                            textInputAction: TextInputAction.send,
+                            minLines: 1,
+                            maxLines: 4,
+                            style: const TextStyle(
+                              color: Color(0xFF1F2937),
+                              fontSize: 14,
+                            ),
+                            decoration: const InputDecoration(
+                              hintText: 'Ask about your materials…',
+                              hintStyle: TextStyle(color: Color(0xFF8D8578)),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(5),
+                          child: ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _controller,
+                            builder: (context, value, _) {
+                              final canSend =
+                                  !_sending && value.text.trim().isNotEmpty;
+                              return GestureDetector(
+                                onTap: canSend
+                                    ? () => _sendMessage(value.text)
+                                    : null,
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: canSend
+                                        ? AppThemeTokens.modalHeader
+                                        : const Color(0xFFE5E7EB),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.arrow_upward_rounded,
+                                    size: 20,
+                                    color: canSend
+                                        ? AppThemeTokens.goldAccent
+                                        : const Color(0xFF9CA3AF),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0A2C4E),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: const Icon(Icons.send_rounded,
-                      color: Colors.white, size: 18),
                 ),
               ],
             ),
@@ -870,26 +1031,85 @@ class _AiGuidePanel extends StatelessWidget {
   }
 }
 
-class _AiBubble extends StatelessWidget {
-  final String text;
+class _GuideMessageBubble extends StatelessWidget {
+  final _GuideMessage message;
 
-  const _AiBubble({required this.text});
+  const _GuideMessageBubble({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final isUser = message.isUser;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isUser ? AppThemeTokens.buttonPrimary : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color:
+              isUser ? AppThemeTokens.buttonPrimary : const Color(0xFFE1D9CB),
+        ),
+      ),
+      child: message.isMarkdown && !isUser
+          ? MarkdownBody(
+              data: message.text,
+              selectable: true,
+              styleSheet: MarkdownStyleSheet(
+                p: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF35302A),
+                  height: 1.6,
+                ),
+                strong: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF1F2937),
+                  fontWeight: FontWeight.w700,
+                ),
+                a: const TextStyle(
+                  color: AppThemeTokens.buttonPrimary,
+                  decoration: TextDecoration.none,
+                  fontWeight: FontWeight.w600,
+                ),
+                listBullet: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF35302A),
+                ),
+                code: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF0A2C4E),
+                  backgroundColor: Color(0xFFE8F5F8),
+                ),
+              ),
+            )
+          : Text(
+              message.text,
+              style: TextStyle(
+                fontSize: 13,
+                color: isUser ? Colors.white : const Color(0xFF35302A),
+                height: 1.6,
+              ),
+            ),
+    );
+  }
+}
+
+class _GuideTypingBubble extends StatelessWidget {
+  const _GuideTypingBubble();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE1D9CB)),
       ),
-      child: Text(
-        text,
-        style: const TextStyle(
+      child: const Text(
+        'Thinking…',
+        style: TextStyle(
           fontSize: 13,
-          color: Color(0xFF35302A),
-          height: 1.6,
+          color: Color(0xFF6F675B),
+          fontStyle: FontStyle.italic,
         ),
       ),
     );
@@ -1029,7 +1249,8 @@ class _MiniActionButton extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 15, color: dark ? Colors.white : const Color(0xFF1F2937)),
+            Icon(icon,
+                size: 15, color: dark ? Colors.white : const Color(0xFF1F2937)),
             const SizedBox(width: 6),
           ],
           Text(
@@ -1187,7 +1408,7 @@ class _ProductCard extends StatelessWidget {
           Text(
             '$cta →',
             style: const TextStyle(
-              color: Color(0xFF0A5CA5),
+              color: AppThemeTokens.buttonPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
