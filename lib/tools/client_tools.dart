@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:elevenlabs_agents/elevenlabs_agents.dart';
 import '../config/api_config.dart';
@@ -36,10 +37,10 @@ class CaptureNeedTool implements ClientTool {
         data: body,
       );
 
-      return ClientToolResult.success({
+      return ClientToolResult.success(jsonEncode({
         'need_id': resp.data['need_id'],
         'status': resp.data['status'],
-      });
+      }));
     } catch (e) {
       return ClientToolResult.failure('Failed to capture need: $e');
     }
@@ -158,7 +159,7 @@ class SearchProductCatalogTool implements ClientTool {
               })
           .toList();
 
-      return ClientToolResult.success({'products': results});
+      return ClientToolResult.success(jsonEncode({'products': results}));
     } catch (e) {
       return ClientToolResult.failure('Failed to search product catalog: $e');
     }
@@ -178,6 +179,8 @@ class AdvancePhaseTool implements ClientTool {
   @override
   Future<ClientToolResult?> execute(Map<String, dynamic> parameters) async {
     try {
+      print('[chips][tool] advance_phase called with params: $parameters');
+      
       final body = <String, dynamic>{
         'prospect_id': prospectId ?? parameters['prospect_id'],
         'collected_attributes': parameters['collected_attributes'] is Map
@@ -190,15 +193,21 @@ class AdvancePhaseTool implements ClientTool {
         data: body,
       );
 
+      print('[chips][tool] advance_phase backend response: ${resp.data}');
+
       if (onPhaseAdvanced != null) {
         onPhaseAdvanced!(resp.data['new_phase']);
       }
 
-      return ClientToolResult.success({
+      final result = {
         'new_phase': resp.data['new_phase'],
         'top_product_signals': resp.data['top_product_signals'],
-      });
+      };
+      
+      print('[chips][tool] advance_phase returning success: $result');
+      return ClientToolResult.success(jsonEncode(result));
     } catch (e) {
+      print('[chips][tool] advance_phase failed: $e');
       return ClientToolResult.failure('Failed to advance phase: $e');
     }
   }
@@ -229,11 +238,11 @@ class RecordHandoffTool implements ClientTool {
         data: body,
       );
 
-      return ClientToolResult.success({
+      return ClientToolResult.success(jsonEncode({
         'handoff_id': resp.data['handoff_id'],
         'assigned_manager_type': resp.data['assigned_manager_type'],
         'status': resp.data['status'],
-      });
+      }));
     } catch (e) {
       return ClientToolResult.failure('Failed to record handoff: $e');
     }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:elevenlabs_agents/elevenlabs_agents.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
@@ -84,6 +86,9 @@ class _VoicePageState extends State<VoicePage> {
   _ResponseChipsState _responseChips = _ResponseChipsState.empty;
   int _chipsEpoch = 0;
   int _disconnectClearEpoch = 0;
+  int _lastUserMessageTime = 0;
+  int _lastUserMessageSentAt = 0;
+  Timer? _pendingChipsTimer;
   late bool _isChatMode;
   bool _manualEndRequested = false;
   bool _isRecoveringSession = false;
@@ -211,6 +216,9 @@ class _VoicePageState extends State<VoicePage> {
               _transcript.add(_TranscriptEntry(
                   isUser: true, text: transcript, isTentative: true));
             }
+            _responseChips = _ResponseChipsState.empty;
+            _chipsEpoch++;
+            _lastUserMessageSentAt = DateTime.now().millisecondsSinceEpoch;
           });
           _scrollToBottom();
         },
@@ -228,12 +236,16 @@ class _VoicePageState extends State<VoicePage> {
               _transcript.add(
                   _TranscriptEntry(isUser: true, text: transcript));
             }
+            _responseChips = _ResponseChipsState.empty;
+            _chipsEpoch++;
+            _lastUserMessageSentAt = DateTime.now().millisecondsSinceEpoch;
           });
           _scrollToBottom();
         },
         onTentativeAgentResponse: ({required response}) {
           if (!mounted) return;
           setState(() {
+            _lastUserMessageTime = 0; // Reset: agent has started new turn
             if (_transcript.isNotEmpty &&
                 !_transcript.last.isUser &&
                 _transcript.last.isTentative) {
@@ -249,6 +261,7 @@ class _VoicePageState extends State<VoicePage> {
           if (!mounted) return;
           if (source == Role.ai) {
             setState(() {
+              _lastUserMessageTime = 0; // Reset: agent has started new turn
               if (_transcript.isNotEmpty &&
                   !_transcript.last.isUser &&
                   _transcript.last.isTentative) {
@@ -306,6 +319,24 @@ class _VoicePageState extends State<VoicePage> {
   }
 
   void _applyResponseChips(SetResponseChipsPayload payload) {
+    _pendingChipsTimer?.cancel();
+
+    // Within 3s of a user message, buffer all chip calls with a 500ms debounce
+    // so only the LAST call in a rapid burst (e.g. wrong then correct category)
+    // actually gets displayed. After 3s, use a fast 150ms debounce.
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final recentUserMessage = _lastUserMessageSentAt > 0
+        && (nowMs - _lastUserMessageSentAt) < 3000;
+    final delay = recentUserMessage ? 500 : 150;
+
+    _pendingChipsTimer = Timer(Duration(milliseconds: delay), () {
+      _pendingChipsTimer = null;
+      if (!mounted) return;
+      _applyResponseChipsNow(payload);
+    });
+  }
+
+  void _applyResponseChipsNow(SetResponseChipsPayload payload) {
     final now = DateTime.now();
     final expiresAt = payload.ttlMs != null && payload.ttlMs! > 0
         ? now.add(Duration(milliseconds: payload.ttlMs!))
@@ -313,12 +344,22 @@ class _VoicePageState extends State<VoicePage> {
 
     final blockedByCategory = _isIdentityCategory(payload.category);
 
+    // Heuristic: If the user just sent a message within the last 500ms, 
+    // any arriving tool calls were likely generated for the PREVIOUS turn and 
+    // were caught in-flight. Ignore them to prevent stale chips.
+    // _lastUserMessageTime is reset to 0 as soon as the agent starts a new response.
+    final msSinceUserMessage = _lastUserMessageTime > 0 
+        ? now.millisecondsSinceEpoch - _lastUserMessageTime 
+        : 999999;
+    final isStaleInFlight = msSinceUserMessage < 500;
+
     final shouldShow = payload.showChips &&
         payload.chips.isNotEmpty &&
-      !blockedByCategory;
+        !blockedByCategory &&
+        !isStaleInFlight;
 
     print(
-      '[chips][ui] apply start show=${payload.showChips} chipsNotEmpty=${payload.chips.isNotEmpty} blockedByCategory=$blockedByCategory conversationEnded=$_conversationEnded => shouldShow=$shouldShow',
+      '[chips][ui] apply start show=${payload.showChips} chipsNotEmpty=${payload.chips.isNotEmpty} blockedByCategory=$blockedByCategory isStaleInFlight=$isStaleInFlight => shouldShow=$shouldShow',
     );
 
     final next = _ResponseChipsState(
@@ -463,6 +504,7 @@ class _VoicePageState extends State<VoicePage> {
   @override
   void dispose() {
     _isDisposing = true;
+    _pendingChipsTimer?.cancel();
     _client?.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -543,9 +585,15 @@ class _VoicePageState extends State<VoicePage> {
     print(
       '[chips][ui] sending user message="$trimmed" connected=${_client?.status == ConversationStatus.connected} chatMode=$_isChatMode',
     );
+    _pendingChipsTimer?.cancel();
     _client?.sendUserMessage(trimmed);
     setState(() {
       _transcript.add(_TranscriptEntry(isUser: true, text: trimmed));
+      _responseChips = _ResponseChipsState.empty;
+      _chipsEpoch++;
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      _lastUserMessageTime = nowMs;
+      _lastUserMessageSentAt = nowMs;
     });
     _scrollToBottom();
   }
