@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:elevenlabs_agents/elevenlabs_agents.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
@@ -88,7 +86,6 @@ class _VoicePageState extends State<VoicePage> {
   int _disconnectClearEpoch = 0;
   int _lastUserMessageTime = 0;
   int _lastUserMessageSentAt = 0;
-  Timer? _pendingChipsTimer;
   late bool _isChatMode;
   bool _manualEndRequested = false;
   bool _isRecoveringSession = false;
@@ -319,24 +316,6 @@ class _VoicePageState extends State<VoicePage> {
   }
 
   void _applyResponseChips(SetResponseChipsPayload payload) {
-    _pendingChipsTimer?.cancel();
-
-    // Within 3s of a user message, buffer all chip calls with a 500ms debounce
-    // so only the LAST call in a rapid burst (e.g. wrong then correct category)
-    // actually gets displayed. After 3s, use a fast 150ms debounce.
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final recentUserMessage = _lastUserMessageSentAt > 0
-        && (nowMs - _lastUserMessageSentAt) < 3000;
-    final delay = recentUserMessage ? 500 : 150;
-
-    _pendingChipsTimer = Timer(Duration(milliseconds: delay), () {
-      _pendingChipsTimer = null;
-      if (!mounted) return;
-      _applyResponseChipsNow(payload);
-    });
-  }
-
-  void _applyResponseChipsNow(SetResponseChipsPayload payload) {
     final now = DateTime.now();
     final expiresAt = payload.ttlMs != null && payload.ttlMs! > 0
         ? now.add(Duration(milliseconds: payload.ttlMs!))
@@ -504,7 +483,6 @@ class _VoicePageState extends State<VoicePage> {
   @override
   void dispose() {
     _isDisposing = true;
-    _pendingChipsTimer?.cancel();
     _client?.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -585,7 +563,6 @@ class _VoicePageState extends State<VoicePage> {
     print(
       '[chips][ui] sending user message="$trimmed" connected=${_client?.status == ConversationStatus.connected} chatMode=$_isChatMode',
     );
-    _pendingChipsTimer?.cancel();
     _client?.sendUserMessage(trimmed);
     setState(() {
       _transcript.add(_TranscriptEntry(isUser: true, text: trimmed));
