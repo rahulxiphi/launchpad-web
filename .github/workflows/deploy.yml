@@ -1,0 +1,66 @@
+name: Test and Deploy (launchpad-web)
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter 3.24.5
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.5"
+          channel: "stable"
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build web (release)
+        # Full Dart compile + tree-shake — same as what Docker does on the VM.
+        # Catches any Dart errors before wasting a 10+ min VM Docker build.
+        run: |
+          flutter build web --release \
+            --dart-define=API_BASE_URL=http://localhost:8010/api/v1
+
+  deploy:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VM via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          password: ${{ secrets.VM_PASSWORD }}
+          connect_timeout: 60s
+          timeout: 600s
+          script: |
+            set -e
+
+            cd /root/launchpad-web
+            git pull origin main
+
+            # Rebuild web image (flutter build web runs inside Docker, uses API_BASE_URL from .env.demo)
+            docker compose -p launchpad_demo -f docker-compose.demo.yml build --no-cache web
+
+            # Swap in the new container
+            docker compose -p launchpad_demo -f docker-compose.demo.yml up -d --force-recreate web
+
+            # Clean up dangling images
+            docker image prune -f
+
+            # Health check
+            sleep 5
+            curl -f http://localhost:9010/health
