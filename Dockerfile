@@ -23,7 +23,7 @@ RUN useradd -m -s /bin/bash flutter
 RUN chown -R flutter:flutter /home/flutter
 
 ENV FLUTTER_HOME="/flutter"
-ENV FLUTTER_VERSION="3.24.5"
+ENV FLUTTER_VERSION="3.38.1"
 ENV PATH="$FLUTTER_HOME/bin:$PATH"
 
 RUN git clone https://github.com/flutter/flutter.git $FLUTTER_HOME
