@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../services/conversation_service.dart';
 import '../../theme/app_theme.dart';
@@ -35,7 +36,7 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
   ProspectInitResult? _prospect;
   bool _loading = false;
 
-  static const _defaultCompany = 'Aster Labs';
+  static const _defaultCompany = 'Launchpad';
   static const _defaultFounder = 'Aditya Kumar';
 
   @override
@@ -119,6 +120,19 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
         : parts.map((part) => part[0].toUpperCase()).join();
   }
 
+  void _showProfileModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => _ProspectProfileModal(
+        prospectId: widget.prospectId,
+        founderName: _founderName,
+        companyName: _companyName,
+        initials: _initials,
+        stageBucket: _prospect?.stageBucket,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 1180;
@@ -131,31 +145,40 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
               companyName: _companyName,
               initials: _initials,
               founderName: _founderName,
+              onProfileTap: () => _showProfileModal(context),
             ),
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : isDesktop
-                      ? Row(
+                      ? Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            const _NotificationsSection(),
                             Expanded(
-                                child: _HubMainColumn(
-                              companyName: _companyName,
-                              founderName: _founderName,
-                              industry: _industry,
-                              stageLabel: _stageLabel,
-                              priorities: _priorities,
-                            )),
-                            SizedBox(
-                              width: 404,
-                              child: _AiGuidePanel(
-                                prospectId: widget.prospectId,
-                                founderName: _founderName,
-                                companyName: _companyName,
-                                industry: _industry,
-                                stageLabel: _stageLabel,
-                                priorities: _priorities,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                      child: _HubMainColumn(
+                                    companyName: _companyName,
+                                    founderName: _founderName,
+                                    industry: _industry,
+                                    stageLabel: _stageLabel,
+                                    priorities: _priorities,
+                                  )),
+                                  SizedBox(
+                                    width: 404,
+                                    child: _AiGuidePanel(
+                                      prospectId: widget.prospectId,
+                                      founderName: _founderName,
+                                      companyName: _companyName,
+                                      industry: _industry,
+                                      stageLabel: _stageLabel,
+                                      priorities: _priorities,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -187,11 +210,13 @@ class _HubNavBar extends StatelessWidget {
   final String companyName;
   final String founderName;
   final String initials;
+  final VoidCallback? onProfileTap;
 
   const _HubNavBar({
     required this.companyName,
     required this.founderName,
     required this.initials,
+    this.onProfileTap,
   });
 
   @override
@@ -199,7 +224,7 @@ class _HubNavBar extends StatelessWidget {
     return Container(
       height: 74,
       padding: const EdgeInsets.symmetric(horizontal: 28),
-      color: const Color(0xFF0A2C4E),
+      color: AppThemeTokens.modalHeader,
       child: Row(
         children: [
           RichText(
@@ -214,7 +239,7 @@ class _HubNavBar extends StatelessWidget {
                 TextSpan(text: 'JPMorgan '),
                 TextSpan(
                   text: 'Innovation Economy',
-                  style: TextStyle(color: Color(0xFFE8CC7A)),
+                  style: TextStyle(color: AppThemeTokens.goldAccent),
                 ),
               ],
             ),
@@ -250,21 +275,27 @@ class _HubNavBar extends StatelessWidget {
             ],
           ),
           const SizedBox(width: 16),
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFF223A56),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFB99C4C), width: 1),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initials,
-              style: const TextStyle(
-                color: Color(0xFFE8CC7A),
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
+          GestureDetector(
+            onTap: onProfileTap,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF223A56),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0xFFB99C4C), width: 1),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  initials,
+                  style: const TextStyle(
+                    color: AppThemeTokens.goldAccent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
           ),
@@ -309,6 +340,74 @@ class _NavPill extends StatelessWidget {
   }
 }
 
+class _NotificationsSection extends StatelessWidget {
+  const _NotificationsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
+          child: Text(
+            'NOTIFICATIONS',
+            style: const TextStyle(
+              fontSize: 12,
+              letterSpacing: 1,
+              color: Color(0xFF8D8578),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 18),
+          child: Row(
+            children: const [
+              Expanded(
+                child: _NotificationCard(
+                  icon: Icons.calendar_today_rounded,
+                  iconColor: Color(0xFF7C5410),
+                  iconBg: Color(0xFFFBEAD5),
+                  title: 'Meeting confirmed',
+                  message:
+                      'Intro call with Sarah on May 6 at 2:00 PM ET. Tap to prep.',
+                  footer: 'Apr 28 · Click to prepare',
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: _NotificationCard(
+                  icon: Icons.call_outlined,
+                  iconColor: Color(0xFF0F6E56),
+                  iconBg: Color(0xFFE1F5EE),
+                  title: 'Call summary available',
+                  message:
+                      'Apr 29 call with Sarah. Topics, next steps, and new material added.',
+                  footer: 'Apr 29 · Click to view',
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: _NotificationCard(
+                  icon: Icons.description_outlined,
+                  iconColor: Color(0xFF5B55D9),
+                  iconBg: Color(0xFFEEEDFE),
+                  title: 'New guide added by Sarah',
+                  message:
+                      'Preparing for your first credit facility, based on your call.',
+                  footer: 'Apr 29 · In your learning path',
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(height: 1, color: const Color(0xFFE7DCC8)),
+      ],
+    );
+  }
+}
+
 class _HubMainColumn extends StatelessWidget {
   final String companyName;
   final String founderName;
@@ -332,74 +431,34 @@ class _HubMainColumn extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionLabel('Notifications'),
+          // On mobile, show notifications inside the scroll view
+          if (trailingPanel != null) const _NotificationsSection(),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 18),
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
             child: Row(
-              children: const [
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
                 Expanded(
-                  child: _NotificationCard(
-                    icon: Icons.calendar_today_rounded,
-                    iconColor: Color(0xFF7C5410),
-                    iconBg: Color(0xFFFBEAD5),
-                    title: 'Meeting confirmed',
-                    message:
-                        'Intro call with Sarah on May 6 at 2:00 PM ET. Tap to prep.',
-                    footer: 'Apr 28 · Click to prepare',
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _NotificationCard(
-                    icon: Icons.call_outlined,
-                    iconColor: Color(0xFF0F6E56),
-                    iconBg: Color(0xFFE1F5EE),
-                    title: 'Call summary available',
-                    message:
-                        'Apr 29 call with Sarah. Topics, next steps, and new material added.',
-                    footer: 'Apr 29 · Click to view',
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _NotificationCard(
-                    icon: Icons.description_outlined,
-                    iconColor: Color(0xFF5B55D9),
-                    iconBg: Color(0xFFEEEDFE),
-                    title: 'New guide added by Sarah',
-                    message:
-                        'Preparing for your first credit facility, based on your call.',
-                    footer: 'Apr 29 · In your learning path',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(height: 1, color: const Color(0xFFE7DCC8)),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-            child: Text(
-              'Your banker',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontFamily: 'Georgia',
-                    color: const Color(0xFF0A2C4E),
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0A2C4E),
-                        borderRadius: BorderRadius.circular(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Your banker',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontFamily: 'Georgia',
+                              color: AppThemeTokens.modalHeader,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 22,
+                            ),
                       ),
+                      const SizedBox(height: 18),
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: AppThemeTokens.modalHeader,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       child: Row(
                         children: [
                           Container(
@@ -412,7 +471,7 @@ class _HubMainColumn extends StatelessWidget {
                                   Border.all(color: const Color(0xFF314C68)),
                             ),
                             child: const Icon(Icons.calendar_today_rounded,
-                                color: Color(0xFFE8CC7A), size: 18),
+                                color: AppThemeTokens.goldAccent, size: 18),
                           ),
                           const SizedBox(width: 14),
                           const Expanded(
@@ -422,7 +481,7 @@ class _HubMainColumn extends StatelessWidget {
                                 Text(
                                   'UPCOMING MEETING',
                                   style: TextStyle(
-                                    color: Color(0xFFE8CC7A),
+                                    color: AppThemeTokens.goldAccent,
                                     fontSize: 10,
                                     letterSpacing: 1.1,
                                     fontWeight: FontWeight.w700,
@@ -465,8 +524,8 @@ class _HubMainColumn extends StatelessWidget {
                           FilledButton(
                             onPressed: () {},
                             style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFFDBB549),
-                              foregroundColor: const Color(0xFF0A2C4E),
+                              backgroundColor: AppThemeTokens.goldAccent,
+                              foregroundColor: AppThemeTokens.modalHeader,
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 12),
                               shape: RoundedRectangleBorder(
@@ -477,100 +536,119 @@ class _HubMainColumn extends StatelessWidget {
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Container(
-                    width: 300,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE0D7C8)),
-                    ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: Color(0xFF0A2C4E),
-                              child: Text(
-                                'SC',
-                                style: TextStyle(
-                                  color: Color(0xFFE8CC7A),
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Sarah Chen',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 17,
-                                    ),
-                                  ),
-                                  SizedBox(height: 2),
-                                  Text(
-                                    'Innovation Banking',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF6B7280),
-                                    ),
-                                  ),
-                                  SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.circle,
-                                          size: 8, color: Color(0xFF1D9E75)),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        'Available this week',
-                                        style: TextStyle(
-                                          color: Color(0xFF1D9E75),
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _MiniActionButton(
-                                label: 'Contact',
-                                dark: true,
-                                icon: Icons.forum_outlined,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: _MiniActionButton(
-                                label: 'Schedule',
-                                dark: false,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+                const SizedBox(width: 16),
+                Container(
+                  width: 300,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE0D7C8)),
+                  ),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 24,
+                            backgroundColor: AppThemeTokens.modalHeader,
+                            child: Text(
+                              'SC',
+                              style: TextStyle(
+                                color: AppThemeTokens.goldAccent,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Sarah Chen',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 17,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Innovation Banking',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(Icons.circle,
+                                        size: 8, color: Color(0xFF1D9E75)),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'Available this week',
+                                      style: TextStyle(
+                                        color: Color(0xFF1D9E75),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _MiniActionButton(
+                              label: 'Contact',
+                              dark: true,
+                              icon: Icons.forum_outlined,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: _MiniActionButton(
+                              label: 'Schedule',
+                              dark: false,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           Container(height: 1, color: const Color(0xFFE7DCC8)),
-          const _SectionLabel('Shared documents'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
+            child: Row(
+              children: [
+                Text(
+                  'SHARED DOCUMENTS',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    letterSpacing: 1,
+                    color: Color(0xFF8D8578),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                const _AddDocChip(),
+              ],
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 22),
             child: Wrap(
@@ -580,7 +658,6 @@ class _HubMainColumn extends StatelessWidget {
                 _DocChip('Investor overview deck.pdf', 'Shared'),
                 _DocChip('Product one-pager.docx', 'Needs review'),
                 _DocChip('Financial statements Q1.xlsx', 'Requested'),
-                _AddDocChip(),
               ],
             ),
           ),
@@ -597,10 +674,11 @@ class _HubMainColumn extends StatelessWidget {
                       Text(
                         "Explore what's available to you",
                         style:
-                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            Theme.of(context).textTheme.titleLarge?.copyWith(
                                   fontFamily: 'Georgia',
-                                  color: const Color(0xFF0A2C4E),
+                                  color: AppThemeTokens.modalHeader,
                                   fontWeight: FontWeight.w700,
+                                  fontSize: 22,
                                 ),
                       ),
                       const SizedBox(height: 6),
@@ -625,44 +703,47 @@ class _HubMainColumn extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _ProductCard(
-                    icon: Icons.account_balance_wallet_outlined,
-                    tint: const Color(0xFFE6F1FB),
-                    iconColor: const Color(0xFF2366B3),
-                    title: 'Business checking & operating accounts',
-                    description:
-                        'Accounts built for startups — multi-user access, sweep options, and no minimum balance at $_stageCopy(stageLabel).',
-                    cta: 'Learn more',
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _ProductCard(
+                      icon: Icons.account_balance_wallet_outlined,
+                      tint: Color(0xFF1A7B99).withValues(alpha: 0.1),
+                      iconColor: AppThemeTokens.buttonPrimary,
+                      title: 'Business checking & operating accounts',
+                      description:
+                          'Accounts built for startups — multi-user access, sweep options, and no minimum balance at ${_stageCopy(stageLabel)}.',
+                      cta: 'Learn more',
+                    ),
                   ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _ProductCard(
-                    icon: Icons.monitor_heart_outlined,
-                    tint: const Color(0xFFE1F5EE),
-                    iconColor: const Color(0xFF1D9E75),
-                    title: 'Treasury & cash management',
-                    description:
-                        'Automated sweep structures, money market access, and yield optimization tuned for ${companyName.trim()}\'s operating rhythm.',
-                    cta: 'Learn more',
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: _ProductCard(
+                      icon: Icons.monitor_heart_outlined,
+                      tint: const Color(0xFFE1F5EE),
+                      iconColor: const Color(0xFF1D9E75),
+                      title: 'Treasury & cash management',
+                      description:
+                          'Automated sweep structures, money market access, and yield optimization tuned for ${companyName.trim()}\'s operating rhythm.',
+                      cta: 'Learn more',
+                    ),
                   ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _ProductCard(
-                    icon: Icons.attach_money_rounded,
-                    tint: const Color(0xFFFBEAD5),
-                    iconColor: const Color(0xFF996715),
-                    title: 'Venture debt & credit facilities',
-                    description:
-                        'Pre-approved borrowing for growth capital, bridge financing, and optionality before your next equity round.',
-                    cta: 'Ask Sarah about this',
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: _ProductCard(
+                      icon: Icons.attach_money_rounded,
+                      tint: const Color(0xFFFBEAD5),
+                      iconColor: const Color(0xFF996715),
+                      title: 'Venture debt & credit facilities',
+                      description:
+                          'Pre-approved borrowing for growth capital, bridge financing, and optionality before your next equity round.',
+                      cta: 'Ask Sarah about this',
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           Container(height: 1, color: const Color(0xFFE7DCC8)),
@@ -688,7 +769,7 @@ class _HubMainColumn extends StatelessWidget {
             child: Column(
               children: [
                 _LearningCard(
-                  stripe: const Color(0xFFDBB549),
+                  stripe: AppThemeTokens.goldAccent,
                   tag: 'Guide',
                   title: 'Setting up efficient banking early',
                   meta: '8 min read · Seed · Operations',
@@ -852,7 +933,7 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
                 const Text(
                   'AI guide',
                   style: TextStyle(
-                    color: Color(0xFF0A2C4E),
+                    color: AppThemeTokens.modalHeader,
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
@@ -862,9 +943,9 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5F8),
+                    color: AppThemeTokens.buttonPrimary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: const Color(0xFF9ED3DF)),
+                    border: Border.all(color: AppThemeTokens.buttonPrimary.withValues(alpha: 0.4)),
                   ),
                   child: const Text(
                     'Ask about your materials',
@@ -887,49 +968,22 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ..._messages.map(
-                      (message) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _GuideMessageBubble(message: message),
-                      ),
-                    ),
-                    if (_messages.length == 1) ...[
-                      const SizedBox(height: 6),
-                      ...widget.priorities.take(3).map(
-                            (chip) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: InkWell(
-                                  onTap: () => _sendMessage(chip),
-                                  borderRadius: BorderRadius.circular(999),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE8F5F8),
-                                      borderRadius: BorderRadius.circular(999),
-                                      border: Border.all(
-                                        color: const Color(0xFF9ED3DF),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      chip,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppThemeTokens.buttonPrimary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                    ],
+                    ...List.generate(_messages.length, (i) {
+                      final msg = _messages[i];
+                      final isPrevSame = i > 0 && _messages[i - 1].isUser == msg.isUser;
+                      final isNextSame = i < _messages.length - 1 && _messages[i + 1].isUser == msg.isUser;
+                      return Padding(
+                        padding: EdgeInsets.only(top: isPrevSame ? 2 : 10, bottom: 1),
+                        child: _GuideMessageBubble(
+                          message: msg,
+                          isPrevSame: isPrevSame,
+                          isNextSame: isNextSame,
+                        ),
+                      );
+                    }),
                     if (_sending)
                       const Padding(
-                        padding: EdgeInsets.only(top: 4),
+                        padding: EdgeInsets.only(top: 10),
                         child: _GuideTypingBubble(),
                       ),
                   ],
@@ -1033,61 +1087,121 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
 
 class _GuideMessageBubble extends StatelessWidget {
   final _GuideMessage message;
+  final bool isPrevSame;
+  final bool isNextSame;
 
-  const _GuideMessageBubble({required this.message});
+  const _GuideMessageBubble({
+    required this.message,
+    this.isPrevSame = false,
+    this.isNextSame = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isUser = message.isUser;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isUser ? AppThemeTokens.buttonPrimary : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color:
-              isUser ? AppThemeTokens.buttonPrimary : const Color(0xFFE1D9CB),
+
+    Widget avatar(Color bg, Widget child) => Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+          child: Center(child: child),
+        );
+
+    final aiAvatar = avatar(
+      AppThemeTokens.modalHeader,
+      const Text(
+        'A',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: AppThemeTokens.goldAccent,
         ),
       ),
-      child: message.isMarkdown && !isUser
-          ? MarkdownBody(
-              data: message.text,
-              selectable: true,
-              styleSheet: MarkdownStyleSheet(
-                p: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF35302A),
-                  height: 1.6,
-                ),
-                strong: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF1F2937),
-                  fontWeight: FontWeight.w700,
-                ),
-                a: const TextStyle(
-                  color: AppThemeTokens.buttonPrimary,
-                  decoration: TextDecoration.none,
-                  fontWeight: FontWeight.w600,
-                ),
-                listBullet: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF35302A),
-                ),
-                code: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF0A2C4E),
-                  backgroundColor: Color(0xFFE8F5F8),
-                ),
+    );
+
+    final userAvatar = avatar(
+      const Color(0xFFE5E7EB),
+      const Icon(Icons.person_rounded, size: 16, color: Color(0xFF6B7280)),
+    );
+
+    final bubbleContent = message.isMarkdown && !isUser
+        ? MarkdownBody(
+            data: message.text,
+            selectable: true,
+            styleSheet: MarkdownStyleSheet(
+              p: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF1F2937),
+                height: 1.5,
+                fontWeight: FontWeight.w500,
               ),
-            )
-          : Text(
-              message.text,
-              style: TextStyle(
-                fontSize: 13,
-                color: isUser ? Colors.white : const Color(0xFF35302A),
-                height: 1.6,
+              strong: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF1F2937),
+                fontWeight: FontWeight.w700,
+              ),
+              a: const TextStyle(
+                color: AppThemeTokens.buttonPrimary,
+                decoration: TextDecoration.none,
+                fontWeight: FontWeight.w600,
+              ),
+              listBullet: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF1F2937),
+              ),
+              code: const TextStyle(
+                fontSize: 12,
+                color: AppThemeTokens.modalHeader,
+                backgroundColor: Color(0xFFE5E7EB),
               ),
             ),
+          )
+        : Text(
+            message.text,
+            style: TextStyle(
+              fontSize: 14,
+              color: isUser ? Colors.white : const Color(0xFF1F2937),
+              height: 1.5,
+              fontWeight: FontWeight.w500,
+            ),
+          );
+
+    // Grouped corner radii — same logic as VoiceBubbleRow
+    final bubble = Container(
+      constraints: const BoxConstraints(maxWidth: 300),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: isUser ? AppThemeTokens.buttonPrimary : const Color(0xFFE5E7EB),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(isPrevSame && !isUser ? 4 : 20),
+          topRight: Radius.circular(isPrevSame && isUser ? 4 : 20),
+          bottomLeft: Radius.circular(isNextSame && !isUser ? 4 : 20),
+          bottomRight: Radius.circular(isNextSame && isUser ? 4 : 20),
+        ),
+      ),
+      child: bubbleContent,
+    );
+
+    final estimatedLines =
+        (message.text.length / 55).ceil() + '\n'.allMatches(message.text).length;
+    final avatarAlign =
+        estimatedLines <= 1 ? CrossAxisAlignment.center : CrossAxisAlignment.end;
+
+    return Row(
+      mainAxisAlignment:
+          isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+      crossAxisAlignment: avatarAlign,
+      children: isUser
+          ? [
+              Flexible(child: bubble),
+              const SizedBox(width: 8),
+              if (isNextSame) const SizedBox(width: 28) else userAvatar,
+            ]
+          : [
+              if (isNextSame) const SizedBox(width: 28) else aiAvatar,
+              const SizedBox(width: 8),
+              Flexible(child: bubble),
+            ],
     );
   }
 }
@@ -1097,43 +1211,45 @@ class _GuideTypingBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE1D9CB)),
-      ),
-      child: const Text(
-        'Thinking…',
-        style: TextStyle(
-          fontSize: 13,
-          color: Color(0xFF6F675B),
-          fontStyle: FontStyle.italic,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: const BoxDecoration(
+            color: AppThemeTokens.modalHeader,
+            shape: BoxShape.circle,
+          ),
+          child: const Center(
+            child: Text(
+              'A',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppThemeTokens.goldAccent,
+              ),
+            ),
+          ),
         ),
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  final String text;
-
-  const _SectionLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
-      child: Text(
-        text.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 12,
-          letterSpacing: 1,
-          color: Color(0xFF8D8578),
-          fontWeight: FontWeight.w600,
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE5E7EB),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Text(
+            'Thinking…',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF6B7280),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -1160,7 +1276,7 @@ class _NotificationCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFE6F1FB),
+        color: Color(0xFF1A7B99).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFB6D4F4)),
       ),
@@ -1208,15 +1324,6 @@ class _NotificationCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: const Color(0xFF378ADD),
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
         ],
       ),
     );
@@ -1239,10 +1346,10 @@ class _MiniActionButton extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: dark ? const Color(0xFF0A2C4E) : Colors.white,
+        color: dark ? AppThemeTokens.modalHeader : Colors.white,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: dark ? const Color(0xFF0A2C4E) : const Color(0xFFE1D9CB),
+          color: dark ? AppThemeTokens.modalHeader : const Color(0xFFE1D9CB),
         ),
       ),
       child: Row(
@@ -1441,67 +1548,68 @@ class _LearningCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE1D9CB)),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 100,
-            decoration: BoxDecoration(
-              color: stripe,
-              borderRadius: const BorderRadius.horizontal(
-                left: Radius.circular(14),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: stripe,
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(14),
+                ),
               ),
             ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFBEAD5),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      tag,
-                      style: const TextStyle(
-                        color: Color(0xFF7C5410),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFBEAD5),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        tag,
+                        style: const TextStyle(
+                          color: Color(0xFF7C5410),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A18),
+                    const SizedBox(height: 10),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A1A18),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    meta,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF8D8578),
+                    const SizedBox(height: 6),
+                    Text(
+                      meta,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF8D8578),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: Icon(Icons.chevron_right_rounded,
-                color: Color(0xFF8D8578), size: 22),
-          ),
-        ],
+            const Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: Icon(Icons.chevron_right_rounded,
+                  color: Color(0xFF8D8578), size: 22),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1544,5 +1652,342 @@ String _stageCopy(String stageLabel) {
       return 'Series B+';
     default:
       return 'your current stage';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Profile Modal
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ProspectProfileModal extends StatefulWidget {
+  final String? prospectId;
+  final String founderName;
+  final String companyName;
+  final String initials;
+  final String? stageBucket;
+
+  const _ProspectProfileModal({
+    required this.prospectId,
+    required this.founderName,
+    required this.companyName,
+    required this.initials,
+    this.stageBucket,
+  });
+
+  @override
+  State<_ProspectProfileModal> createState() => _ProspectProfileModalState();
+}
+
+class _ProspectProfileModalState extends State<_ProspectProfileModal> {
+  final ConversationService _service = ConversationService();
+  ProspectFullProfile? _profile;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    if (widget.prospectId == null) {
+      setState(() {
+        _loading = false;
+        _error = 'No prospect ID available.';
+      });
+      return;
+    }
+    try {
+      final profile = await _service.getProspectFullProfile(widget.prospectId!);
+      if (mounted) setState(() { _profile = profile; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _loading = false; _error = 'Could not load profile.'; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Header ─────────────────────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 24, 16, 20),
+                color: AppThemeTokens.modalHeader,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF223A56),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFB99C4C), width: 1.5),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        widget.initials,
+                        style: const TextStyle(
+                          color: AppThemeTokens.goldAccent,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.founderName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.companyName,
+                            style: const TextStyle(
+                              color: AppThemeTokens.goldAccent,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 20),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              // ── Body ───────────────────────────────────────────────────────
+              Container(
+                color: Colors.white,
+                constraints: const BoxConstraints(maxHeight: 520),
+                child: _loading
+                    ? const Padding(
+                        padding: EdgeInsets.all(48),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation(AppThemeTokens.buttonPrimary),
+                            strokeWidth: 2.5,
+                          ),
+                        ),
+                      )
+                    : _error != null
+                        ? Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Text(
+                              _error!,
+                              style: const TextStyle(color: Colors.red, fontSize: 14),
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // PROFILE section — only show if any field is non-empty
+                                Builder(builder: (ctx) {
+                                  final rows = [
+                                    _buildRow('Email', _profile!.email),
+                                    _buildRow('Phone', _profile!.phoneNumber),
+                                    _buildRow('Company', _profile!.companyName),
+                                    _buildRow('Industry', _profile!.industry),
+                                    _buildRow('Stage', _profile!.companyStage),
+                                    _buildRow('Headcount', _profile!.headcount),
+                                    _buildRow('Incorporated', _profile!.incorporated ? 'Yes' : 'No'),
+                                    if (_profile!.selectedPrioritiesJson.isNotEmpty)
+                                      _buildRow(
+                                        'Priorities',
+                                        _profile!.selectedPrioritiesJson.entries
+                                            .where((e) => e.value)
+                                            .map((e) => e.key)
+                                            .join(', '),
+                                      ),
+                                    _buildRow('Conversations', '${_profile!.conversationCount}'),
+                                    if (_profile!.invitationCode != null)
+                                      _buildRow('Invite code', _profile!.invitationCode),
+                                  ];
+                                  final hasData = rows.any((r) => r != null);
+                                  if (!hasData) return const SizedBox.shrink();
+                                  return _buildSection('PROFILE', rows);
+                                }),
+                                const SizedBox(height: 20),
+                                // AI-COLLECTED INSIGHTS — always shown; empty state if none
+                                _profile!.aiAttributes.isNotEmpty
+                                    ? _buildSection(
+                                        'AI-COLLECTED INSIGHTS',
+                                        _profile!.aiAttributes.entries
+                                            .map((e) => _buildRow(
+                                                  e.key
+                                                      .replaceAll('_', ' ')
+                                                      .split(' ')
+                                                      .map((w) => w.isEmpty
+                                                          ? ''
+                                                          : '${w[0].toUpperCase()}${w.substring(1)}')
+                                                      .join(' '),
+                                                  e.value?.toString(),
+                                                ))
+                                            .toList(),
+                                      )
+                                    : Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'AI-COLLECTED INSIGHTS',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              letterSpacing: 1.2,
+                                              color: Color(0xFF8D8578),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Container(
+                                            padding: const EdgeInsets.all(16),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(color: const Color(0xFFE7DCC8)),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(
+                                                  Icons.auto_awesome_rounded,
+                                                  size: 16,
+                                                  color: Color(0xFF8D8578),
+                                                ),
+                                                const SizedBox(width: 10),
+                                                const Expanded(
+                                                  child: Text(
+                                                    'No attributes collected yet.',
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      color: Color(0xFF6B7280),
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                ElevatedButton(
+                                                  onPressed: () {
+                                                    Navigator.of(context).pop();
+                                                    if (widget.prospectId != null) {
+                                                      GoRouter.of(context).go('/?p=${Uri.encodeComponent(widget.prospectId!)}');
+                                                    } else {
+                                                      GoRouter.of(context).go('/');
+                                                    }
+                                                  },
+                                                  style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
+                                                    padding: WidgetStateProperty.all(
+                                                      const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                                                    ),
+                                                    shape: WidgetStateProperty.all(
+                                                      RoundedRectangleBorder(
+                                                        borderRadius: BorderRadius.circular(13),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  child: const Text('Start Conversation', style: TextStyle(fontWeight: FontWeight.bold)),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ],
+                            ),
+                          ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSection(String label, List<Widget?> rows) {
+    final nonNullRows = rows.whereType<Widget>().toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            letterSpacing: 1.2,
+            color: Color(0xFF8D8578),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFE7DCC8)),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            children: nonNullRows
+                .asMap()
+                .entries
+                .map((entry) => Column(
+                      children: [
+                        entry.value,
+                        if (entry.key < nonNullRows.length - 1)
+                          const Divider(height: 1, color: Color(0xFFEDE7DB), indent: 14, endIndent: 14),
+                      ],
+                    ))
+                .toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget? _buildRow(String label, String? value) {
+    if (value == null || value.isEmpty) return null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF6B7280),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF1F2937),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

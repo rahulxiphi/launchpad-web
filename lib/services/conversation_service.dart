@@ -123,6 +123,44 @@ class RelationshipHubChatResult {
   });
 }
 
+/// Combined profile: form data + AI-collected attributes from ElevenLabs conversations.
+class ProspectFullProfile {
+  final String prospectId;
+  final String? email;
+  final String? fullName;
+  final String? phoneNumber;
+  final String? companyName;
+  final bool incorporated;
+  final String? companyStage;
+  final String? industry;
+  final String? headcount;
+  final Map<String, bool> selectedPrioritiesJson;
+  final String? stageBucket;
+  final int conversationCount;
+  final int conversationPhase;
+  final String? invitationCode;
+  final Map<String, dynamic> aiAttributes;
+
+  const ProspectFullProfile({
+    required this.prospectId,
+    this.email,
+    this.fullName,
+    this.phoneNumber,
+    this.companyName,
+    this.incorporated = false,
+    this.companyStage,
+    this.industry,
+    this.headcount,
+    this.selectedPrioritiesJson = const {},
+    this.stageBucket,
+    this.conversationCount = 0,
+    this.conversationPhase = 1,
+    this.invitationCode,
+    this.aiAttributes = const {},
+  });
+}
+
+
 class ConversationService {
   final Dio _dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 10),
@@ -351,4 +389,38 @@ class ConversationService {
           const {},
     );
   }
+
+  /// Fetches full merged profile: form data + latest AI-collected attributes.
+  Future<ProspectFullProfile> getProspectFullProfile(String prospectId) async {
+    final response = await _dio.get(
+      '${ApiConfig.baseUrl}/conversations/prospect/$prospectId/full-profile',
+    );
+    final data = response.data as Map<String, dynamic>;
+    return ProspectFullProfile(
+      prospectId: data['prospect_id'] as String,
+      email: data['email'] as String?,
+      fullName: data['full_name'] as String?,
+      phoneNumber: data['phone_number'] as String?,
+      companyName: data['company_name'] as String?,
+      incorporated: data['incorporated'] as bool? ?? false,
+      companyStage: data['company_stage'] as String?,
+      industry: data['industry'] as String?,
+      headcount: data['headcount'] as String?,
+      selectedPrioritiesJson:
+          (data['selected_priorities_json'] as Map?)?.map(
+                (key, value) => MapEntry(key.toString(), value == true),
+              ) ??
+              const {},
+      stageBucket: data['stage_bucket'] as String?,
+      conversationCount: data['conversation_count'] as int? ?? 0,
+      conversationPhase: data['conversation_phase'] as int? ?? 1,
+      invitationCode: data['invitation_code'] as String?,
+      aiAttributes:
+          (data['ai_attributes'] as Map?)?.map(
+                (key, value) => MapEntry(key.toString(), value),
+              ) ??
+              const {},
+    );
+  }
 }
+
