@@ -23,7 +23,13 @@ jobs:
         run: flutter pub get
 
       - name: Run tests
-        run: flutter test
+        # Skip gracefully if no test directory exists yet
+        run: |
+          if [ -d test ]; then
+            flutter test
+          else
+            echo "No test directory found, skipping flutter test."
+          fi
 
       - name: Build web (release)
         # Full Dart compile + tree-shake — same as what Docker does on the VM.
