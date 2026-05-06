@@ -301,7 +301,9 @@ class _HubNavBar extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Text(
-            companyName,
+            companyName.isNotEmpty && companyName != 'Launchpad'
+                ? companyName
+                : founderName.split(' ').first,
             style: const TextStyle(
               color: Color(0xFFE2E8F0),
               fontSize: 13,
@@ -435,194 +437,192 @@ class _HubMainColumn extends StatelessWidget {
           if (trailingPanel != null) const _NotificationsSection(),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Your banker',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontFamily: 'Georgia',
-                              color: AppThemeTokens.modalHeader,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 22,
-                            ),
+                Text(
+                  'Your banker',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontFamily: 'Georgia',
+                        color: AppThemeTokens.modalHeader,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 22,
                       ),
-                      const SizedBox(height: 18),
-                      Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: AppThemeTokens.modalHeader,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF213E5B),
-                              borderRadius: BorderRadius.circular(12),
-                              border:
-                                  Border.all(color: const Color(0xFF314C68)),
-                            ),
-                            child: const Icon(Icons.calendar_today_rounded,
-                                color: AppThemeTokens.goldAccent, size: 18),
-                          ),
-                          const SizedBox(width: 14),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'UPCOMING MEETING',
-                                  style: TextStyle(
-                                    color: AppThemeTokens.goldAccent,
-                                    fontSize: 10,
-                                    letterSpacing: 1.1,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                SizedBox(height: 5),
-                                Text(
-                                  'Intro call with Sarah Chen',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Tuesday, May 6 · 2:00 PM ET · 30 min',
-                                  style: TextStyle(
-                                    color: Color(0xFFB8C3D1),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          OutlinedButton(
-                            onPressed: () {},
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFFE2E8F0),
-                              side: const BorderSide(color: Color(0xFF3E5B79)),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(999)),
-                            ),
-                            child: const Text('Add to calendar'),
-                          ),
-                          const SizedBox(width: 10),
-                          FilledButton(
-                            onPressed: () {},
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppThemeTokens.goldAccent,
-                              foregroundColor: AppThemeTokens.modalHeader,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(999)),
-                            ),
-                            child: const Text('Prep for call'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ),
-              ),
-                const SizedBox(width: 16),
-                Container(
-                  width: 300,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE0D7C8)),
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                const SizedBox(height: 18),
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 24,
-                            backgroundColor: AppThemeTokens.modalHeader,
-                            child: Text(
-                              'SC',
-                              style: TextStyle(
-                                color: AppThemeTokens.goldAccent,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: AppThemeTokens.modalHeader,
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Sarah Chen',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 17,
-                                  ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF213E5B),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: const Color(0xFF314C68)),
                                 ),
-                                SizedBox(height: 2),
-                                Text(
-                                  'Innovation Banking',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF6B7280),
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                Row(
+                                child: const Icon(
+                                    Icons.calendar_today_rounded,
+                                    color: AppThemeTokens.goldAccent,
+                                    size: 18),
+                              ),
+                              const SizedBox(width: 14),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.circle,
-                                        size: 8, color: Color(0xFF1D9E75)),
-                                    SizedBox(width: 6),
                                     Text(
-                                      'Available this week',
+                                      'UPCOMING MEETING',
                                       style: TextStyle(
-                                        color: Color(0xFF1D9E75),
+                                        color: AppThemeTokens.goldAccent,
+                                        fontSize: 10,
+                                        letterSpacing: 1.1,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    SizedBox(height: 5),
+                                    Text(
+                                      'Intro call with Sarah Chen',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 19,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Tuesday, May 6 · 2:00 PM ET · 30 min',
+                                      style: TextStyle(
+                                        color: Color(0xFFB8C3D1),
                                         fontSize: 12,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 12),
+                              OutlinedButton(
+                                onPressed: () {},
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFE2E8F0),
+                                  side: const BorderSide(
+                                      color: Color(0xFF3E5B79)),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(999)),
+                                ),
+                                child: const Text('Add to calendar'),
+                              ),
+                              const SizedBox(width: 10),
+                              FilledButton(
+                                onPressed: () {},
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppThemeTokens.goldAccent,
+                                  foregroundColor: AppThemeTokens.modalHeader,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(999)),
+                                ),
+                                child: const Text('Prep for call'),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                      SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _MiniActionButton(
-                              label: 'Contact',
-                              dark: true,
-                              icon: Icons.forum_outlined,
-                            ),
+                      const SizedBox(width: 16),
+                      SizedBox(
+                        width: 260,
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                                color: const Color(0xFFE0D7C8)),
                           ),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: _MiniActionButton(
-                              label: 'Schedule',
-                              dark: false,
-                            ),
+                          child: const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 24,
+                                    backgroundColor:
+                                        AppThemeTokens.modalHeader,
+                                    child: Text(
+                                      'SC',
+                                      style: TextStyle(
+                                        color: AppThemeTokens.goldAccent,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Sarah Chen',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 17,
+                                          ),
+                                        ),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          'Innovation Banking',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF6B7280),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 14),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _MiniActionButton(
+                                      label: 'Contact',
+                                      dark: true,
+                                      icon: Icons.forum_outlined,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: _MiniActionButton(
+                                      label: 'Schedule',
+                                      dark: false,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
@@ -1387,7 +1387,7 @@ class _DocChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAF7F0),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE1D9CB)),
       ),
@@ -1431,10 +1431,10 @@ class _AddDocChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFFAF7F0),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color: const Color(0xFFD7CFBF),
           style: BorderStyle.solid,
@@ -1712,7 +1712,7 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
+        constraints: const BoxConstraints(maxWidth: 840),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Column(
@@ -1755,15 +1755,17 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            widget.companyName,
-                            style: const TextStyle(
-                              color: AppThemeTokens.goldAccent,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                          if (widget.companyName.isNotEmpty && widget.companyName != 'Launchpad') ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              widget.companyName,
+                              style: const TextStyle(
+                                color: AppThemeTokens.goldAccent,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),
@@ -1799,54 +1801,60 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                           )
                         : SingleChildScrollView(
                             padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // PROFILE section — only show if any field is non-empty
-                                Builder(builder: (ctx) {
-                                  final rows = [
-                                    _buildRow('Email', _profile!.email),
-                                    _buildRow('Phone', _profile!.phoneNumber),
-                                    _buildRow('Company', _profile!.companyName),
-                                    _buildRow('Industry', _profile!.industry),
-                                    _buildRow('Stage', _profile!.companyStage),
-                                    _buildRow('Headcount', _profile!.headcount),
-                                    _buildRow('Incorporated', _profile!.incorporated ? 'Yes' : 'No'),
-                                    if (_profile!.selectedPrioritiesJson.isNotEmpty)
-                                      _buildRow(
-                                        'Priorities',
-                                        _profile!.selectedPrioritiesJson.entries
-                                            .where((e) => e.value)
-                                            .map((e) => e.key)
-                                            .join(', '),
-                                      ),
-                                    _buildRow('Conversations', '${_profile!.conversationCount}'),
-                                    if (_profile!.invitationCode != null)
-                                      _buildRow('Invite code', _profile!.invitationCode),
-                                  ];
-                                  final hasData = rows.any((r) => r != null);
-                                  if (!hasData) return const SizedBox.shrink();
-                                  return _buildSection('PROFILE', rows);
-                                }),
-                                const SizedBox(height: 20),
-                                // AI-COLLECTED INSIGHTS — always shown; empty state if none
-                                _profile!.aiAttributes.isNotEmpty
-                                    ? _buildSection(
-                                        'AI-COLLECTED INSIGHTS',
-                                        _profile!.aiAttributes.entries
-                                            .map((e) => _buildRow(
-                                                  e.key
-                                                      .replaceAll('_', ' ')
-                                                      .split(' ')
-                                                      .map((w) => w.isEmpty
-                                                          ? ''
-                                                          : '${w[0].toUpperCase()}${w.substring(1)}')
-                                                      .join(' '),
-                                                  e.value?.toString(),
-                                                ))
-                                            .toList(),
-                                      )
-                                    : Column(
+                            child: Builder(builder: (ctx) {
+                              final profileRows = [
+                                _buildRow('Email', _profile!.email),
+                                _buildRow('Phone', _profile!.phoneNumber),
+                                _buildRow('Company', _profile!.companyName),
+                                _buildRow('Industry', _profile!.industry),
+                                _buildRow('Stage', _profile!.companyStage),
+                                _buildRow('Headcount', _profile!.headcount),
+                                _buildRow('Incorporated', _profile!.incorporated ? 'Yes' : 'No'),
+                                if (_profile!.selectedPrioritiesJson.isNotEmpty)
+                                  _buildRow(
+                                    'Priorities',
+                                    _profile!.selectedPrioritiesJson.entries
+                                        .where((e) => e.value)
+                                        .map((e) => e.key)
+                                        .join(', '),
+                                  ),
+                                _buildRow('Conversations', '${_profile!.conversationCount}'),
+                                if (_profile!.invitationCode != null)
+                                  _buildRow('Invite code', _profile!.invitationCode),
+                              ];
+                              final hasProfileData = profileRows.any((r) => r != null);
+
+                              final insightRows = _profile!.aiAttributes.isNotEmpty
+                                  ? _profile!.aiAttributes.entries
+                                      .map((e) => _buildRow(
+                                            e.key
+                                                .replaceAll('_', ' ')
+                                                .split(' ')
+                                                .map((w) => w.isEmpty
+                                                    ? ''
+                                                    : '${w[0].toUpperCase()}${w.substring(1)}')
+                                                .join(' '),
+                                            e.value?.toString(),
+                                          ))
+                                      .toList()
+                                  : null;
+
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (hasProfileData)
+                                    Expanded(
+                                      child: _buildSection('PROFILE', profileRows),
+                                    ),
+                                  if (hasProfileData && insightRows != null)
+                                    const SizedBox(width: 24),
+                                  if (insightRows != null)
+                                    Expanded(
+                                      child: _buildSection('AI-COLLECTED INSIGHTS', insightRows),
+                                    )
+                                  else
+                                    Expanded(
+                                      child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           const Text(
@@ -1909,8 +1917,10 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                                           ),
                                         ],
                                       ),
-                              ],
-                            ),
+                                    ),
+                                ],
+                              );
+                            }),
                           ),
               ),
             ],
