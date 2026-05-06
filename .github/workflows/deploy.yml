@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Flutter 3.38.1
         uses: subosito/flutter-action@v2
@@ -42,7 +42,7 @@ jobs:
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
-          key: ${{ secrets.VM_SSH_KEY }}
+          # key: ${{ secrets.VM_SSH_KEY }}
           password: ${{ secrets.VM_PASSWORD }}
           connect_timeout: 60s
           timeout: 600s
