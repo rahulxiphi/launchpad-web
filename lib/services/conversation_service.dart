@@ -123,6 +123,38 @@ class RelationshipHubChatResult {
   });
 }
 
+class ChatHistoryMessage {
+  final int id;
+  final String type;
+  final String content;
+
+  const ChatHistoryMessage({
+    required this.id,
+    required this.type,
+    required this.content,
+  });
+
+  factory ChatHistoryMessage.fromJson(Map<String, dynamic> json) {
+    return ChatHistoryMessage(
+      id: json['id'] as int,
+      type: json['type'] as String? ?? '',
+      content: json['content'] as String? ?? '',
+    );
+  }
+}
+
+class ChatHistoryResult {
+  final List<ChatHistoryMessage> messages;
+  final int total;
+  final bool hasMore;
+
+  const ChatHistoryResult({
+    required this.messages,
+    required this.total,
+    required this.hasMore,
+  });
+}
+
 /// Combined profile: form data + AI-collected attributes from ElevenLabs conversations.
 class ProspectFullProfile {
   final String prospectId;
@@ -420,6 +452,36 @@ class ConversationService {
                 (key, value) => MapEntry(key.toString(), value),
               ) ??
               const {},
+    );
+  }
+
+  /// Fetch paginated chat history from the n8n_chat_histories table.
+  ///
+  /// Uses cursor-based pagination: pass [beforeId] to load messages older than
+  /// that id.  Omit or pass 0 to load the most recent messages.
+  Future<ChatHistoryResult> getChatHistory(
+    String prospectId, {
+    int limit = 30,
+    int beforeId = 0,
+  }) async {
+    final queryParams = <String, dynamic>{'limit': limit};
+    if (beforeId > 0) {
+      queryParams['before_id'] = beforeId;
+    }
+    final response = await _dio.get(
+      '${ApiConfig.baseUrl}/conversations/relationship-hub/chat-history/$prospectId',
+      queryParameters: queryParams,
+    );
+    final data = response.data as Map<String, dynamic>;
+    final messages = (data['messages'] as List<dynamic>?)
+            ?.map((m) =>
+                ChatHistoryMessage.fromJson(m as Map<String, dynamic>))
+            .toList() ??
+        [];
+    return ChatHistoryResult(
+      messages: messages,
+      total: data['total'] as int? ?? 0,
+      hasMore: data['has_more'] as bool? ?? false,
     );
   }
 }

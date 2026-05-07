@@ -637,11 +637,11 @@ class _HubMainColumn extends StatelessWidget {
               children: [
                 Text(
                   'SHARED DOCUMENTS',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     letterSpacing: 1,
-                    color: Color(0xFF8D8578),
-                    fontWeight: FontWeight.w600,
+                    color: AppThemeTokens.modalHeader,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const Spacer(),
@@ -830,6 +830,7 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
   final ConversationService _service = ConversationService();
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _historyScrollController = ScrollController();
   bool _sending = false;
   late final List<_GuideMessage> _messages = [
     _GuideMessage(
@@ -839,10 +840,38 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
     ),
   ];
 
+  bool _viewingHistory = false;
+  List<_GuideMessage> _historyMessages = [];
+  bool _loadingHistory = false;
+  bool _historyHasMore = false;
+  int _historyEarliestId = 0;
+  bool _hasHistory = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkHistory();
+  }
+
+  Future<void> _checkHistory() async {
+    if (widget.prospectId == null) return;
+    try {
+      final result = await _service.getChatHistory(
+        widget.prospectId!,
+        limit: 1,
+      );
+      if (!mounted) return;
+      setState(() => _hasHistory = result.messages.isNotEmpty);
+    } catch (_) {
+      if (!mounted) return;
+    }
+  }
+
   @override
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
+    _historyScrollController.dispose();
     super.dispose();
   }
 
@@ -911,6 +940,62 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
     });
   }
 
+  Future<void> _loadHistory({bool loadMore = false}) async {
+    if (_loadingHistory) return;
+    if (loadMore && !_historyHasMore) return;
+
+    setState(() => _loadingHistory = true);
+
+    try {
+      final result = await _service.getChatHistory(
+        widget.prospectId!,
+        limit: 30,
+        beforeId: loadMore ? _historyEarliestId : 0,
+      );
+
+      if (!mounted) return;
+
+      final newMessages = result.messages.map((m) {
+        final isUser = m.type == 'human';
+        return _GuideMessage(isUser: isUser, text: m.content);
+      }).toList();
+
+      if (loadMore) {
+        _historyMessages = [...newMessages, ..._historyMessages];
+      } else {
+        _historyMessages = newMessages;
+      }
+
+      _historyHasMore = result.hasMore;
+      _historyEarliestId = result.messages.isNotEmpty ? result.messages.first.id : 0;
+    } catch (_) {
+      if (!mounted) return;
+    } finally {
+      if (mounted) setState(() => _loadingHistory = false);
+    }
+  }
+
+  void _openHistory() {
+    _loadHistory();
+    setState(() => _viewingHistory = true);
+  }
+
+  void _closeHistory() {
+    setState(() {
+      _viewingHistory = false;
+      _historyMessages = [];
+      _historyEarliestId = 0;
+      _historyHasMore = false;
+    });
+  }
+
+  void _onHistoryScroll() {
+    if (!_historyScrollController.hasClients || _loadingHistory || !_historyHasMore) return;
+    if (_historyScrollController.offset <= 50) {
+      _loadHistory(loadMore: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -920,163 +1005,300 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
       ),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Color(0xFFE7DCC8))),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.auto_awesome_rounded,
-                    color: AppThemeTokens.buttonPrimary, size: 18),
-                const SizedBox(width: 8),
-                const Text(
-                  'AI guide',
-                  style: TextStyle(
-                    color: AppThemeTokens.modalHeader,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppThemeTokens.buttonPrimary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AppThemeTokens.buttonPrimary.withValues(alpha: 0.4)),
-                  ),
-                  child: const Text(
-                    'Ask about your materials',
-                    style: TextStyle(
-                      color: AppThemeTokens.buttonPrimary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+          _buildHeader(),
+          Expanded(
+            child: _viewingHistory ? _buildHistoryBody() : _buildChatBody(),
+          ),
+          if (!_viewingHistory) _buildInputBar(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE7DCC8))),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            _viewingHistory ? Icons.history_rounded : Icons.auto_awesome_rounded,
+            color: _viewingHistory ? const Color(0xFF6B7280) : AppThemeTokens.buttonPrimary,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _viewingHistory ? 'Chat History' : 'AI guide',
+            style: const TextStyle(
+              color: AppThemeTokens.modalHeader,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
             ),
           ),
-          Expanded(
-            child: Container(
-              color: const Color(0xFFFAFAF8),
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          const Spacer(),
+          if (_viewingHistory)
+            GestureDetector(
+              onTap: _closeHistory,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppThemeTokens.buttonPrimary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppThemeTokens.buttonPrimary.withValues(alpha: 0.4)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    ...List.generate(_messages.length, (i) {
-                      final msg = _messages[i];
-                      final isPrevSame = i > 0 && _messages[i - 1].isUser == msg.isUser;
-                      final isNextSame = i < _messages.length - 1 && _messages[i + 1].isUser == msg.isUser;
-                      return Padding(
-                        padding: EdgeInsets.only(top: isPrevSame ? 2 : 10, bottom: 1),
-                        child: _GuideMessageBubble(
-                          message: msg,
-                          isPrevSame: isPrevSame,
-                          isNextSame: isNextSame,
-                        ),
-                      );
-                    }),
-                    if (_sending)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 10),
-                        child: _GuideTypingBubble(),
+                    Icon(Icons.arrow_back_rounded, size: 13, color: AppThemeTokens.buttonPrimary),
+                    SizedBox(width: 5),
+                    Text(
+                      'Back to Chat',
+                      style: TextStyle(
+                        color: AppThemeTokens.buttonPrimary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                       ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            GestureDetector(
+              onTap: _openHistory,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppThemeTokens.buttonPrimary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppThemeTokens.buttonPrimary.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_hasHistory)
+                      const Icon(Icons.history_rounded, size: 13, color: AppThemeTokens.buttonPrimary),
+                    if (_hasHistory) const SizedBox(width: 5),
+                    Text(
+                      _hasHistory ? 'Chat History' : 'Ask about your materials',
+                      style: const TextStyle(
+                        color: AppThemeTokens.buttonPrimary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: Color(0xFFE7DCC8))),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFDFCF9),
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(color: const Color(0xFFD1D5DB)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChatBody() {
+    return Container(
+      color: const Color(0xFFFAFAF8),
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ...List.generate(_messages.length, (i) {
+              final msg = _messages[i];
+              final isPrevSame = i > 0 && _messages[i - 1].isUser == msg.isUser;
+              final isNextSame = i < _messages.length - 1 && _messages[i + 1].isUser == msg.isUser;
+              return Padding(
+                padding: EdgeInsets.only(top: isPrevSame ? 2 : 10, bottom: 1),
+                child: _GuideMessageBubble(
+                  message: msg,
+                  isPrevSame: isPrevSame,
+                  isNextSame: isNextSame,
+                ),
+              );
+            }),
+            if (_sending)
+              const Padding(
+                padding: EdgeInsets.only(top: 10),
+                child: _GuideTypingBubble(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistoryBody() {
+    return Container(
+      color: const Color(0xFFFAFAF8),
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification is ScrollUpdateNotification) {
+            _onHistoryScroll();
+          }
+          return false;
+        },
+        child: SingleChildScrollView(
+          controller: _historyScrollController,
+          padding: const EdgeInsets.all(16),
+          child: _historyMessages.isEmpty && _loadingHistory
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  ),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_loadingHistory)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 12),
+                        child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+                      ),
+                    if (_historyMessages.isEmpty && !_loadingHistory)
+                      const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(
+                          child: Text(
+                            'No chat history yet.',
+                            style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+                          ),
                         ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _controller,
-                            enabled: !_sending,
-                            onSubmitted: _sendMessage,
-                            textInputAction: TextInputAction.send,
-                            minLines: 1,
-                            maxLines: 4,
-                            style: const TextStyle(
-                              color: Color(0xFF1F2937),
-                              fontSize: 14,
-                            ),
-                            decoration: const InputDecoration(
-                              hintText: 'Ask about your materials…',
-                              hintStyle: TextStyle(color: Color(0xFF8D8578)),
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
+                      )
+                    else
+                      ...List.generate(_historyMessages.length, (i) {
+                        final msg = _historyMessages[i];
+                        final isPrevSame = i > 0 && _historyMessages[i - 1].isUser == msg.isUser;
+                        final isNextSame = i < _historyMessages.length - 1 && _historyMessages[i + 1].isUser == msg.isUser;
+                        return Padding(
+                          padding: EdgeInsets.only(top: isPrevSame ? 2 : 10, bottom: 1),
+                          child: _GuideMessageBubble(
+                            message: msg,
+                            isPrevSame: isPrevSame,
+                            isNextSame: isNextSame,
+                          ),
+                        );
+                      }),
+                    if (_historyHasMore && !_loadingHistory)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Center(
+                          child: GestureDetector(
+                            onTap: () => _loadHistory(loadMore: true),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: const Color(0xFFE1D9CB)),
                               ),
-                              isDense: true,
+                              child: const Text(
+                                'Load more',
+                                style: TextStyle(
+                                  color: Color(0xFF6B7280),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(5),
-                          child: ValueListenableBuilder<TextEditingValue>(
-                            valueListenable: _controller,
-                            builder: (context, value, _) {
-                              final canSend =
-                                  !_sending && value.text.trim().isNotEmpty;
-                              return GestureDetector(
-                                onTap: canSend
-                                    ? () => _sendMessage(value.text)
-                                    : null,
-                                child: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: canSend
-                                        ? AppThemeTokens.modalHeader
-                                        : const Color(0xFFE5E7EB),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.arrow_upward_rounded,
-                                    size: 20,
-                                    color: canSend
-                                        ? AppThemeTokens.goldAccent
-                                        : const Color(0xFF9CA3AF),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                      ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputBar() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: Color(0xFFE7DCC8))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFFDFCF9),
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: const Color(0xFFD1D5DB)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      enabled: !_sending,
+                      onSubmitted: _sendMessage,
+                      textInputAction: TextInputAction.send,
+                      minLines: 1,
+                      maxLines: 4,
+                      style: const TextStyle(
+                        color: Color(0xFF1F2937),
+                        fontSize: 14,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: 'Ask about your materials…',
+                        hintStyle: TextStyle(color: Color(0xFF8D8578)),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
                         ),
-                      ],
+                        isDense: true,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.all(5),
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _controller,
+                      builder: (context, value, _) {
+                        final canSend =
+                            !_sending && value.text.trim().isNotEmpty;
+                        return GestureDetector(
+                          onTap: canSend
+                              ? () => _sendMessage(value.text)
+                              : null,
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: canSend
+                                  ? AppThemeTokens.modalHeader
+                                  : const Color(0xFFE5E7EB),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.arrow_upward_rounded,
+                              size: 20,
+                              color: canSend
+                                  ? AppThemeTokens.goldAccent
+                                  : const Color(0xFF9CA3AF),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -1431,23 +1653,24 @@ class _AddDocChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAF7F0),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: const Color(0xFFD7CFBF),
-          style: BorderStyle.solid,
-        ),
+        border: Border.all(color: const Color(0xFFE1D9CB)),
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.add, size: 16, color: Color(0xFF8D8578)),
+          Icon(Icons.add, size: 16, color: Color(0xFF1F2937)),
           SizedBox(width: 6),
           Text(
             'Add document',
-            style: TextStyle(fontSize: 13, color: Color(0xFF6F675B)),
+            style: TextStyle(
+              fontSize: 12,
+              color: Color(0xFF1F2937),
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -1777,10 +2000,10 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                 ),
               ),
               // ── Body ───────────────────────────────────────────────────────
-              Container(
-                color: Colors.white,
-                constraints: const BoxConstraints(maxHeight: 520),
-                child: _loading
+              Expanded(
+                child: Container(
+                  color: Colors.white,
+                  child: _loading
                     ? const Padding(
                         padding: EdgeInsets.all(48),
                         child: Center(
@@ -1802,10 +2025,7 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                         : SingleChildScrollView(
                             padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
                             child: Builder(builder: (ctx) {
-                              final profileRows = [
-                                _buildRow('Email', _profile!.email),
-                                _buildRow('Phone', _profile!.phoneNumber),
-                                _buildRow('Company', _profile!.companyName),
+                              final manualFormRows = [
                                 _buildRow('Industry', _profile!.industry),
                                 _buildRow('Stage', _profile!.companyStage),
                                 _buildRow('Headcount', _profile!.headcount),
@@ -1818,11 +2038,18 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                                         .map((e) => e.key)
                                         .join(', '),
                                   ),
+                              ];
+                              final hasManualFormRows = manualFormRows.any((r) => r != null);
+
+                              final firstFormRows = [
+                                _buildRow('Email', _profile!.email),
+                                _buildRow('Phone', _profile!.phoneNumber),
+                                _buildRow('Company', _profile!.companyName),
                                 _buildRow('Conversations', '${_profile!.conversationCount}'),
                                 if (_profile!.invitationCode != null)
                                   _buildRow('Invite code', _profile!.invitationCode),
                               ];
-                              final hasProfileData = profileRows.any((r) => r != null);
+                              final hasFirstFormRows = firstFormRows.any((r) => r != null);
 
                               final insightRows = _profile!.aiAttributes.isNotEmpty
                                   ? _profile!.aiAttributes.entries
@@ -1839,93 +2066,122 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                                       .toList()
                                   : null;
 
+                              final leftChildren = <Widget>[];
+                              if (hasManualFormRows) {
+                                leftChildren.add(_buildSection('MANUAL FORM DEEP INPUT', manualFormRows));
+                              }
+                              if (hasFirstFormRows && insightRows != null) {
+                                if (leftChildren.isNotEmpty) {
+                                  leftChildren.add(const SizedBox(height: 16));
+                                }
+                                leftChildren.add(_buildSection('FIRST FORM DETAILS', firstFormRows));
+                              }
+
+                              final rightChildren = <Widget>[];
+                              if (insightRows != null) {
+                                rightChildren.add(_buildSection('AI-COLLECTED INSIGHTS', insightRows));
+                              } else {
+                                rightChildren.add(_buildSectionTitle('AI-COLLECTED INSIGHTS'));
+                                rightChildren.add(const SizedBox(height: 10));
+                                rightChildren.add(
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: const Color(0xFFE7DCC8)),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.auto_awesome_rounded,
+                                          size: 16,
+                                          color: Color(0xFF8D8578),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        const Expanded(
+                                          child: Text(
+                                            'No attributes collected yet.',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Color(0xFF6B7280),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            Navigator.of(context).pop();
+                                            if (widget.prospectId != null) {
+                                              GoRouter.of(context).go('/?p=${Uri.encodeComponent(widget.prospectId!)}');
+                                            } else {
+                                              GoRouter.of(context).go('/');
+                                            }
+                                          },
+                                          style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
+                                            padding: WidgetStateProperty.all(
+                                              const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                                            ),
+                                            shape: WidgetStateProperty.all(
+                                              RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(13),
+                                              ),
+                                            ),
+                                          ),
+                                          child: const Text('Start Conversation', style: TextStyle(fontWeight: FontWeight.bold)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                                if (hasFirstFormRows) {
+                                  rightChildren.add(const SizedBox(height: 16));
+                                  rightChildren.add(_buildSection('FIRST FORM DETAILS', firstFormRows));
+                                }
+                              }
+
+                              final hasLeft = leftChildren.isNotEmpty;
+                              final hasRight = rightChildren.isNotEmpty;
+
                               return Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (hasProfileData)
-                                    Expanded(
-                                      child: _buildSection('PROFILE', profileRows),
-                                    ),
-                                  if (hasProfileData && insightRows != null)
-                                    const SizedBox(width: 24),
-                                  if (insightRows != null)
-                                    Expanded(
-                                      child: _buildSection('AI-COLLECTED INSIGHTS', insightRows),
-                                    )
-                                  else
+                                  if (hasLeft)
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'AI-COLLECTED INSIGHTS',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              letterSpacing: 1.2,
-                                              color: Color(0xFF8D8578),
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Container(
-                                            padding: const EdgeInsets.all(16),
-                                            decoration: BoxDecoration(
-                                              border: Border.all(color: const Color(0xFFE7DCC8)),
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                const Icon(
-                                                  Icons.auto_awesome_rounded,
-                                                  size: 16,
-                                                  color: Color(0xFF8D8578),
-                                                ),
-                                                const SizedBox(width: 10),
-                                                const Expanded(
-                                                  child: Text(
-                                                    'No attributes collected yet.',
-                                                    style: TextStyle(
-                                                      fontSize: 13,
-                                                      color: Color(0xFF6B7280),
-                                                    ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 12),
-                                                ElevatedButton(
-                                                  onPressed: () {
-                                                    Navigator.of(context).pop();
-                                                    if (widget.prospectId != null) {
-                                                      GoRouter.of(context).go('/?p=${Uri.encodeComponent(widget.prospectId!)}');
-                                                    } else {
-                                                      GoRouter.of(context).go('/');
-                                                    }
-                                                  },
-                                                  style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
-                                                    padding: WidgetStateProperty.all(
-                                                      const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                                                    ),
-                                                    shape: WidgetStateProperty.all(
-                                                      RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(13),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  child: const Text('Start Conversation', style: TextStyle(fontWeight: FontWeight.bold)),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
+                                        children: leftChildren,
+                                      ),
+                                    ),
+                                  if (hasLeft && hasRight)
+                                    const SizedBox(width: 32),
+                                  if (hasRight)
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: rightChildren,
                                       ),
                                     ),
                                 ],
                               );
                             }),
                           ),
-              ),
-            ],
+               ),
+             ),
+           ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 11,
+        letterSpacing: 1.2,
+        color: Color(0xFF8D8578),
+        fontWeight: FontWeight.w600,
       ),
     );
   }
@@ -1935,15 +2191,7 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 11,
-            letterSpacing: 1.2,
-            color: Color(0xFF8D8578),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        _buildSectionTitle(label),
         const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
