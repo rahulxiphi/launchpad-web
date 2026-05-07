@@ -86,10 +86,10 @@ class _VoicePageState extends State<VoicePage> {
   int _disconnectClearEpoch = 0;
   int _lastUserMessageTime = 0;
   int _lastUserMessageSentAt = 0;
-  // Blocks stale set_response_chips calls that arrive between a user message
-  // and the next agent response. Without this, tool calls from the previous
-  // agent turn can overwrite chips from the latest turn.
+  // Queues set_response_chips calls that arrive before the SDK emits the
+  // matching agent text callback. ElevenLabs often sends the tool result first.
   bool _blockChipsUntilAgentResponse = false;
+  SetResponseChipsPayload? _pendingResponseChips;
   late bool _isChatMode;
   bool _manualEndRequested = false;
   bool _isRecoveringSession = false;
@@ -230,6 +230,7 @@ class _VoicePageState extends State<VoicePage> {
                   isUser: true, text: transcript, isTentative: true));
             }
             _responseChips = _ResponseChipsState.empty;
+            _pendingResponseChips = null;
             _chipsEpoch++;
             _lastUserMessageSentAt = DateTime.now().millisecondsSinceEpoch;
             _blockChipsUntilAgentResponse = true;
@@ -251,6 +252,7 @@ class _VoicePageState extends State<VoicePage> {
                   _TranscriptEntry(isUser: true, text: transcript));
             }
             _responseChips = _ResponseChipsState.empty;
+            _pendingResponseChips = null;
             _chipsEpoch++;
             _lastUserMessageSentAt = DateTime.now().millisecondsSinceEpoch;
             _blockChipsUntilAgentResponse = true;
@@ -271,6 +273,7 @@ class _VoicePageState extends State<VoicePage> {
                   isUser: false, text: response, isTentative: true));
             }
           });
+          _flushPendingResponseChips();
           _scrollToBottom();
         },
         onMessage: ({required message, required source}) {
@@ -290,6 +293,7 @@ class _VoicePageState extends State<VoicePage> {
                     _TranscriptEntry(isUser: false, text: message));
               }
             });
+            _flushPendingResponseChips();
             _scrollToBottom();
           }
         },
@@ -336,12 +340,9 @@ class _VoicePageState extends State<VoicePage> {
   }
 
   void _applyResponseChips(SetResponseChipsPayload payload) {
-    // Block stale chips from a previous agent turn that arrive after the user
-    // has already sent their next message but before the new agent response
-    // starts. These would overwrite the correct chips from the latest turn.
     if (_blockChipsUntilAgentResponse) {
-      print('[chips][ui] blocked stale chips (user sent message, '
-          'awaiting next agent response)');
+      _pendingResponseChips = payload;
+      print('[chips][ui] queued chips until next agent response');
       return;
     }
 
@@ -400,6 +401,14 @@ class _VoicePageState extends State<VoicePage> {
         print('[chips][ui] expiry timer cleared chips epoch=$_chipsEpoch');
       });
     }
+  }
+
+  void _flushPendingResponseChips() {
+    final pending = _pendingResponseChips;
+    if (pending == null || _blockChipsUntilAgentResponse) return;
+    _pendingResponseChips = null;
+    print('[chips][ui] flushing queued chips after agent response started');
+    _applyResponseChips(pending);
   }
 
   void _finalizeConversationEnded() {
@@ -471,6 +480,9 @@ class _VoicePageState extends State<VoicePage> {
     setState(() {
       _isRecoveringSession = true;
       _statusText = 'Reconnecting…';
+      _responseChips = _ResponseChipsState.empty;
+      _pendingResponseChips = null;
+      _chipsEpoch++;
     });
     print(
       '[chips][ui] attempting recovery #$_recoveriesAttempted after disconnect reason=$reason',
@@ -503,6 +515,7 @@ class _VoicePageState extends State<VoicePage> {
       if (phaseStr != null) {
         _activePhase = int.tryParse(phaseStr) ?? _activePhase;
       }
+      final isWorkflowHandoff = reason == 'agent';
 
       _client = _buildConversationClient();
       setState(() {});
@@ -511,9 +524,6 @@ class _VoicePageState extends State<VoicePage> {
         serverDynamicVariables: tokenResult.dynamicVariables,
       );
 
-      // Resend the user's last message so the new agent (Earl/Gary etc.)
-      // sees it and responds naturally — conversation history is lost
-      // across the disconnect/recovery boundary.
       String? lastUserMsg;
       for (final entry in _transcript.reversed) {
         if (entry.isUser && !entry.isTentative) {
@@ -521,7 +531,13 @@ class _VoicePageState extends State<VoicePage> {
           break;
         }
       }
-      if (lastUserMsg != null && lastUserMsg.isNotEmpty) {
+      if (isWorkflowHandoff) {
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        if (!mounted) return;
+        final handoffPrompt = _buildWorkflowHandoffPrompt(lastUserMsg);
+        print('[chips][ui] sending hidden workflow handoff prompt');
+        _client!.sendUserMessage(handoffPrompt);
+      } else if (lastUserMsg != null && lastUserMsg.isNotEmpty) {
         // Brief delay to let the SDK settle after connect
         await Future<void>.delayed(const Duration(milliseconds: 300));
         if (!mounted) return;
@@ -602,6 +618,20 @@ class _VoicePageState extends State<VoicePage> {
     widget.onGoToRelationshipHub();
   }
 
+  String _buildWorkflowHandoffPrompt(String? lastUserMsg) {
+    final phaseText = _activePhase >= 3
+        ? 'phase 4 or 5'
+        : 'phase 2 or 3';
+    final lastAnswer = lastUserMsg == null || lastUserMsg.trim().isEmpty
+        ? ''
+        : ' The user just answered: "${lastUserMsg.trim()}".';
+    return 'You are now taking over after an internal workflow handoff. '
+        'Continue from the shared prospect context and do not repeat questions '
+        'that were already answered, especially company name, industry, primary '
+        'intent, or startup stage.$lastAnswer Briefly acknowledge the handoff '
+        'and ask the next useful $phaseText question.';
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -624,6 +654,7 @@ class _VoicePageState extends State<VoicePage> {
     setState(() {
       _transcript.add(_TranscriptEntry(isUser: true, text: trimmed));
       _responseChips = _ResponseChipsState.empty;
+      _pendingResponseChips = null;
       _chipsEpoch++;
       _blockChipsUntilAgentResponse = true;
       final nowMs = DateTime.now().millisecondsSinceEpoch;
