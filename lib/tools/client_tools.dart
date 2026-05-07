@@ -167,6 +167,57 @@ class SearchProductCatalogTool implements ClientTool {
 }
 
 // ---------------------------------------------------------------------------
+// capture-startup-stage (Phase 1 → Phase 2/3 routing)
+// ---------------------------------------------------------------------------
+
+class CaptureStartupStageTool implements ClientTool {
+  final String? prospectId;
+  final void Function(int newPhase)? onStageCaptured;
+
+  CaptureStartupStageTool({this.prospectId, this.onStageCaptured});
+
+  @override
+  Future<ClientToolResult?> execute(Map<String, dynamic> parameters) async {
+    try {
+      print('[tool] capture_startup_stage called with params: $parameters');
+
+      final body = <String, dynamic>{
+        'prospect_id': prospectId ?? parameters['prospect_id'],
+        'startup_stage_bucket': parameters['startup_stage_bucket'],
+        if (parameters['company_stage'] != null)
+          'company_stage': parameters['company_stage'],
+        if (parameters['company_name'] != null)
+          'company_name': parameters['company_name'],
+        if (parameters['industry'] != null)
+          'industry': parameters['industry'],
+        if (parameters['primary_intent'] != null)
+          'primary_intent': parameters['primary_intent'],
+      };
+
+      final resp = await _dio.post(
+        '/conversations/tools/capture-startup-stage',
+        data: body,
+      );
+
+      print('[tool] capture_startup_stage response: ${resp.data}');
+
+      if (onStageCaptured != null) {
+        onStageCaptured!(resp.data['conversation_phase']);
+      }
+
+      return ClientToolResult.success({
+        'conversation_phase': resp.data['conversation_phase'],
+        'confirmed_stage_bucket': resp.data['confirmed_stage_bucket'],
+        'status': 'captured',
+      });
+    } catch (e) {
+      print('[tool] capture_startup_stage failed: $e');
+      return ClientToolResult.failure('Failed to capture startup stage: $e');
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // advance-phase (mid-call phase transition)
 // ---------------------------------------------------------------------------
 

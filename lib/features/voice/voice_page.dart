@@ -86,6 +86,10 @@ class _VoicePageState extends State<VoicePage> {
   int _disconnectClearEpoch = 0;
   int _lastUserMessageTime = 0;
   int _lastUserMessageSentAt = 0;
+  // Blocks stale set_response_chips calls that arrive between a user message
+  // and the next agent response. Without this, tool calls from the previous
+  // agent turn can overwrite chips from the latest turn.
+  bool _blockChipsUntilAgentResponse = false;
   late bool _isChatMode;
   bool _manualEndRequested = false;
   bool _isRecoveringSession = false;
@@ -96,6 +100,8 @@ class _VoicePageState extends State<VoicePage> {
 
   // Track the current phase locally so we can update it via tool calls
   late int _activePhase;
+  // Effective stage bucket — may change after recovery (Phase 2/3 resume)
+  late String _effectiveStageBucket;
 
   // ---------------------------------------------------------------------------
   // Lifecycle
@@ -109,6 +115,8 @@ class _VoicePageState extends State<VoicePage> {
     // Initialize active phase from dynamic variables
     final phaseStr = widget.dynamicVariables['conversation_phase']?.toString();
     _activePhase = int.tryParse(phaseStr ?? '1') ?? 1;
+    // Initialize effective stage bucket (may be updated after recovery)
+    _effectiveStageBucket = widget.stageBucket;
 
     _client = _buildConversationClient();
 
@@ -124,6 +132,14 @@ class _VoicePageState extends State<VoicePage> {
         'search_product_catalog': SearchProductCatalogTool(
           prospectId: widget.prospectId,
           stageBucket: widget.stageBucket,
+        ),
+        'capture_startup_stage': CaptureStartupStageTool(
+          prospectId: widget.prospectId,
+          onStageCaptured: (newPhase) {
+            if (mounted) {
+              setState(() => _activePhase = newPhase);
+            }
+          },
         ),
         'advance_phase': AdvancePhaseTool(
           prospectId: widget.prospectId,
@@ -216,6 +232,7 @@ class _VoicePageState extends State<VoicePage> {
             _responseChips = _ResponseChipsState.empty;
             _chipsEpoch++;
             _lastUserMessageSentAt = DateTime.now().millisecondsSinceEpoch;
+            _blockChipsUntilAgentResponse = true;
           });
           _scrollToBottom();
         },
@@ -236,6 +253,7 @@ class _VoicePageState extends State<VoicePage> {
             _responseChips = _ResponseChipsState.empty;
             _chipsEpoch++;
             _lastUserMessageSentAt = DateTime.now().millisecondsSinceEpoch;
+            _blockChipsUntilAgentResponse = true;
           });
           _scrollToBottom();
         },
@@ -243,6 +261,7 @@ class _VoicePageState extends State<VoicePage> {
           if (!mounted) return;
           setState(() {
             _lastUserMessageTime = 0; // Reset: agent has started new turn
+            _blockChipsUntilAgentResponse = false;
             if (_transcript.isNotEmpty &&
                 !_transcript.last.isUser &&
                 _transcript.last.isTentative) {
@@ -259,6 +278,7 @@ class _VoicePageState extends State<VoicePage> {
           if (source == Role.ai) {
             setState(() {
               _lastUserMessageTime = 0; // Reset: agent has started new turn
+              _blockChipsUntilAgentResponse = false;
               if (_transcript.isNotEmpty &&
                   !_transcript.last.isUser &&
                   _transcript.last.isTentative) {
@@ -316,6 +336,15 @@ class _VoicePageState extends State<VoicePage> {
   }
 
   void _applyResponseChips(SetResponseChipsPayload payload) {
+    // Block stale chips from a previous agent turn that arrive after the user
+    // has already sent their next message but before the new agent response
+    // starts. These would overwrite the correct chips from the latest turn.
+    if (_blockChipsUntilAgentResponse) {
+      print('[chips][ui] blocked stale chips (user sent message, '
+          'awaiting next agent response)');
+      return;
+    }
+
     final now = DateTime.now();
     final expiresAt = payload.ttlMs != null && payload.ttlMs! > 0
         ? now.add(Duration(milliseconds: payload.ttlMs!))
@@ -323,22 +352,12 @@ class _VoicePageState extends State<VoicePage> {
 
     final blockedByCategory = _isIdentityCategory(payload.category);
 
-    // Heuristic: If the user just sent a message within the last 500ms, 
-    // any arriving tool calls were likely generated for the PREVIOUS turn and 
-    // were caught in-flight. Ignore them to prevent stale chips.
-    // _lastUserMessageTime is reset to 0 as soon as the agent starts a new response.
-    final msSinceUserMessage = _lastUserMessageTime > 0 
-        ? now.millisecondsSinceEpoch - _lastUserMessageTime 
-        : 999999;
-    final isStaleInFlight = msSinceUserMessage < 500;
-
     final shouldShow = payload.showChips &&
         payload.chips.isNotEmpty &&
-        !blockedByCategory &&
-        !isStaleInFlight;
+        !blockedByCategory;
 
     print(
-      '[chips][ui] apply start show=${payload.showChips} chipsNotEmpty=${payload.chips.isNotEmpty} blockedByCategory=$blockedByCategory isStaleInFlight=$isStaleInFlight => shouldShow=$shouldShow',
+      '[chips][ui] apply start show=${payload.showChips} chipsNotEmpty=${payload.chips.isNotEmpty} blockedByCategory=$blockedByCategory => shouldShow=$shouldShow',
     );
 
     final next = _ResponseChipsState(
@@ -458,7 +477,11 @@ class _VoicePageState extends State<VoicePage> {
     );
 
     try {
-      oldClient?.dispose();
+      // NOTE: Do NOT dispose the old client here. The WebSocket was already
+      // closed by the ElevenLabs server (reason=agent). Disposing while the
+      // SDK's internal disconnect handler is still running causes a
+      // DartError ("A ConversationClient was used after being disposed").
+      // The old client will be garbage collected when _client is reassigned.
 
       final tokenResult = await _conversationService.getVoiceToken(
         widget.stageBucket,
@@ -466,12 +489,46 @@ class _VoicePageState extends State<VoicePage> {
       );
 
       if (!mounted) return;
+
+      print('[chips][ui] recovery token response: stageBucket=${tokenResult.stageBucket} '
+          'dynamicVars=${tokenResult.dynamicVariables}');
+
+      // Update effective stage bucket from server response (the server may
+      // return the routed stage_bucket when conversation_phase >= 2)
+      if (tokenResult.stageBucket != widget.stageBucket) {
+        _effectiveStageBucket = tokenResult.stageBucket;
+      }
+      // Update active phase from server dynamic variables
+      final phaseStr = tokenResult.dynamicVariables['conversation_phase']?.toString();
+      if (phaseStr != null) {
+        _activePhase = int.tryParse(phaseStr) ?? _activePhase;
+      }
+
       _client = _buildConversationClient();
       setState(() {});
       await _startSession(
         conversationToken: tokenResult.conversationToken,
         serverDynamicVariables: tokenResult.dynamicVariables,
       );
+
+      // Resend the user's last message so the new agent (Earl/Gary etc.)
+      // sees it and responds naturally — conversation history is lost
+      // across the disconnect/recovery boundary.
+      String? lastUserMsg;
+      for (final entry in _transcript.reversed) {
+        if (entry.isUser && !entry.isTentative) {
+          lastUserMsg = entry.text;
+          break;
+        }
+      }
+      if (lastUserMsg != null && lastUserMsg.isNotEmpty) {
+        // Brief delay to let the SDK settle after connect
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        if (!mounted) return;
+        print('[chips][ui] recovery resending last message: "$lastUserMsg"');
+        _client!.sendUserMessage(lastUserMsg);
+      }
+
       print('[chips][ui] recovery succeeded');
     } catch (e) {
       print('[chips][ui] recovery failed: $e');
@@ -568,6 +625,7 @@ class _VoicePageState extends State<VoicePage> {
       _transcript.add(_TranscriptEntry(isUser: true, text: trimmed));
       _responseChips = _ResponseChipsState.empty;
       _chipsEpoch++;
+      _blockChipsUntilAgentResponse = true;
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       _lastUserMessageTime = nowMs;
       _lastUserMessageSentAt = nowMs;
@@ -617,7 +675,7 @@ class _VoicePageState extends State<VoicePage> {
   // Helpers
   // ---------------------------------------------------------------------------
   String get _stageLabel {
-    switch (widget.stageBucket) {
+    switch (_effectiveStageBucket) {
       case 'pre_seed':
         return 'Pre-seed';
       case 'seed':
@@ -634,7 +692,7 @@ class _VoicePageState extends State<VoicePage> {
         return 'IPO & Beyond';
       default:
         // Convert snake_case to Title Case (e.g. 'super_agent_stage' → 'Super Agent Stage')
-        return widget.stageBucket
+        return _effectiveStageBucket
             .split('_')
             .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
             .join(' ');
@@ -642,7 +700,7 @@ class _VoicePageState extends State<VoicePage> {
   }
 
   String get _agentName {
-    switch (widget.stageBucket) {
+    switch (_effectiveStageBucket) {
       case 'early_stage':
         return 'Earl';
       case 'growth_stage':
