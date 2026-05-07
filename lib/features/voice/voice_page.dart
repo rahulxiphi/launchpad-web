@@ -233,7 +233,6 @@ class _VoicePageState extends State<VoicePage> {
             _pendingResponseChips = null;
             _chipsEpoch++;
             _lastUserMessageSentAt = DateTime.now().millisecondsSinceEpoch;
-            _blockChipsUntilAgentResponse = true;
           });
           _scrollToBottom();
         },
@@ -255,15 +254,13 @@ class _VoicePageState extends State<VoicePage> {
             _pendingResponseChips = null;
             _chipsEpoch++;
             _lastUserMessageSentAt = DateTime.now().millisecondsSinceEpoch;
-            _blockChipsUntilAgentResponse = true;
           });
           _scrollToBottom();
         },
         onTentativeAgentResponse: ({required response}) {
           if (!mounted) return;
           setState(() {
-            _lastUserMessageTime = 0; // Reset: agent has started new turn
-            _blockChipsUntilAgentResponse = false;
+            _lastUserMessageTime = 0;
             if (_transcript.isNotEmpty &&
                 !_transcript.last.isUser &&
                 _transcript.last.isTentative) {
@@ -278,10 +275,9 @@ class _VoicePageState extends State<VoicePage> {
         },
         onMessage: ({required message, required source}) {
           if (!mounted) return;
-          if (source == Role.ai) {
+            if (source == Role.ai) {
             setState(() {
-              _lastUserMessageTime = 0; // Reset: agent has started new turn
-              _blockChipsUntilAgentResponse = false;
+              _lastUserMessageTime = 0;
               if (_transcript.isNotEmpty &&
                   !_transcript.last.isUser &&
                   _transcript.last.isTentative) {
@@ -656,7 +652,6 @@ class _VoicePageState extends State<VoicePage> {
       _responseChips = _ResponseChipsState.empty;
       _pendingResponseChips = null;
       _chipsEpoch++;
-      _blockChipsUntilAgentResponse = true;
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       _lastUserMessageTime = nowMs;
       _lastUserMessageSentAt = nowMs;
