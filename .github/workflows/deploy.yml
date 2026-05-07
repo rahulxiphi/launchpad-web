@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Flutter 3.38.1
         uses: subosito/flutter-action@v2
@@ -23,7 +23,13 @@ jobs:
         run: flutter pub get
 
       - name: Run tests
-        run: flutter test
+        # Skip gracefully if no test directory exists yet
+        run: |
+          if [ -d test ]; then
+            flutter test
+          else
+            echo "No test directory found, skipping flutter test."
+          fi
 
       - name: Build web (release)
         # Full Dart compile + tree-shake — same as what Docker does on the VM.
@@ -42,7 +48,7 @@ jobs:
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
-          key: ${{ secrets.VM_SSH_KEY }}
+          # key: ${{ secrets.VM_SSH_KEY }}
           password: ${{ secrets.VM_PASSWORD }}
           connect_timeout: 60s
           timeout: 600s
