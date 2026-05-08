@@ -154,6 +154,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                     child: Center(
                       child: Container(
                         width: isMobile ? double.infinity : 840,
+                        height: isMobile ? null : 680.0,
                         margin: EdgeInsets.symmetric(
                           horizontal: isMobile ? 0 : 24,
                           vertical: isMobile ? 0 : 32,
@@ -174,6 +175,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                                   )
                                 ],
                         ),
+                        clipBehavior: Clip.hardEdge,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -182,16 +184,17 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                           _buildStepHeader(context, isDark, textTheme),
 
                           // ── Body ────────────────────────────────────────
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              isMobile ? 24 : 36,
-                              16,
-                              isMobile ? 24 : 36,
-                              32,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding: EdgeInsets.fromLTRB(
+                                isMobile ? 24 : 36,
+                                16,
+                                isMobile ? 24 : 36,
+                                32,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
                                 // Central Pulse Button
                                 if (_isFetchingToken)
                                   const SizedBox(
@@ -466,6 +469,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                               ],
                             ),
                           ),
+                        ),
                           ],
                         ),
                       ),

@@ -601,6 +601,7 @@ class _VoicePageState extends State<VoicePage> {
         _conversationEnded = true;
         _statusText = 'Conversation ended';
       });
+      widget.onGoToRelationshipHub();
     }
   }
 

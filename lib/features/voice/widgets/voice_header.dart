@@ -174,23 +174,29 @@ class VoiceHeader extends StatelessWidget {
             GestureDetector(
               onTap: onEnd,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEE2E2),
+                  color: const Color(0xFFDC2626),
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFDC2626).withOpacity(0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.call_end_rounded, size: 14, color: Color(0xFFDC2626)),
+                    const Icon(Icons.call_end_rounded, size: 14, color: Colors.white),
                     const SizedBox(width: 5),
                     Text(
                       isChatMode ? 'End chat' : 'End',
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFFDC2626),
+                        color: Colors.white,
                       ),
                     ),
                   ],

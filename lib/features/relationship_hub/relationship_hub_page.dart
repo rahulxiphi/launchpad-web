@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
 
@@ -71,6 +72,11 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
       _prospect?.fullName ??
       widget.dynamicVariables['userName']?.toString() ??
       _defaultFounder;
+
+  String get _userEmail =>
+      _prospect?.email ??
+      widget.dynamicVariables['userEmail']?.toString() ??
+      '';
 
   String get _industry =>
       _prospect?.industry ??
@@ -166,6 +172,9 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
                                     industry: _industry,
                                     stageLabel: _stageLabel,
                                     priorities: _priorities,
+                                    prospectId: widget.prospectId,
+                                    email: _userEmail,
+                                    onTapProduct: _showProductModal,
                                   )),
                                   SizedBox(
                                     width: 404,
@@ -189,6 +198,8 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
                           industry: _industry,
                           stageLabel: _stageLabel,
                           priorities: _priorities,
+                          prospectId: widget.prospectId,
+                          email: _userEmail,
                           trailingPanel: _AiGuidePanel(
                             prospectId: widget.prospectId,
                             founderName: _founderName,
@@ -197,6 +208,7 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
                             stageLabel: _stageLabel,
                             priorities: _priorities,
                           ),
+                          onTapProduct: _showProductModal,
                         ),
             ),
           ],
@@ -416,7 +428,10 @@ class _HubMainColumn extends StatelessWidget {
   final String industry;
   final String stageLabel;
   final List<String> priorities;
+  final String? prospectId;
+  final String email;
   final Widget? trailingPanel;
+  final void Function(BuildContext context, String title, String description, IconData icon, Color tint, Color iconColor)? onTapProduct;
 
   const _HubMainColumn({
     required this.companyName,
@@ -424,8 +439,80 @@ class _HubMainColumn extends StatelessWidget {
     required this.industry,
     required this.stageLabel,
     required this.priorities,
+    this.prospectId,
+    this.email = '',
     this.trailingPanel,
+    this.onTapProduct,
   });
+
+  String? get _returnUrl {
+    final pid = prospectId;
+    if (pid == null) return null;
+    final uri = Uri.base;
+    return uri.fragment.isNotEmpty
+        ? '${uri.origin}/#/?p=$pid'
+        : '${uri.origin}/?p=$pid';
+  }
+
+  Widget _buildReturnLink(BuildContext context) {
+    final url = _returnUrl;
+    if (url == null) return const SizedBox.shrink();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE0D7C8)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppThemeTokens.modalHeader.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.link_rounded, color: AppThemeTokens.modalHeader, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your return link',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: isDark ? Colors.white : const Color(0xFF1F2937)),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  email.isNotEmpty
+                      ? 'Come back anytime to continue your conversation. Also sent to $email.'
+                      : 'Come back anytime to continue your conversation.',
+                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : const Color(0xFF6B7280)),
+                ),
+                const SizedBox(height: 4),
+                GestureDetector(
+                  onTap: () => Clipboard.setData(ClipboardData(text: url)),
+                  child: Text(
+                    url,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                      color: AppThemeTokens.modalHeader,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _CopyLinkButton(url: url),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -627,6 +714,8 @@ class _HubMainColumn extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(height: 18),
+                _buildReturnLink(context),
               ],
             ),
           ),
@@ -664,86 +753,111 @@ class _HubMainColumn extends StatelessWidget {
           Container(height: 1, color: const Color(0xFFE7DCC8)),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Explore what's available to you",
-                        style:
-                            Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontFamily: 'Georgia',
-                                  color: AppThemeTokens.modalHeader,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 22,
-                                ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Products relevant to your stage — no commitment required',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFF6F675B),
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
                 Text(
-                  '$stageLabel · $industry',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF8D8578),
-                  ),
+                  "Explore what's available to you",
+                  style:
+                      Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontFamily: 'Georgia',
+                            color: AppThemeTokens.modalHeader,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 22,
+                          ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Products relevant to your stage${stageLabel.isNotEmpty ? ' — $stageLabel' : ''}',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF6F675B),
+                      ),
                 ),
               ],
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: _ProductCard(
-                      icon: Icons.account_balance_wallet_outlined,
-                      tint: Color(0xFF1A7B99).withValues(alpha: 0.1),
-                      iconColor: AppThemeTokens.buttonPrimary,
-                      title: 'Business checking & operating accounts',
-                      description:
-                          'Accounts built for startups — multi-user access, sweep options, and no minimum balance at ${_stageCopy(stageLabel)}.',
-                      cta: 'Learn more',
-                    ),
+            child: Wrap(
+              spacing: 14,
+              runSpacing: 14,
+              children: [
+                SizedBox(
+                  width: 320,
+                  child: _ProductCard(
+                    icon: Icons.account_balance_wallet_outlined,
+                    tint: const Color(0xFF1A7B99),
+                    iconColor: AppThemeTokens.buttonPrimary,
+                    title: 'Business checking & operating accounts',
+                    description:
+                        'Accounts built for startups — multi-user access, sweep options, and no minimum balance.',
+                    cta: 'Learn more',
+                    onTap: () => onTapProduct?.call(context, 'Business checking & operating accounts',
+                        'Accounts built for startups — multi-user access, sweep options, and no minimum balance. Ideal for separating operating cash, reserves, and payroll across multiple entities.',
+                        Icons.account_balance_wallet_outlined, const Color(0xFF1A7B99), AppThemeTokens.buttonPrimary),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: _ProductCard(
-                      icon: Icons.monitor_heart_outlined,
-                      tint: const Color(0xFFE1F5EE),
-                      iconColor: const Color(0xFF1D9E75),
-                      title: 'Treasury & cash management',
-                      description:
-                          'Automated sweep structures, money market access, and yield optimization tuned for ${companyName.trim()}\'s operating rhythm.',
-                      cta: 'Learn more',
-                    ),
+                ),
+                SizedBox(
+                  width: 320,
+                  child: _ProductCard(
+                    icon: Icons.monitor_heart_outlined,
+                    tint: const Color(0xFF1D9E75),
+                    iconColor: const Color(0xFF1D9E75),
+                    title: 'Treasury & cash management',
+                    description:
+                        'Automated sweep structures, money market access, and yield optimization tuned for your operating rhythm.',
+                    cta: 'Learn more',
+                    onTap: () => onTapProduct?.call(context, 'Treasury & cash management',
+                        'Automated sweep structures, money market access, and yield optimization. Maximize returns on idle cash with minimal operational overhead.',
+                        Icons.monitor_heart_outlined, const Color(0xFF1D9E75), const Color(0xFF1D9E75)),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: _ProductCard(
-                      icon: Icons.attach_money_rounded,
-                      tint: const Color(0xFFFBEAD5),
-                      iconColor: const Color(0xFF996715),
-                      title: 'Venture debt & credit facilities',
-                      description:
-                          'Pre-approved borrowing for growth capital, bridge financing, and optionality before your next equity round.',
-                      cta: 'Ask Sarah about this',
-                    ),
+                ),
+                SizedBox(
+                  width: 320,
+                  child: _ProductCard(
+                    icon: Icons.attach_money_rounded,
+                    tint: const Color(0xFF996715),
+                    iconColor: const Color(0xFF996715),
+                    title: 'Venture debt & credit facilities',
+                    description:
+                        'Pre-approved borrowing for growth capital, bridge financing, and optionality before your next equity round.',
+                    cta: 'Ask Sarah about this',
+                    onTap: () => onTapProduct?.call(context, 'Venture debt & credit facilities',
+                        'Pre-approved borrowing for growth capital, bridge financing, and optionality before your next equity round. Flexible terms tailored to your stage.',
+                        Icons.attach_money_rounded, const Color(0xFF996715), const Color(0xFF996715)),
                   ),
-                ],
-              ),
+                ),
+                SizedBox(
+                  width: 320,
+                  child: _ProductCard(
+                    icon: Icons.payments_outlined,
+                    tint: const Color(0xFF7C3AED),
+                    iconColor: const Color(0xFF7C3AED),
+                    title: 'Payments & operations',
+                    description:
+                        'Vendor payments, payroll integration, and multi-currency operations for global-ready startups.',
+                    cta: 'Learn more',
+                    onTap: () => onTapProduct?.call(context, 'Payments & operations',
+                        'Streamlined vendor payments, payroll integration, and multi-currency operations. Built for startups operating across borders.',
+                        Icons.payments_outlined, const Color(0xFF7C3AED), const Color(0xFF7C3AED)),
+                  ),
+                ),
+                SizedBox(
+                  width: 320,
+                  child: _ProductCard(
+                    icon: Icons.public_outlined,
+                    tint: const Color(0xFF0891B2),
+                    iconColor: const Color(0xFF0891B2),
+                    title: 'International expansion',
+                    description:
+                        'New market entry support, FX strategy, and cross-border payment infrastructure.',
+                    cta: 'Learn more',
+                    onTap: () => onTapProduct?.call(context, 'International expansion',
+                        'New market entry support, FX strategy, and cross-border payment infrastructure. Navigate multi-currency operations with confidence.',
+                        Icons.public_outlined, const Color(0xFF0891B2), const Color(0xFF0891B2)),
+                  ),
+                ),
+              ],
             ),
           ),
           Container(height: 1, color: const Color(0xFFE7DCC8)),
@@ -1596,6 +1710,48 @@ class _MiniActionButton extends StatelessWidget {
   }
 }
 
+class _CopyLinkButton extends StatefulWidget {
+  final String url;
+  const _CopyLinkButton({required this.url});
+
+  @override
+  State<_CopyLinkButton> createState() => _CopyLinkButtonState();
+}
+
+class _CopyLinkButtonState extends State<_CopyLinkButton> {
+  bool _copied = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Clipboard.setData(ClipboardData(text: widget.url));
+        setState(() => _copied = true);
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) setState(() => _copied = false);
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: _copied
+              ? const Color(0xFF1D9E75).withOpacity(0.1)
+              : AppThemeTokens.modalHeader.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          _copied ? 'Copied' : 'Copy link',
+          style: TextStyle(
+            color: _copied ? const Color(0xFF1D9E75) : AppThemeTokens.modalHeader,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _DocChip extends StatelessWidget {
   final String label;
   final String status;
@@ -1678,13 +1834,14 @@ class _AddDocChip extends StatelessWidget {
   }
 }
 
-class _ProductCard extends StatelessWidget {
+class _ProductCard extends StatefulWidget {
   final IconData icon;
   final Color tint;
   final Color iconColor;
   final String title;
   final String description;
   final String cta;
+  final VoidCallback? onTap;
 
   const _ProductCard({
     required this.icon,
@@ -1693,57 +1850,83 @@ class _ProductCard extends StatelessWidget {
     required this.title,
     required this.description,
     required this.cta,
+    this.onTap,
   });
 
   @override
+  State<_ProductCard> createState() => _ProductCardState();
+}
+
+class _ProductCardState extends State<_ProductCard> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE1D9CB)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: tint,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A18),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: 240,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: _isHovered ? AppThemeTokens.modalHeader : Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: _isHovered ? AppThemeTokens.modalHeader : const Color(0xFFE1D9CB),
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            description,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF6F675B),
-              height: 1.6,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _isHovered ? Colors.white.withOpacity(0.12) : widget.tint.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(widget.icon, color: _isHovered ? Colors.white : widget.iconColor, size: 20),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                widget.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: _isHovered ? Colors.white : const Color(0xFF1A1A18),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: Text(
+                  widget.description,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: _isHovered ? const Color(0xFFD1D5DB) : const Color(0xFF6F675B),
+                    height: 1.5,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${widget.cta} →',
+                style: TextStyle(
+                  color: _isHovered ? const Color(0xFF93C5FD) : AppThemeTokens.buttonPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 14),
-          Text(
-            '$cta →',
-            style: const TextStyle(
-              color: AppThemeTokens.buttonPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1863,21 +2046,18 @@ class _TinyBadge extends StatelessWidget {
   }
 }
 
-String _stageCopy(String stageLabel) {
-  switch (stageLabel) {
-    case 'Pre-seed':
-      return 'pre-seed';
-    case 'Seed':
-      return 'seed';
-    case 'Series A':
-      return 'Series A';
-    case 'Series B+':
-      return 'Series B+';
-    default:
-      return 'your current stage';
+  void _showProductModal(BuildContext context, String title, String description, IconData icon, Color tint, Color iconColor) {
+    showDialog(
+      context: context,
+      builder: (_) => _ProductDetailModal(
+        icon: icon,
+        tint: tint,
+        iconColor: iconColor,
+        title: title,
+        description: description,
+      ),
+    );
   }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Profile Modal
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2066,22 +2246,26 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                                       .toList()
                                   : null;
 
+                              final companyLabel = widget.companyName.isNotEmpty
+                                  ? '${widget.companyName.toUpperCase()} DETAILS'
+                                  : 'COMPANY DETAILS';
+
                               final leftChildren = <Widget>[];
                               if (hasManualFormRows) {
-                                leftChildren.add(_buildSection('MANUAL FORM DEEP INPUT', manualFormRows));
+                                leftChildren.add(_buildSection(companyLabel, manualFormRows));
                               }
                               if (hasFirstFormRows && insightRows != null) {
                                 if (leftChildren.isNotEmpty) {
                                   leftChildren.add(const SizedBox(height: 16));
                                 }
-                                leftChildren.add(_buildSection('FIRST FORM DETAILS', firstFormRows));
+                                leftChildren.add(_buildSection('YOUR DETAILS', firstFormRows));
                               }
 
                               final rightChildren = <Widget>[];
                               if (insightRows != null) {
-                                rightChildren.add(_buildSection('AI-COLLECTED INSIGHTS', insightRows));
+                                rightChildren.add(_buildSentenceSection('What We\'ve Collected', insightRows));
                               } else {
-                                rightChildren.add(_buildSectionTitle('AI-COLLECTED INSIGHTS'));
+                                rightChildren.add(_buildSectionSentenceTitle('What We\'ve Collected'));
                                 rightChildren.add(const SizedBox(height: 10));
                                 rightChildren.add(
                                   Container(
@@ -2107,7 +2291,7 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(width: 12),
+                                        const SizedBox(width: 8),
                                         ElevatedButton(
                                           onPressed: () {
                                             Navigator.of(context).pop();
@@ -2119,7 +2303,7 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                                           },
                                           style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
                                             padding: WidgetStateProperty.all(
-                                              const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                                              const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
                                             ),
                                             shape: WidgetStateProperty.all(
                                               RoundedRectangleBorder(
@@ -2135,7 +2319,7 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                                 );
                                 if (hasFirstFormRows) {
                                   rightChildren.add(const SizedBox(height: 16));
-                                  rightChildren.add(_buildSection('FIRST FORM DETAILS', firstFormRows));
+                                  rightChildren.add(_buildSection('YOUR DETAILS', firstFormRows));
                                 }
                               }
 
@@ -2165,9 +2349,9 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                               );
                             }),
                           ),
-               ),
-             ),
-           ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -2183,6 +2367,47 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
         color: Color(0xFF8D8578),
         fontWeight: FontWeight.w600,
       ),
+    );
+  }
+
+  Widget _buildSectionSentenceTitle(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: Color(0xFF4B5563),
+      ),
+    );
+  }
+
+  Widget _buildSentenceSection(String label, List<Widget?> rows) {
+    final nonNullRows = rows.whereType<Widget>().toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionSentenceTitle(label),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFE7DCC8)),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            children: nonNullRows
+                .asMap()
+                .entries
+                .map((entry) => Column(
+                      children: [
+                        entry.value,
+                        if (entry.key < nonNullRows.length - 1)
+                          const Divider(height: 1, color: Color(0xFFEDE7DB), indent: 14, endIndent: 14),
+                      ],
+                    ))
+                .toList(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -2245,6 +2470,116 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Product Detail Modal
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ProductDetailModal extends StatelessWidget {
+  final IconData icon;
+  final Color tint;
+  final Color iconColor;
+  final String title;
+  final String description;
+
+  const _ProductDetailModal({
+    required this.icon,
+    required this.tint,
+    required this.iconColor,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            color: Colors.white.withOpacity(0.96),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Header ─────────────────────────────────────────
+                Container(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 16, 20),
+                  color: AppThemeTokens.modalHeader,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: Icon(icon, color: Colors.white, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 20),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                // ── Body ───────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        description,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF374151),
+                          height: 1.6,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.auto_awesome, size: 18, color: AppThemeTokens.goldAccent),
+                          label: const Text('Learn More', style: TextStyle(fontWeight: FontWeight.bold)),
+                          style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
+                            shape: WidgetStateProperty.all(
+                              RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
