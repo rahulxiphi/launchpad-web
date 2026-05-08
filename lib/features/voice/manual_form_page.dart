@@ -197,6 +197,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                     child: Center(
                       child: Container(
                         width: isMobile ? double.infinity : 840,
+                        height: isMobile ? null : 680.0,
                         margin: EdgeInsets.symmetric(
                           horizontal: isMobile ? 0 : 24,
                           vertical: isMobile ? 0 : 32,
@@ -217,6 +218,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                   )
                                 ],
                         ),
+                        clipBehavior: Clip.hardEdge,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -224,16 +226,17 @@ class _ManualFormPageState extends State<ManualFormPage> {
                           _buildHeader(context, isDark, textTheme),
 
                           // ── Body ────────────────────────────────────────
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              isMobile ? 24 : 36,
-                              16,
-                              isMobile ? 24 : 36,
-                              20,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding: EdgeInsets.fromLTRB(
+                                isMobile ? 24 : 36,
+                                16,
+                                isMobile ? 24 : 36,
+                                20,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                 // Stage pills
                                 Text(
                                   'Company stage',
@@ -546,6 +549,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
                               ],
                             ),
                           ),
+                        ),
                           ],
                         ),
                       ),

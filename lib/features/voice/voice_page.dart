@@ -86,6 +86,10 @@ class _VoicePageState extends State<VoicePage> {
   int _disconnectClearEpoch = 0;
   int _lastUserMessageTime = 0;
   int _lastUserMessageSentAt = 0;
+  // Queues set_response_chips calls that arrive before the SDK emits the
+  // matching agent text callback. ElevenLabs often sends the tool result first.
+  bool _blockChipsUntilAgentResponse = false;
+  SetResponseChipsPayload? _pendingResponseChips;
   late bool _isChatMode;
   bool _manualEndRequested = false;
   bool _isRecoveringSession = false;
@@ -96,6 +100,8 @@ class _VoicePageState extends State<VoicePage> {
 
   // Track the current phase locally so we can update it via tool calls
   late int _activePhase;
+  // Effective stage bucket — may change after recovery (Phase 2/3 resume)
+  late String _effectiveStageBucket;
 
   // ---------------------------------------------------------------------------
   // Lifecycle
@@ -109,6 +115,8 @@ class _VoicePageState extends State<VoicePage> {
     // Initialize active phase from dynamic variables
     final phaseStr = widget.dynamicVariables['conversation_phase']?.toString();
     _activePhase = int.tryParse(phaseStr ?? '1') ?? 1;
+    // Initialize effective stage bucket (may be updated after recovery)
+    _effectiveStageBucket = widget.stageBucket;
 
     _client = _buildConversationClient();
 
@@ -124,6 +132,14 @@ class _VoicePageState extends State<VoicePage> {
         'search_product_catalog': SearchProductCatalogTool(
           prospectId: widget.prospectId,
           stageBucket: widget.stageBucket,
+        ),
+        'capture_startup_stage': CaptureStartupStageTool(
+          prospectId: widget.prospectId,
+          onStageCaptured: (newPhase) {
+            if (mounted) {
+              setState(() => _activePhase = newPhase);
+            }
+          },
         ),
         'advance_phase': AdvancePhaseTool(
           prospectId: widget.prospectId,
@@ -214,6 +230,7 @@ class _VoicePageState extends State<VoicePage> {
                   isUser: true, text: transcript, isTentative: true));
             }
             _responseChips = _ResponseChipsState.empty;
+            _pendingResponseChips = null;
             _chipsEpoch++;
             _lastUserMessageSentAt = DateTime.now().millisecondsSinceEpoch;
           });
@@ -234,6 +251,7 @@ class _VoicePageState extends State<VoicePage> {
                   _TranscriptEntry(isUser: true, text: transcript));
             }
             _responseChips = _ResponseChipsState.empty;
+            _pendingResponseChips = null;
             _chipsEpoch++;
             _lastUserMessageSentAt = DateTime.now().millisecondsSinceEpoch;
           });
@@ -242,7 +260,7 @@ class _VoicePageState extends State<VoicePage> {
         onTentativeAgentResponse: ({required response}) {
           if (!mounted) return;
           setState(() {
-            _lastUserMessageTime = 0; // Reset: agent has started new turn
+            _lastUserMessageTime = 0;
             if (_transcript.isNotEmpty &&
                 !_transcript.last.isUser &&
                 _transcript.last.isTentative) {
@@ -252,13 +270,14 @@ class _VoicePageState extends State<VoicePage> {
                   isUser: false, text: response, isTentative: true));
             }
           });
+          _flushPendingResponseChips();
           _scrollToBottom();
         },
         onMessage: ({required message, required source}) {
           if (!mounted) return;
-          if (source == Role.ai) {
+            if (source == Role.ai) {
             setState(() {
-              _lastUserMessageTime = 0; // Reset: agent has started new turn
+              _lastUserMessageTime = 0;
               if (_transcript.isNotEmpty &&
                   !_transcript.last.isUser &&
                   _transcript.last.isTentative) {
@@ -270,6 +289,7 @@ class _VoicePageState extends State<VoicePage> {
                     _TranscriptEntry(isUser: false, text: message));
               }
             });
+            _flushPendingResponseChips();
             _scrollToBottom();
           }
         },
@@ -316,6 +336,12 @@ class _VoicePageState extends State<VoicePage> {
   }
 
   void _applyResponseChips(SetResponseChipsPayload payload) {
+    if (_blockChipsUntilAgentResponse) {
+      _pendingResponseChips = payload;
+      print('[chips][ui] queued chips until next agent response');
+      return;
+    }
+
     final now = DateTime.now();
     final expiresAt = payload.ttlMs != null && payload.ttlMs! > 0
         ? now.add(Duration(milliseconds: payload.ttlMs!))
@@ -323,22 +349,12 @@ class _VoicePageState extends State<VoicePage> {
 
     final blockedByCategory = _isIdentityCategory(payload.category);
 
-    // Heuristic: If the user just sent a message within the last 500ms, 
-    // any arriving tool calls were likely generated for the PREVIOUS turn and 
-    // were caught in-flight. Ignore them to prevent stale chips.
-    // _lastUserMessageTime is reset to 0 as soon as the agent starts a new response.
-    final msSinceUserMessage = _lastUserMessageTime > 0 
-        ? now.millisecondsSinceEpoch - _lastUserMessageTime 
-        : 999999;
-    final isStaleInFlight = msSinceUserMessage < 500;
-
     final shouldShow = payload.showChips &&
         payload.chips.isNotEmpty &&
-        !blockedByCategory &&
-        !isStaleInFlight;
+        !blockedByCategory;
 
     print(
-      '[chips][ui] apply start show=${payload.showChips} chipsNotEmpty=${payload.chips.isNotEmpty} blockedByCategory=$blockedByCategory isStaleInFlight=$isStaleInFlight => shouldShow=$shouldShow',
+      '[chips][ui] apply start show=${payload.showChips} chipsNotEmpty=${payload.chips.isNotEmpty} blockedByCategory=$blockedByCategory => shouldShow=$shouldShow',
     );
 
     final next = _ResponseChipsState(
@@ -381,6 +397,14 @@ class _VoicePageState extends State<VoicePage> {
         print('[chips][ui] expiry timer cleared chips epoch=$_chipsEpoch');
       });
     }
+  }
+
+  void _flushPendingResponseChips() {
+    final pending = _pendingResponseChips;
+    if (pending == null || _blockChipsUntilAgentResponse) return;
+    _pendingResponseChips = null;
+    print('[chips][ui] flushing queued chips after agent response started');
+    _applyResponseChips(pending);
   }
 
   void _finalizeConversationEnded() {
@@ -452,13 +476,20 @@ class _VoicePageState extends State<VoicePage> {
     setState(() {
       _isRecoveringSession = true;
       _statusText = 'Reconnecting…';
+      _responseChips = _ResponseChipsState.empty;
+      _pendingResponseChips = null;
+      _chipsEpoch++;
     });
     print(
       '[chips][ui] attempting recovery #$_recoveriesAttempted after disconnect reason=$reason',
     );
 
     try {
-      oldClient?.dispose();
+      // NOTE: Do NOT dispose the old client here. The WebSocket was already
+      // closed by the ElevenLabs server (reason=agent). Disposing while the
+      // SDK's internal disconnect handler is still running causes a
+      // DartError ("A ConversationClient was used after being disposed").
+      // The old client will be garbage collected when _client is reassigned.
 
       final tokenResult = await _conversationService.getVoiceToken(
         widget.stageBucket,
@@ -466,12 +497,50 @@ class _VoicePageState extends State<VoicePage> {
       );
 
       if (!mounted) return;
+
+      print('[chips][ui] recovery token response: stageBucket=${tokenResult.stageBucket} '
+          'dynamicVars=${tokenResult.dynamicVariables}');
+
+      // Update effective stage bucket from server response (the server may
+      // return the routed stage_bucket when conversation_phase >= 2)
+      if (tokenResult.stageBucket != widget.stageBucket) {
+        _effectiveStageBucket = tokenResult.stageBucket;
+      }
+      // Update active phase from server dynamic variables
+      final phaseStr = tokenResult.dynamicVariables['conversation_phase']?.toString();
+      if (phaseStr != null) {
+        _activePhase = int.tryParse(phaseStr) ?? _activePhase;
+      }
+      final isWorkflowHandoff = reason == 'agent';
+
       _client = _buildConversationClient();
       setState(() {});
       await _startSession(
         conversationToken: tokenResult.conversationToken,
         serverDynamicVariables: tokenResult.dynamicVariables,
       );
+
+      String? lastUserMsg;
+      for (final entry in _transcript.reversed) {
+        if (entry.isUser && !entry.isTentative) {
+          lastUserMsg = entry.text;
+          break;
+        }
+      }
+      if (isWorkflowHandoff) {
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        if (!mounted) return;
+        final handoffPrompt = _buildWorkflowHandoffPrompt(lastUserMsg);
+        print('[chips][ui] sending hidden workflow handoff prompt');
+        _client!.sendUserMessage(handoffPrompt);
+      } else if (lastUserMsg != null && lastUserMsg.isNotEmpty) {
+        // Brief delay to let the SDK settle after connect
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        if (!mounted) return;
+        print('[chips][ui] recovery resending last message: "$lastUserMsg"');
+        _client!.sendUserMessage(lastUserMsg);
+      }
+
       print('[chips][ui] recovery succeeded');
     } catch (e) {
       print('[chips][ui] recovery failed: $e');
@@ -532,6 +601,7 @@ class _VoicePageState extends State<VoicePage> {
         _conversationEnded = true;
         _statusText = 'Conversation ended';
       });
+      widget.onGoToRelationshipHub();
     }
   }
 
@@ -543,6 +613,20 @@ class _VoicePageState extends State<VoicePage> {
 
   void _goToRelationshipHub() {
     widget.onGoToRelationshipHub();
+  }
+
+  String _buildWorkflowHandoffPrompt(String? lastUserMsg) {
+    final phaseText = _activePhase >= 3
+        ? 'phase 4 or 5'
+        : 'phase 2 or 3';
+    final lastAnswer = lastUserMsg == null || lastUserMsg.trim().isEmpty
+        ? ''
+        : ' The user just answered: "${lastUserMsg.trim()}".';
+    return 'You are now taking over after an internal workflow handoff. '
+        'Continue from the shared prospect context and do not repeat questions '
+        'that were already answered, especially company name, industry, primary '
+        'intent, or startup stage.$lastAnswer Briefly acknowledge the handoff '
+        'and ask the next useful $phaseText question.';
   }
 
   void _scrollToBottom() {
@@ -567,6 +651,7 @@ class _VoicePageState extends State<VoicePage> {
     setState(() {
       _transcript.add(_TranscriptEntry(isUser: true, text: trimmed));
       _responseChips = _ResponseChipsState.empty;
+      _pendingResponseChips = null;
       _chipsEpoch++;
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       _lastUserMessageTime = nowMs;
@@ -617,7 +702,7 @@ class _VoicePageState extends State<VoicePage> {
   // Helpers
   // ---------------------------------------------------------------------------
   String get _stageLabel {
-    switch (widget.stageBucket) {
+    switch (_effectiveStageBucket) {
       case 'pre_seed':
         return 'Pre-seed';
       case 'seed':
@@ -634,7 +719,7 @@ class _VoicePageState extends State<VoicePage> {
         return 'IPO & Beyond';
       default:
         // Convert snake_case to Title Case (e.g. 'super_agent_stage' → 'Super Agent Stage')
-        return widget.stageBucket
+        return _effectiveStageBucket
             .split('_')
             .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
             .join(' ');
@@ -642,7 +727,7 @@ class _VoicePageState extends State<VoicePage> {
   }
 
   String get _agentName {
-    switch (widget.stageBucket) {
+    switch (_effectiveStageBucket) {
       case 'early_stage':
         return 'Earl';
       case 'growth_stage':

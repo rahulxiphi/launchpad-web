@@ -306,6 +306,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                     child: Center(
                       child: Container(
                         width: isMobile ? double.infinity : 840,
+                        height: isMobile ? null : 680.0,
                         margin: EdgeInsets.symmetric(
                           horizontal: isMobile ? 0 : 24, 
                           vertical: isMobile ? 0 : 32
@@ -321,44 +322,150 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                             )
                           ],
                         ),
+                        clipBehavior: Clip.hardEdge,
                         child: Form(
                           key: _formKey,
                           child: Column(
-                            mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // ── Header bar ──────────────────────────────────
                               _buildHeader(context, isDark, textTheme, content.heading, content.description),
                               
                               // ── Body ────────────────────────────────────────
-                              Padding(
-                                padding: EdgeInsets.fromLTRB(
-                                  isMobile ? 24 : 36,
-                                  16,
-                                  isMobile ? 24 : 36,
-                                  24,
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Let\'s start with you',
-                                      style: textTheme.titleLarge?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark
-                                            ? Colors.white
-                                            : AppThemeTokens.brandInk,
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  padding: EdgeInsets.fromLTRB(
+                                    isMobile ? 24 : 36,
+                                    16,
+                                    isMobile ? 24 : 36,
+                                    24,
+                                  ),
+                                  child: Column(
+                                     crossAxisAlignment: CrossAxisAlignment.start,
+                                     children: [
+                                      // ── Agent model card ──────────────────
+                                      Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: isDark ? const Color(0xFF1A202C) : Colors.white,
+                                          borderRadius: BorderRadius.circular(14),
+                                          border: Border.all(
+                                            color: isDark ? Colors.grey.shade700 : const Color(0xFFE5E0D4),
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.04),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  width: 42,
+                                                  height: 42,
+                                                  decoration: BoxDecoration(
+                                                    gradient: LinearGradient(
+                                                      colors: [
+                                                        AppThemeTokens.modalHeader,
+                                                        AppThemeTokens.modalHeader.withOpacity(0.8),
+                                                      ],
+                                                    ),
+                                                    borderRadius: BorderRadius.circular(12),
+                                                  ),
+                                                  child: Icon(Icons.auto_awesome_rounded, size: 20, color: AppThemeTokens.goldAccent),
+                                                ),
+                                                const SizedBox(width: 14),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        content.heading,
+                                                        style: TextStyle(
+                                                          fontSize: 15,
+                                                          fontWeight: FontWeight.w700,
+                                                          color: isDark ? Colors.white : AppThemeTokens.brandInk,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 2),
+                                                      Row(
+                                                        children: [
+                                                          Icon(Icons.timer_outlined, size: 13, color: isDark ? Colors.white54 : const Color(0xFF9CA3AF)),
+                                                          const SizedBox(width: 4),
+                                                          Text(
+                                                            content.duration,
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: isDark ? Colors.white54 : const Color(0xFF9CA3AF),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              content.description,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: isDark ? Colors.white.withOpacity(0.70) : const Color(0xFF6B7280),
+                                                height: 1.5,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Wrap(
+                                              spacing: 8,
+                                              runSpacing: 6,
+                                              children: content.topics.map((topic) {
+                                                return Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                                  decoration: BoxDecoration(
+                                                    color: isDark ? const Color(0xFF2D3748) : const Color(0xFFF8F5EE),
+                                                    borderRadius: BorderRadius.circular(999),
+                                                    border: Border.all(
+                                                      color: isDark ? Colors.grey.shade600 : const Color(0xFFE5E0D4),
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    topic,
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w500,
+                                                      color: isDark ? Colors.white70 : const Color(0xFF4B5563),
+                                                    ),
+                                                  ),
+                                                );
+                                              }).toList(),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      'A few basics so Nova can make the conversation immediately useful.',
-                                      style: textTheme.bodySmall?.copyWith(
-                                        color: isDark ? Colors.white54 : const Color(0xFF6B7280),
+                                      const SizedBox(height: 20),
+                                      Text(
+                                        'Let\'s start with you',
+                                        style: textTheme.titleLarge?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark
+                                              ? Colors.white
+                                              : AppThemeTokens.brandInk,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 24),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'A few basics so Nova can make the conversation immediately useful.',
+                                        style: textTheme.bodySmall?.copyWith(
+                                          color: isDark ? Colors.white54 : const Color(0xFF6B7280),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
                                     // Lower Section: Balanced Form Fields
                                     Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -525,6 +632,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                   ],
                                 ),
                               ),
+                            ),
                             ],
                           ),
                         ),
