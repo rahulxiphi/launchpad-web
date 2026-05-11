@@ -147,6 +147,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   final _phoneController = TextEditingController();
   final _companyController = TextEditingController();
   bool _preferManual = false;
+  bool _disclaimerAccepted = false;
 
   // Core JPMC aesthetic colors
   static const jpmcDarkNavy = Color(0xFF131F2E);
@@ -246,11 +247,112 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   }
 
   bool get _canSubmit {
+    if (_isReadOnly) return true;
     final email = _emailController.text.trim();
     if (email.isEmpty) return false;
     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) return false;
     if (_isPostIncorporated && _companyController.text.trim().isEmpty) return false;
+    if (!_disclaimerAccepted) return false;
     return true;
+  }
+
+  void _showDisclaimerModal() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          width: 500,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: AppThemeTokens.modalHeader,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded, color: AppThemeTokens.goldAccent),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Important Disclaimer',
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Welcome to JPMC Innovation Economy Chat!',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppThemeTokens.brandInk),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'We may retain and review our conversations to provide better service and ensure security. For more details, please see our Privacy and Security guidelines under Profile > Important Information.',
+                        style: TextStyle(fontSize: 14, color: Color(0xFF4B5563), height: 1.5),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Service Availability:',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppThemeTokens.brandInk),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'This chat feature is designed specifically for JPMC Innovation Economy banking products. It is not available for servicing other JPMC lines of business or specific investment accounts. For non-IE inquiries, please contact your dedicated Relationship Manager or our Service Desk at (800) JPMC-HELP.',
+                        style: TextStyle(fontSize: 14, color: Color(0xFF4B5563), height: 1.5),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Important Notice:',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppThemeTokens.brandInk),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'If your conversation is related to an account that is currently past due, please be advised: this is an attempt to collect a debt and any information obtained will be used for that purpose.',
+                        style: TextStyle(fontSize: 14, color: Color(0xFF4B5563), height: 1.5),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() => _disclaimerAccepted = true);
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppThemeTokens.buttonPrimary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text('I UNDERSTAND'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -531,7 +633,62 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 90),
+                                      const SizedBox(height: 32),
+                                      // Disclaimer Checkbox
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: isDark ? const Color(0xFF2C261A) : const Color(0xFFFDF8E1),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: isDark ? const Color(0xFF423C2B) : const Color(0xFFF0E6C5)),
+                                        ),
+                                        child: _buildCheckbox(
+                                          _disclaimerAccepted,
+                                          (val) => setState(() => _disclaimerAccepted = val ?? false),
+                                          '', // We'll use a custom label to make "disclaimer" clickable
+                                          isDark,
+                                          customLabel: Text.rich(
+                                            TextSpan(
+                                              text: 'I understand and agree to the ',
+                                              style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : const Color(0xFF6B7280)),
+                                              children: [
+                                                WidgetSpan(
+                                                  alignment: PlaceholderAlignment.middle,
+                                                  child: GestureDetector(
+                                                    onTap: _showDisclaimerModal,
+                                                    child: Container(
+                                                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                                                      decoration: BoxDecoration(
+                                                        border: Border(
+                                                          bottom: BorderSide(
+                                                            color: isDark ? Colors.white : Colors.black,
+                                                            width: 1.2,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      padding: const EdgeInsets.only(bottom: 1),
+                                                      child: Text(
+                                                        'Disclaimer',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: isDark ? Colors.white : Colors.black,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                TextSpan(
+                                                  text: ' and the terms of this advisory session.',
+                                                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : const Color(0xFF6B7280)),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 24),
                                     SizedBox(
                                       width: double.infinity,
                                       child: Stack(
@@ -780,17 +937,16 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
     );
   }
 
-  Widget _buildCheckbox(bool value, ValueChanged<bool?> onChanged, String label, bool isDark, {bool isMultiLine = false}) {
+  Widget _buildCheckbox(bool value, ValueChanged<bool?> onChanged, String label, bool isDark, {bool isMultiLine = false, Widget? customLabel}) {
     return GestureDetector(
       onTap: () => onChanged(!value),
       behavior: HitTestBehavior.opaque,
       child: Row(
-        crossAxisAlignment: isMultiLine ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 20,
             height: 20,
-            margin: EdgeInsets.only(top: isMultiLine ? 2 : 0),
             decoration: BoxDecoration(
               color: value ? AppThemeTokens.buttonPrimary : Colors.transparent,
               borderRadius: BorderRadius.circular(5),
@@ -807,13 +963,13 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
+            child: customLabel ?? Text(
               label,
               style: TextStyle(
                 fontSize: isMultiLine ? 12 : 13,
                 fontWeight: isMultiLine ? FontWeight.normal : FontWeight.w600,
                 color: isDark ? Colors.white70 : (isMultiLine ? const Color(0xFF6B7280) : Colors.grey.shade800),
-                height: isMultiLine ? 1.4 : 1.0,
+                height: 1.4,
               ),
             ),
           ),

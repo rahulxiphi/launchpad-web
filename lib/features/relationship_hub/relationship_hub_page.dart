@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:html' as html;
+import 'dart:async';
+
 
 import '../../services/conversation_service.dart';
 import '../../theme/app_theme.dart';
@@ -268,7 +270,7 @@ class _HubNavBar extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          const _NavbarNotificationIcon(),
+          _NavbarNotificationIcon(),
           const SizedBox(width: 16),
           GestureDetector(
             onTap: onProfileTap,
@@ -2645,27 +2647,76 @@ class _NavbarNotificationIconState extends State<_NavbarNotificationIcon> {
   final LayerLink _link = LayerLink();
   OverlayEntry? _overlayEntry;
   bool _isHovered = false;
-  bool _isClicked = false;
+  bool _isExpanded = false;
+  Timer? _hideTimer;
+
+  List<Map<String, dynamic>> _notifications = [
+    {
+      'title': 'Sarah reviewed your guide',
+      'time': '2 hours ago',
+      'icon': Icons.description_outlined,
+      'bg': const Color(0xFFEEEDFE),
+      'iconColor': const Color(0xFF5B55D9)
+    },
+    {
+      'title': 'New message from Alex',
+      'time': '5 hours ago',
+      'icon': Icons.message_outlined,
+      'bg': const Color(0xFFE1F5EE),
+      'iconColor': const Color(0xFF0F6E56)
+    },
+    {
+      'title': 'Upcoming meeting: Q3 Review',
+      'time': '1 day ago',
+      'icon': Icons.calendar_today_rounded,
+      'bg': const Color(0xFFFBEAD5),
+      'iconColor': const Color(0xFF7C5410)
+    },
+  ];
+
+  final List<Map<String, dynamic>> _extraNotifications = [
+    {
+      'title': 'New document shared: Pitch deck',
+      'time': '2 days ago',
+      'icon': Icons.file_present_rounded,
+      'bg': const Color(0xFFE1F5EE),
+      'iconColor': const Color(0xFF0F6E56)
+    },
+    {
+      'title': 'Your account was verified',
+      'time': '3 days ago',
+      'icon': Icons.verified_user_outlined,
+      'bg': const Color(0xFFEEEDFE),
+      'iconColor': const Color(0xFF5B55D9)
+    },
+    {
+      'title': 'Welcome to Innovation Economy',
+      'time': '4 days ago',
+      'icon': Icons.auto_awesome_outlined,
+      'bg': const Color(0xFFFBEAD5),
+      'iconColor': const Color(0xFF7C5410)
+    },
+    {
+      'title': 'Weekly insight report ready',
+      'time': '1 week ago',
+      'icon': Icons.bar_chart_rounded,
+      'bg': const Color(0xFFE1F5EE),
+      'iconColor': const Color(0xFF0F6E56)
+    },
+    {
+      'title': 'Security alert: New login',
+      'time': '1 week ago',
+      'icon': Icons.security_rounded,
+      'bg': const Color(0xFFFEE2E2),
+      'iconColor': const Color(0xFFB91C1C)
+    },
+  ];
 
   void _showOverlay() {
     if (_overlayEntry != null) return;
     _overlayEntry = OverlayEntry(
       builder: (context) => Stack(
         children: [
-          if (_isClicked)
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  setState(() {
-                    _isClicked = false;
-                    _isHovered = false;
-                    _hideOverlay();
-                  });
-                },
-                child: Container(),
-              ),
-            ),
           Positioned(
             child: CompositedTransformFollower(
               link: _link,
@@ -2673,6 +2724,7 @@ class _NavbarNotificationIconState extends State<_NavbarNotificationIcon> {
               offset: const Offset(-250, 40),
               child: MouseRegion(
                 onEnter: (_) {
+                  _hideTimer?.cancel();
                   setState(() {
                     _isHovered = true;
                   });
@@ -2680,7 +2732,7 @@ class _NavbarNotificationIconState extends State<_NavbarNotificationIcon> {
                 onExit: (_) {
                   setState(() {
                     _isHovered = false;
-                    if (!_isClicked) _hideOverlay();
+                    _startHideTimer();
                   });
                 },
                 child: Material(
@@ -2707,9 +2759,9 @@ class _NavbarNotificationIconState extends State<_NavbarNotificationIcon> {
                           decoration: const BoxDecoration(
                             border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
                           ),
-                          child: const Row(
+                          child: Row(
                             children: [
-                              Text(
+                              const Text(
                                 'Notifications',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
@@ -2717,38 +2769,88 @@ class _NavbarNotificationIconState extends State<_NavbarNotificationIcon> {
                                   color: Color(0xFF202020),
                                 ),
                               ),
-                              Spacer(),
-                              Text(
-                                'Mark all as read',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF1A7B99),
-                                  fontWeight: FontWeight.w500,
+                              const Spacer(),
+                              if (_notifications.isNotEmpty)
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _notifications = [];
+                                      _isExpanded = false;
+                                      _hideOverlay();
+                                      _showOverlay();
+                                    });
+                                  },
+                                  child: const Text(
+                                    'Mark all as read',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF1A7B99),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                         ),
-                        _buildDropdownItem('Sarah reviewed your guide', '2 hours ago', Icons.description_outlined, const Color(0xFFEEEDFE), const Color(0xFF5B55D9)),
-                        _buildDropdownItem('New message from Alex', '5 hours ago', Icons.message_outlined, const Color(0xFFE1F5EE), const Color(0xFF0F6E56)),
-                        _buildDropdownItem('Upcoming meeting: Q3 Review', '1 day ago', Icons.calendar_today_rounded, const Color(0xFFFBEAD5), const Color(0xFF7C5410)),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: const BoxDecoration(
-                            border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'View all notifications',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF1A7B99),
-                                fontWeight: FontWeight.w600,
+                        if (_notifications.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: Center(
+                              child: Text(
+                                'No notifications now',
+                                style: TextStyle(color: Color(0xFF8D8578), fontSize: 13),
+                              ),
+                            ),
+                          )
+                        else ...[
+                          Flexible(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 400),
+                              child: ListView(
+                                shrinkWrap: true,
+                                padding: EdgeInsets.zero,
+                                children: [
+                                  ..._notifications
+                                      .map((n) => _buildDropdownItem(n['title'],
+                                          n['time'], n['icon'], n['bg'], n['iconColor']))
+                                      .toList(),
+                                  if (_isExpanded)
+                                    ..._extraNotifications
+                                        .map((n) => _buildDropdownItem(n['title'],
+                                            n['time'], n['icon'], n['bg'], n['iconColor']))
+                                        .toList(),
+                                ],
                               ),
                             ),
                           ),
-                        ),
+                          if (!_isExpanded)
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _isExpanded = true;
+                                  _hideOverlay();
+                                  _showOverlay();
+                                });
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                decoration: const BoxDecoration(
+                                  border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    'View all notifications',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF1A7B99),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ],
                     ),
                   ),
@@ -2780,7 +2882,8 @@ class _NavbarNotificationIconState extends State<_NavbarNotificationIcon> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF202020)),
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF202020)),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -2795,13 +2898,24 @@ class _NavbarNotificationIconState extends State<_NavbarNotificationIcon> {
     );
   }
 
+  void _startHideTimer() {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(milliseconds: 150), () {
+      if (!_isHovered) {
+        _hideOverlay();
+      }
+    });
+  }
+
   void _hideOverlay() {
+    _hideTimer?.cancel();
     _overlayEntry?.remove();
     _overlayEntry = null;
   }
 
   @override
   void dispose() {
+    _hideTimer?.cancel();
     _hideOverlay();
     super.dispose();
   }
@@ -2813,6 +2927,7 @@ class _NavbarNotificationIconState extends State<_NavbarNotificationIcon> {
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         onEnter: (_) {
+          _hideTimer?.cancel();
           setState(() {
             _isHovered = true;
             _showOverlay();
@@ -2821,37 +2936,35 @@ class _NavbarNotificationIconState extends State<_NavbarNotificationIcon> {
         onExit: (_) {
           setState(() {
             _isHovered = false;
-            if (!_isClicked) _hideOverlay();
+            _startHideTimer();
           });
         },
-        child: GestureDetector(
-          onTap: () {
-            setState(() {
-              _isClicked = !_isClicked;
-              if (_isClicked) {
-                _showOverlay();
-              } else if (!_isHovered) {
-                _hideOverlay();
-              }
-            });
-          },
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? const Color(0xFFF3F4F6).withOpacity(0.12)
+                : Colors.transparent,
+            shape: BoxShape.circle,
+          ),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              const Icon(Icons.notifications_none_rounded,
-                  color: Color(0xFFE2E8F0), size: 20),
-              Positioned(
-                right: -1,
-                top: -1,
-                child: Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF87171),
-                    borderRadius: BorderRadius.circular(999),
+              const Icon(Icons.notifications_none_rounded, color: Color(0xFFE2E8F0), size: 20),
+              if (_notifications.isNotEmpty)
+                Positioned(
+                  right: -1,
+                  top: -1,
+                  child: Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF87171),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF0F172A), width: 1.5),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
