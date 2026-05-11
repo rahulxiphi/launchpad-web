@@ -329,7 +329,13 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // ── Header bar ──────────────────────────────────
-                              _buildHeader(context, isDark, textTheme, content.heading, content.description),
+                              _buildHeader(
+                                context,
+                                isDark,
+                                textTheme,
+                                'Let\'s start with you',
+                                'A few basics so Nova can make the conversation immediately useful.',
+                              ),
                               
                               // ── Body ────────────────────────────────────────
                               Expanded(
@@ -448,25 +454,8 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                           ],
                                         ),
                                       ),
-                                      const SizedBox(height: 20),
-                                      Text(
-                                        'Let\'s start with you',
-                                        style: textTheme.titleLarge?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark
-                                              ? Colors.white
-                                              : AppThemeTokens.brandInk,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        'A few basics so Nova can make the conversation immediately useful.',
-                                        style: textTheme.bodySmall?.copyWith(
-                                          color: isDark ? Colors.white54 : const Color(0xFF6B7280),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 20),
-                                    // Lower Section: Balanced Form Fields
+                                      const SizedBox(height: 32),
+                                      // Lower Section: Balanced Form Fields
                                     Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
@@ -542,7 +531,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 32),
+                                    const SizedBox(height: 90),
                                     SizedBox(
                                       width: double.infinity,
                                       child: Stack(
@@ -666,7 +655,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
               children: [
                 Text(
                   title,
-                  style: textTheme.titleMedium?.copyWith(
+                  style: textTheme.titleLarge?.copyWith(
                     color: AppThemeTokens.goldAccent,
                     fontWeight: FontWeight.w700,
                   ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:html' as html;
 
 import '../../services/conversation_service.dart';
 import '../../theme/app_theme.dart';
@@ -267,25 +268,7 @@ class _HubNavBar extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Icons.notifications_none_rounded,
-                  color: Color(0xFFE2E8F0), size: 20),
-              Positioned(
-                right: -1,
-                top: -1,
-                child: Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF87171),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          const _NavbarNotificationIcon(),
           const SizedBox(width: 16),
           GestureDetector(
             onTap: onProfileTap,
@@ -354,11 +337,28 @@ class _NavPill extends StatelessWidget {
   }
 }
 
-class _NotificationsSection extends StatelessWidget {
+class _NotificationsSection extends StatefulWidget {
   const _NotificationsSection();
 
   @override
+  State<_NotificationsSection> createState() => _NotificationsSectionState();
+}
+
+class _NotificationsSectionState extends State<_NotificationsSection> {
+  final List<bool> _visibleCards = [true, true, true];
+
+  void _dismissCard(int index) {
+    setState(() {
+      _visibleCards[index] = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_visibleCards.contains(true)) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -377,42 +377,72 @@ class _NotificationsSection extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 18),
           child: Row(
-            children: const [
-              Expanded(
-                child: _NotificationCard(
-                  icon: Icons.calendar_today_rounded,
-                  iconColor: Color(0xFF7C5410),
-                  iconBg: Color(0xFFFBEAD5),
-                  title: 'Meeting confirmed',
-                  message:
-                      'Intro call with Sarah on May 6 at 2:00 PM ET. Tap to prep.',
-                  footer: 'Apr 28 · Click to prepare',
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _NotificationCard(
-                  icon: Icons.call_outlined,
-                  iconColor: Color(0xFF0F6E56),
-                  iconBg: Color(0xFFE1F5EE),
-                  title: 'Call summary available',
-                  message:
-                      'Apr 29 call with Sarah. Topics, next steps, and new material added.',
-                  footer: 'Apr 29 · Click to view',
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _NotificationCard(
-                  icon: Icons.description_outlined,
-                  iconColor: Color(0xFF5B55D9),
-                  iconBg: Color(0xFFEEEDFE),
-                  title: 'New guide added by Sarah',
-                  message:
-                      'Preparing for your first credit facility, based on your call.',
-                  footer: 'Apr 29 · In your learning path',
-                ),
-              ),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ...() {
+                final List<Widget> activeCards = [];
+                if (_visibleCards[0]) {
+                  activeCards.add(
+                    Expanded(
+                      child: _NotificationCard(
+                        icon: Icons.calendar_today_rounded,
+                        iconColor: const Color(0xFF7C5410),
+                        iconBg: const Color(0xFFFBEAD5),
+                        title: 'Meeting confirmed',
+                        message:
+                            'Intro call with Sarah on May 6 at 2:00 PM ET. Tap to prep.',
+                        footer: 'Apr 28 · Click to prepare',
+                        onDismiss: () => _dismissCard(0),
+                      ),
+                    ),
+                  );
+                }
+                if (_visibleCards[1]) {
+                  activeCards.add(
+                    Expanded(
+                      child: _NotificationCard(
+                        icon: Icons.call_outlined,
+                        iconColor: const Color(0xFF0F6E56),
+                        iconBg: const Color(0xFFE1F5EE),
+                        title: 'Call summary available',
+                        message:
+                            'Apr 29 call with Sarah. Topics, next steps, and new material added.',
+                        footer: 'Apr 29 · Click to view',
+                        onDismiss: () => _dismissCard(1),
+                      ),
+                    ),
+                  );
+                }
+                if (_visibleCards[2]) {
+                  activeCards.add(
+                    Expanded(
+                      child: _NotificationCard(
+                        icon: Icons.description_outlined,
+                        iconColor: const Color(0xFF5B55D9),
+                        iconBg: const Color(0xFFEEEDFE),
+                        title: 'New guide added by Sarah',
+                        message:
+                            'Preparing for your first credit facility, based on your call.',
+                        footer: 'Apr 29 · In your learning path',
+                        onDismiss: () => _dismissCard(2),
+                      ),
+                    ),
+                  );
+                }
+
+                while (activeCards.length < 3) {
+                  activeCards.add(const Expanded(child: SizedBox.shrink()));
+                }
+
+                final List<Widget> finalRow = [];
+                for (int i = 0; i < activeCards.length; i++) {
+                  finalRow.add(activeCards[i]);
+                  if (i < activeCards.length - 1) {
+                    finalRow.add(const SizedBox(width: 12));
+                  }
+                }
+                return finalRow;
+              }(),
             ],
           ),
         ),
@@ -444,75 +474,6 @@ class _HubMainColumn extends StatelessWidget {
     this.trailingPanel,
     this.onTapProduct,
   });
-
-  String? get _returnUrl {
-    final pid = prospectId;
-    if (pid == null) return null;
-    final uri = Uri.base;
-    return uri.fragment.isNotEmpty
-        ? '${uri.origin}/#/?p=$pid'
-        : '${uri.origin}/?p=$pid';
-  }
-
-  Widget _buildReturnLink(BuildContext context) {
-    final url = _returnUrl;
-    if (url == null) return const SizedBox.shrink();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0D7C8)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppThemeTokens.modalHeader.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(Icons.link_rounded, color: AppThemeTokens.modalHeader, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Your return link',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: isDark ? Colors.white : const Color(0xFF1F2937)),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  email.isNotEmpty
-                      ? 'Come back anytime to continue your conversation. Also sent to $email.'
-                      : 'Come back anytime to continue your conversation.',
-                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : const Color(0xFF6B7280)),
-                ),
-                const SizedBox(height: 4),
-                GestureDetector(
-                  onTap: () => Clipboard.setData(ClipboardData(text: url)),
-                  child: Text(
-                    url,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontFamily: 'monospace',
-                      color: AppThemeTokens.modalHeader,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          _CopyLinkButton(url: url),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -714,8 +675,6 @@ class _HubMainColumn extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
-                _buildReturnLink(context),
               ],
             ),
           ),
@@ -862,48 +821,76 @@ class _HubMainColumn extends StatelessWidget {
           ),
           Container(height: 1, color: const Color(0xFFE7DCC8)),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 8),
-            child: Row(
-              children: const [
-                Text(
-                  'ADDED BY SARAH AFTER YOUR APR 29 CALL',
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: const [
+                    Text(
+                      'Learning material',
+                      style: TextStyle(
+                        fontFamily: 'Georgia',
+                        color: AppThemeTokens.modalHeader,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 22,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    _TinyBadge('New'),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Curated guides and events to support your next stage of growth.',
                   style: TextStyle(
-                    fontSize: 12,
-                    letterSpacing: 1,
-                    color: Color(0xFF8D8578),
+                    color: Color(0xFF6F675B),
+                    fontSize: 14,
                   ),
                 ),
-                SizedBox(width: 10),
-                _TinyBadge('New'),
               ],
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-            child: Column(
+            child: GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisExtent: 140,
               children: [
                 _LearningCard(
                   stripe: AppThemeTokens.goldAccent,
                   tag: 'Guide',
                   title: 'Setting up efficient banking early',
+                  description:
+                      'Shared by Sarah to help streamline your initial operations.',
                   meta: '8 min read · Seed · Operations',
                 ),
                 _LearningCard(
                   stripe: const Color(0xFF378ADD),
                   tag: 'Event',
                   title: 'Treasury habits that scale with you',
+                  description:
+                      'Added by Sarah based on your discussion about cash management.',
                   meta: 'May 7 · 1:00 PM ET · 45 min',
                 ),
                 _LearningCard(
                   stripe: const Color(0xFF1D9E75),
                   tag: 'Explainer',
                   title: 'How early-stage treasury accounts work',
+                  description:
+                      'A brief explainer shared by Sarah to clarify treasury basics.',
                   meta: '5 min read · Finance leads',
                 ),
                 _LearningCard(
                   stripe: const Color(0xFF7F77DD),
                   tag: 'Guide',
                   title: 'Preparing for your first credit facility',
+                  description:
+                      'Recommended reading by Sarah ahead of your Series A raise.',
                   meta: '10 min read · Series A · Capital structure',
                 ),
               ],
@@ -1089,6 +1076,16 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
     }
   }
 
+  void _openReturnLink() {
+    final pid = widget.prospectId;
+    if (pid == null) return;
+    final uri = Uri.base;
+    final url = uri.fragment.isNotEmpty
+        ? '${uri.origin}/#/?p=$pid'
+        : '${uri.origin}/?p=$pid';
+    html.window.open(url, '_blank');
+  }
+
   void _openHistory() {
     _loadHistory();
     setState(() => _viewingHistory = true);
@@ -1144,7 +1141,7 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
           ),
           const SizedBox(width: 8),
           Text(
-            _viewingHistory ? 'Chat History' : 'AI guide',
+            _viewingHistory ? 'Chat History' : 'Nova',
             style: const TextStyle(
               color: AppThemeTokens.modalHeader,
               fontWeight: FontWeight.w700,
@@ -1181,24 +1178,22 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
             )
           else
             GestureDetector(
-              onTap: _openHistory,
+              onTap: _openReturnLink,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: AppThemeTokens.buttonPrimary.withValues(alpha: 0.1),
+                  color: AppThemeTokens.modalHeader,
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: AppThemeTokens.buttonPrimary.withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_hasHistory)
-                      const Icon(Icons.history_rounded, size: 13, color: AppThemeTokens.buttonPrimary),
-                    if (_hasHistory) const SizedBox(width: 5),
+                  children: const [
+                    Icon(Icons.open_in_new_rounded, size: 13, color: Colors.white),
+                    SizedBox(width: 6),
                     Text(
-                      _hasHistory ? 'Chat History' : 'Ask about your materials',
-                      style: const TextStyle(
-                        color: AppThemeTokens.buttonPrimary,
+                      'Talk to Nova',
+                      style: TextStyle(
+                        color: Colors.white,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
@@ -1597,6 +1592,7 @@ class _NotificationCard extends StatelessWidget {
   final String title;
   final String message;
   final String footer;
+  final VoidCallback? onDismiss;
 
   const _NotificationCard({
     required this.icon,
@@ -1605,6 +1601,7 @@ class _NotificationCard extends StatelessWidget {
     required this.title,
     required this.message,
     required this.footer,
+    this.onDismiss,
   });
 
   @override
@@ -1612,7 +1609,7 @@ class _NotificationCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Color(0xFF1A7B99).withValues(alpha: 0.1),
+        color: const Color(0xFF1A7B99).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFB6D4F4)),
       ),
@@ -1650,12 +1647,40 @@ class _NotificationCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  footer,
-                  style: const TextStyle(
-                    color: Color(0xFF8D8578),
-                    fontSize: 12,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      footer,
+                      style: const TextStyle(
+                        color: Color(0xFF8D8578),
+                        fontSize: 12,
+                      ),
+                    ),
+                    if (onDismiss != null)
+                      MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: onDismiss,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1A7B99).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: const Color(0xFF1A7B99).withValues(alpha: 0.2)),
+                            ),
+                            child: const Text(
+                              'Mark as read',
+                              style: TextStyle(
+                                color: Color(0xFF1A7B99),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -1932,92 +1957,123 @@ class _ProductCardState extends State<_ProductCard> {
   }
 }
 
-class _LearningCard extends StatelessWidget {
+class _LearningCard extends StatefulWidget {
   final Color stripe;
   final String tag;
   final String title;
   final String meta;
+  final String? description;
 
   const _LearningCard({
     required this.stripe,
     required this.tag,
     required this.title,
     required this.meta,
+    this.description,
   });
 
   @override
+  State<_LearningCard> createState() => _LearningCardState();
+}
+
+class _LearningCardState extends State<_LearningCard> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE1D9CB)),
-      ),
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            Container(
-              width: 4,
-              decoration: BoxDecoration(
-                color: stripe,
-                borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(14),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: _isHovered ? const Color(0xFF1F2937) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _isHovered ? const Color(0xFF1F2937) : const Color(0xFFE1D9CB)),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  width: 4,
+                  color: widget.stripe,
                 ),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFBEAD5),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        tag,
-                        style: const TextStyle(
-                          color: Color(0xFF7C5410),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _isHovered ? Colors.white.withOpacity(0.12) : const Color(0xFFFBEAD5),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          widget.tag,
+                          style: TextStyle(
+                            color: _isHovered ? Colors.white : const Color(0xFF7C5410),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A18),
+                      const SizedBox(height: 10),
+                      Text(
+                        widget.title,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: _isHovered ? Colors.white : const Color(0xFF1A1A18),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      meta,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF8D8578),
+                      if (widget.description != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          widget.description!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: _isHovered ? const Color(0xFFD1D5DB) : const Color(0xFF6F675B),
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.meta,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _isHovered ? const Color(0xFF9CA3AF) : const Color(0xFF8D8578),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const Padding(
-              padding: EdgeInsets.only(right: 16),
-              child: Icon(Icons.chevron_right_rounded,
-                  color: Color(0xFF8D8578), size: 22),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Center(
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    color: _isHovered ? Colors.white70 : const Color(0xFF8D8578),
+                    size: 22,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
@@ -2114,12 +2170,12 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 840),
+      child: Container(
+        width: 840,
+        height: 680,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
               // ── Header ─────────────────────────────────────────────────────
               Container(
@@ -2172,6 +2228,30 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                         ],
                       ),
                     ),
+                    if (!_loading && _profile != null && _profile!.aiAttributes.isEmpty) ...[
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          if (widget.prospectId != null) {
+                            GoRouter.of(context).go('/?p=${Uri.encodeComponent(widget.prospectId!)}');
+                          } else {
+                            GoRouter.of(context).go('/');
+                          }
+                        },
+                        style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
+                          padding: WidgetStateProperty.all(
+                            const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          ),
+                          shape: WidgetStateProperty.all(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                        ),
+                        child: const Text('Start Conversation', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                      const SizedBox(width: 14),
+                    ],
                     IconButton(
                       icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 20),
                       onPressed: () => Navigator.of(context).pop(),
@@ -2202,152 +2282,121 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                               textAlign: TextAlign.center,
                             ),
                           )
-                        : SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
-                            child: Builder(builder: (ctx) {
-                              final manualFormRows = [
-                                _buildRow('Industry', _profile!.industry),
-                                _buildRow('Stage', _profile!.companyStage),
-                                _buildRow('Headcount', _profile!.headcount),
-                                _buildRow('Incorporated', _profile!.incorporated ? 'Yes' : 'No'),
-                                if (_profile!.selectedPrioritiesJson.isNotEmpty)
-                                  _buildRow(
-                                    'Priorities',
-                                    _profile!.selectedPrioritiesJson.entries
-                                        .where((e) => e.value)
-                                        .map((e) => e.key)
-                                        .join(', '),
-                                  ),
-                              ];
-                              final hasManualFormRows = manualFormRows.any((r) => r != null);
+                        : CustomScrollView(
+                            slivers: [
+                              SliverPadding(
+                                padding: const EdgeInsets.symmetric(vertical: 20),
+                                sliver: SliverFillRemaining(
+                                  hasScrollBody: false,
+                                  child: Builder(builder: (ctx) {
+                                    final manualFormRows = [
+                                      _buildRow('Industry', _profile!.industry),
+                                      _buildRow('Stage', _profile!.companyStage),
+                                      _buildRow('Headcount', _profile!.headcount),
+                                      _buildRow(
+                                          'Incorporated', _profile!.incorporated ? 'Yes' : 'No'),
+                                      if (_profile!.selectedPrioritiesJson.isNotEmpty)
+                                        _buildRow(
+                                          'Priorities',
+                                          _profile!.selectedPrioritiesJson.entries
+                                              .where((e) => e.value)
+                                              .map((e) => e.key)
+                                              .join(', '),
+                                        ),
+                                    ];
+                                    final hasManualFormRows =
+                                        manualFormRows.any((r) => r != null);
 
-                              final firstFormRows = [
-                                _buildRow('Email', _profile!.email),
-                                _buildRow('Phone', _profile!.phoneNumber),
-                                _buildRow('Company', _profile!.companyName),
-                                _buildRow('Conversations', '${_profile!.conversationCount}'),
-                                if (_profile!.invitationCode != null)
-                                  _buildRow('Invite code', _profile!.invitationCode),
-                              ];
-                              final hasFirstFormRows = firstFormRows.any((r) => r != null);
+                                    final firstFormRows = [
+                                      _buildRow('Email', _profile!.email),
+                                      _buildRow('Phone', _profile!.phoneNumber),
+                                      _buildRow('Company', _profile!.companyName),
+                                      _buildRow('Conversations',
+                                          '${_profile!.conversationCount}'),
+                                      if (_profile!.invitationCode != null)
+                                        _buildRow('Invite code', _profile!.invitationCode),
+                                    ];
+                                    final hasFirstFormRows =
+                                        firstFormRows.any((r) => r != null);
 
-                              final insightRows = _profile!.aiAttributes.isNotEmpty
-                                  ? _profile!.aiAttributes.entries
-                                      .map((e) => _buildRow(
-                                            e.key
-                                                .replaceAll('_', ' ')
-                                                .split(' ')
-                                                .map((w) => w.isEmpty
-                                                    ? ''
-                                                    : '${w[0].toUpperCase()}${w.substring(1)}')
-                                                .join(' '),
-                                            e.value?.toString(),
-                                          ))
-                                      .toList()
-                                  : null;
+                                    final insightRows = _profile!.aiAttributes.isNotEmpty
+                                        ? _profile!.aiAttributes.entries
+                                            .map((e) => _buildRow(
+                                                  e.key
+                                                      .replaceAll('_', ' ')
+                                                      .split(' ')
+                                                      .map((w) => w.isEmpty
+                                                          ? ''
+                                                          : '${w[0].toUpperCase()}${w.substring(1)}')
+                                                      .join(' '),
+                                                  e.value?.toString(),
+                                                ))
+                                            .toList()
+                                        : null;
 
-                              final companyLabel = widget.companyName.isNotEmpty
-                                  ? '${widget.companyName.toUpperCase()} DETAILS'
-                                  : 'COMPANY DETAILS';
+                                    final companyLabel = widget.companyName.isNotEmpty
+                                        ? '${widget.companyName.toUpperCase()} DETAILS'
+                                        : 'COMPANY DETAILS';
 
-                              final leftChildren = <Widget>[];
-                              if (hasManualFormRows) {
-                                leftChildren.add(_buildSection(companyLabel, manualFormRows));
-                              }
-                              if (hasFirstFormRows && insightRows != null) {
-                                if (leftChildren.isNotEmpty) {
-                                  leftChildren.add(const SizedBox(height: 16));
-                                }
-                                leftChildren.add(_buildSection('YOUR DETAILS', firstFormRows));
-                              }
-
-                              final rightChildren = <Widget>[];
-                              if (insightRows != null) {
-                                rightChildren.add(_buildSentenceSection('What We\'ve Collected', insightRows));
-                              } else {
-                                rightChildren.add(_buildSectionSentenceTitle('What We\'ve Collected'));
-                                rightChildren.add(const SizedBox(height: 10));
-                                rightChildren.add(
-                                  Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: const Color(0xFFE7DCC8)),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Row(
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        const Icon(
-                                          Icons.auto_awesome_rounded,
-                                          size: 16,
-                                          color: Color(0xFF8D8578),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        const Expanded(
-                                          child: Text(
-                                            'No attributes collected yet.',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Color(0xFF6B7280),
-                                            ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              if (hasManualFormRows)
+                                                Expanded(
+                                                  child:
+                                                      _buildSection(companyLabel, manualFormRows),
+                                                ),
+                                              if (hasManualFormRows && hasFirstFormRows)
+                                                const SizedBox(width: 32),
+                                              if (hasFirstFormRows)
+                                                Expanded(
+                                                  child:
+                                                      _buildSection('YOUR DETAILS', firstFormRows),
+                                                ),
+                                            ],
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
-                                        ElevatedButton(
-                                          onPressed: () {
-                                            Navigator.of(context).pop();
-                                            if (widget.prospectId != null) {
-                                              GoRouter.of(context).go('/?p=${Uri.encodeComponent(widget.prospectId!)}');
-                                            } else {
-                                              GoRouter.of(context).go('/');
-                                            }
-                                          },
-                                          style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
-                                            padding: WidgetStateProperty.all(
-                                              const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-                                            ),
-                                            shape: WidgetStateProperty.all(
-                                              RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(13),
-                                              ),
-                                            ),
+                                        if (insightRows != null && insightRows.isNotEmpty) ...[
+                                          const SizedBox(height: 32),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                                            child: _buildSentenceSection(
+                                                'What We\'ve Collected', insightRows),
                                           ),
-                                          child: const Text('Start Conversation', style: TextStyle(fontWeight: FontWeight.bold)),
+                                        ],
+                                        const Spacer(),
+                                        const SizedBox(height: 48),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                                          child: _buildSectionTitle('TEAM MEMBERS'),
                                         ),
+                                        const SizedBox(height: 16),
+                                        SizedBox(
+                                          height: 80,
+                                          child: ListView.separated(
+                                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                                            scrollDirection: Axis.horizontal,
+                                            itemCount: _mockTeam.length,
+                                            separatorBuilder: (context, index) =>
+                                                const SizedBox(width: 16),
+                                            itemBuilder: (context, index) {
+                                              return _TeamMemberCard(
+                                                  member: _mockTeam[index]);
+                                            },
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
                                       ],
-                                    ),
-                                  ),
-                                );
-                                if (hasFirstFormRows) {
-                                  rightChildren.add(const SizedBox(height: 16));
-                                  rightChildren.add(_buildSection('YOUR DETAILS', firstFormRows));
-                                }
-                              }
-
-                              final hasLeft = leftChildren.isNotEmpty;
-                              final hasRight = rightChildren.isNotEmpty;
-
-                              return Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (hasLeft)
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: leftChildren,
-                                      ),
-                                    ),
-                                  if (hasLeft && hasRight)
-                                    const SizedBox(width: 32),
-                                  if (hasRight)
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: rightChildren,
-                                      ),
-                                    ),
-                                ],
-                              );
-                            }),
+                                    );
+                                  }),
+                                ),
+                              ),
+                            ],
                           ),
                 ),
               ),
@@ -2581,6 +2630,459 @@ class _ProductDetailModal extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _NavbarNotificationIcon extends StatefulWidget {
+  const _NavbarNotificationIcon();
+
+  @override
+  State<_NavbarNotificationIcon> createState() => _NavbarNotificationIconState();
+}
+
+class _NavbarNotificationIconState extends State<_NavbarNotificationIcon> {
+  final LayerLink _link = LayerLink();
+  OverlayEntry? _overlayEntry;
+  bool _isHovered = false;
+  bool _isClicked = false;
+
+  void _showOverlay() {
+    if (_overlayEntry != null) return;
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          if (_isClicked)
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  setState(() {
+                    _isClicked = false;
+                    _isHovered = false;
+                    _hideOverlay();
+                  });
+                },
+                child: Container(),
+              ),
+            ),
+          Positioned(
+            child: CompositedTransformFollower(
+              link: _link,
+              showWhenUnlinked: false,
+              offset: const Offset(-250, 40),
+              child: MouseRegion(
+                onEnter: (_) {
+                  setState(() {
+                    _isHovered = true;
+                  });
+                },
+                onExit: (_) {
+                  setState(() {
+                    _isHovered = false;
+                    if (!_isClicked) _hideOverlay();
+                  });
+                },
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: 320,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: const BoxDecoration(
+                            border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                          ),
+                          child: const Row(
+                            children: [
+                              Text(
+                                'Notifications',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: Color(0xFF202020),
+                                ),
+                              ),
+                              Spacer(),
+                              Text(
+                                'Mark all as read',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF1A7B99),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _buildDropdownItem('Sarah reviewed your guide', '2 hours ago', Icons.description_outlined, const Color(0xFFEEEDFE), const Color(0xFF5B55D9)),
+                        _buildDropdownItem('New message from Alex', '5 hours ago', Icons.message_outlined, const Color(0xFFE1F5EE), const Color(0xFF0F6E56)),
+                        _buildDropdownItem('Upcoming meeting: Q3 Review', '1 day ago', Icons.calendar_today_rounded, const Color(0xFFFBEAD5), const Color(0xFF7C5410)),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: const BoxDecoration(
+                            border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'View all notifications',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF1A7B99),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  Widget _buildDropdownItem(String title, String time, IconData icon, Color bg, Color iconColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+            child: Icon(icon, size: 16, color: iconColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF202020)),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  time,
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF8D8578)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _hideOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  @override
+  void dispose() {
+    _hideOverlay();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CompositedTransformTarget(
+      link: _link,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) {
+          setState(() {
+            _isHovered = true;
+            _showOverlay();
+          });
+        },
+        onExit: (_) {
+          setState(() {
+            _isHovered = false;
+            if (!_isClicked) _hideOverlay();
+          });
+        },
+        child: GestureDetector(
+          onTap: () {
+            setState(() {
+              _isClicked = !_isClicked;
+              if (_isClicked) {
+                _showOverlay();
+              } else if (!_isHovered) {
+                _hideOverlay();
+              }
+            });
+          },
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(Icons.notifications_none_rounded,
+                  color: Color(0xFFE2E8F0), size: 20),
+              Positioned(
+                right: -1,
+                top: -1,
+                child: Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF87171),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TeamMember {
+  final String name;
+  final String role;
+  final String email;
+  final String initials;
+
+  _TeamMember(this.name, this.role, this.email, this.initials);
+}
+
+final List<_TeamMember> _mockTeam = [
+  _TeamMember('Alex Chen', 'Co-Founder & CTO', 'alex@xphi.ai', 'AC'),
+  _TeamMember('Sarah Johnson', 'Head of Product', 'sarah@xphi.ai', 'SJ'),
+  _TeamMember('Michael Brown', 'Lead Engineer', 'michael@xphi.ai', 'MB'),
+  _TeamMember('Emily Davis', 'Marketing Director', 'emily@xphi.ai', 'ED'),
+  _TeamMember('David Wilson', 'Operations Lead', 'david@xphi.ai', 'DW'),
+];
+
+class _TeamMemberCard extends StatefulWidget {
+  final _TeamMember member;
+  const _TeamMemberCard({required this.member});
+
+  @override
+  State<_TeamMemberCard> createState() => _TeamMemberCardState();
+}
+
+class _TeamMemberCardState extends State<_TeamMemberCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (context) => _TeamMemberProfileModal(member: widget.member),
+          );
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 200,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: _isHovered ? const Color(0xFFF9FAFB) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _isHovered ? const Color(0xFFD1D5DB) : const Color(0xFFE7DCC8)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF223A56),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      widget.member.initials,
+                      style: const TextStyle(
+                        color: AppThemeTokens.goldAccent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.member.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1A1A18),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.member.role,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TeamMemberProfileModal extends StatelessWidget {
+  final _TeamMember member;
+  const _TeamMemberProfileModal({required this.member});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: Container(
+        width: 400,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: AppThemeTokens.modalHeader,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF223A56),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppThemeTokens.goldAccent, width: 1.5),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      member.initials,
+                      style: const TextStyle(
+                        color: AppThemeTokens.goldAccent,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          member.name,
+                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          member.role,
+                          style: const TextStyle(color: AppThemeTokens.goldAccent, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDetailRow(Icons.email_outlined, 'Email', member.email),
+                  const SizedBox(height: 16),
+                  _buildDetailRow(Icons.business_center_outlined, 'Department', 'Core Team'),
+                  const SizedBox(height: 16),
+                  _buildDetailRow(Icons.location_on_outlined, 'Location', 'Remote'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F4F6),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 18, color: const Color(0xFF4B5563)),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280), fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF111827), fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
