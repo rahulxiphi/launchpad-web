@@ -195,8 +195,8 @@ class ProspectFullProfile {
 
 class ConversationService {
   final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 10),
+    connectTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(seconds: 30),
   ));
 
   /// Creates a pre-auth prospect and returns the prospect_id.
@@ -260,6 +260,37 @@ class ConversationService {
       agentDisplayName: data['agent_display_name'] as String,
       conversationPhase: data['conversation_phase'] as int? ?? 1,
       isReturning: data['is_returning'] as bool? ?? false,
+      email: data['email'] as String?,
+      fullName: data['full_name'] as String?,
+      phoneNumber: data['phone_number'] as String?,
+      companyName: data['company_name'] as String?,
+      incorporated: data['incorporated'] as bool? ?? false,
+      companyStage: data['company_stage'] as String?,
+      industry: data['industry'] as String?,
+      headcount: data['headcount'] as String?,
+      selectedPrioritiesJson: (data['selected_priorities_json'] as Map?)?.map(
+            (key, value) => MapEntry(
+              key.toString(),
+              value == true,
+            ),
+          ) ??
+          const {},
+    );
+  }
+
+  /// Fetches an existing prospect by email for pre-filling.
+  Future<ProspectInitResult> lookupProspectByEmail(String email) async {
+    final response = await _dio.get(
+      '${ApiConfig.baseUrl}/conversations/prospect/lookup-email/$email',
+    );
+    final data = response.data as Map<String, dynamic>;
+    return ProspectInitResult(
+      prospectId: data['prospect_id'] as String,
+      stageBucket: data['stage_bucket'] as String,
+      agentDisplayName:
+          data['agent_display_name'] as String? ?? 'your JPMC AI Advisor',
+      conversationPhase: data['conversation_phase'] as int? ?? 1,
+      isReturning: true,
       email: data['email'] as String?,
       fullName: data['full_name'] as String?,
       phoneNumber: data['phone_number'] as String?,

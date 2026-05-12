@@ -8,7 +8,8 @@ import '../../features/voice/conversation_intro_page.dart';
 import '../../features/voice/mode_selection_page.dart';
 import '../../services/conversation_service.dart';
 import 'no_transition_page_route.dart';
-import 'top_bar.dart';
+import 'hub_nav_bar.dart';
+import '../../services/prospect_storage.dart';
 
 /// Prospect conversation shell — full-width, no SideNav.
 ///
@@ -54,33 +55,52 @@ class ProspectIdProvider extends InheritedWidget {
 class _AppShellState extends ConsumerState<AppShell> {
   final _innerNavKey = GlobalKey<NavigatorState>();
   final _service = ConversationService();
+  final _prospectStorage = ProspectStorage();
   
   String? _prospectId;
   late Map<String, dynamic> _resolvedDynamicVariables;
   bool _isHydratingReturnProspect = false;
+  bool _isInitializing = false;
+  bool _isHubEnabled = false;
+  String? _initError;
 
   @override
   void initState() {
     super.initState();
     _prospectId = widget.prospectId;
     _resolvedDynamicVariables = Map<String, dynamic>.from(widget.dynamicVariables);
+    _isHubEnabled = widget.startAtModeSelection;
     if (_prospectId == null) {
       _initLazyProspect();
-    } else if (widget.startAtModeSelection) {
+    } else {
       _hydrateReturnProspect();
     }
   }
 
   Future<void> _initLazyProspect() async {
+    setState(() {
+      _isInitializing = true;
+      _initError = null;
+    });
     try {
+      debugPrint('AppShell: Starting lazy prospect init for bucket ${widget.stageBucket}...');
       final pid = await _service.createProspect(widget.stageBucket);
+      debugPrint('AppShell: Lazy prospect created successfully: $pid');
       if (mounted) {
         setState(() {
           _prospectId = pid;
         });
+        await _prospectStorage.saveProspectId(pid);
       }
     } catch (e) {
-      debugPrint('Lazy prospect init failed: $e');
+      debugPrint('AppShell: Lazy prospect init failed: $e');
+      if (mounted) {
+        setState(() => _initError = 'Could not initialize session: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isInitializing = false);
+      }
     }
   }
 
@@ -94,8 +114,12 @@ class _AppShellState extends ConsumerState<AppShell> {
       if (!mounted) return;
       setState(() {
         _resolvedDynamicVariables =
-            prospect.toDynamicVariables(lockProfileFields: true);
+            prospect.toDynamicVariables(lockProfileFields: widget.startAtModeSelection);
+        if (prospect.conversationPhase > 1) {
+          _isHubEnabled = true;
+        }
       });
+      await _prospectStorage.saveProspectId(_prospectId!);
     } catch (e) {
       debugPrint('Return prospect hydration failed: $e');
     } finally {
@@ -157,21 +181,81 @@ class _AppShellState extends ConsumerState<AppShell> {
     router.go(path);
   }
 
+  void _handleFormFilled() {
+    setState(() => _isHubEnabled = true);
+  }
+
+  void _handleProspectFound(ProspectInitResult prospect) {
+    setState(() {
+      _prospectId = prospect.prospectId;
+      _resolvedDynamicVariables =
+          prospect.toDynamicVariables(lockProfileFields: false);
+      if (prospect.conversationPhase > 1) {
+        _isHubEnabled = true;
+      }
+    });
+    _prospectStorage.saveProspectId(prospect.prospectId);
+  }
+
+  String get _initials {
+    final name = _resolvedDynamicVariables['userName']?.toString() ?? 'Guest';
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).take(2).toList();
+    if (parts.isEmpty) return 'G';
+    return parts.map((p) => p[0].toUpperCase()).join();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAuthenticated = ref.watch(isAuthenticatedProvider);
 
-    if (_isHydratingReturnProspect) {
+    if (_isHydratingReturnProspect || _isInitializing) {
       return ProspectIdProvider(
         prospectId: _prospectId,
         child: Scaffold(
-          appBar: AppTopBar(
-            onSignIn: _handleSignIn,
-            onSignOut: _handleSignOut,
-            onProfileTap: _handleProfileTap,
-            isAuthenticated: isAuthenticated,
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(74),
+            child: HubNavBar(
+              companyName: _resolvedDynamicVariables['companyName']?.toString() ?? 'Launchpad',
+              founderName: _resolvedDynamicVariables['userName']?.toString() ?? 'Guest',
+              initials: _initials,
+              activeLabel: 'Interactions',
+              isHubEnabled: _isHubEnabled,
+              onProfileTap: _handleProfileTap,
+            ),
           ),
-          body: const Center(child: CircularProgressIndicator()),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 24),
+                Text(
+                  _isInitializing ? 'Preparing your session...' : 'Resuming your session...',
+                  style: const TextStyle(color: Color(0xFF94A3B8)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_initError != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(_initError!, style: const TextStyle(color: Colors.red)),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _initLazyProspect,
+                child: const Text('RETRY'),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -179,11 +263,16 @@ class _AppShellState extends ConsumerState<AppShell> {
     return ProspectIdProvider(
       prospectId: _prospectId,
       child: Scaffold(
-        appBar: AppTopBar(
-          onSignIn: _handleSignIn,
-          onSignOut: _handleSignOut,
-          onProfileTap: _handleProfileTap,
-          isAuthenticated: isAuthenticated,
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(74),
+          child: HubNavBar(
+            companyName: _resolvedDynamicVariables['companyName']?.toString() ?? 'Launchpad',
+            founderName: _resolvedDynamicVariables['userName']?.toString() ?? 'Guest',
+            initials: _initials,
+            activeLabel: 'Interactions',
+            isHubEnabled: _isHubEnabled,
+            onProfileTap: _handleProfileTap,
+          ),
         ),
         body: Navigator(
           key: _innerNavKey,
@@ -194,11 +283,15 @@ class _AppShellState extends ConsumerState<AppShell> {
                 prospectId: _prospectId,
                 dynamicVariables: _resolvedDynamicVariables,
                 onStartNew: _handleStartNew,
+                onFormFilled: _handleFormFilled,
+                onProspectFound: _handleProspectFound,
                 onGoToRelationshipHub: _handleGoToRelationshipHub,
               ),
             );
 
-            if (!widget.startAtModeSelection) {
+            final showModeSelection = widget.startAtModeSelection || _isHubEnabled;
+
+            if (!showModeSelection) {
               return [introRoute];
             }
 
@@ -223,6 +316,8 @@ class _AppShellState extends ConsumerState<AppShell> {
                 prospectId: _prospectId,
                 dynamicVariables: _resolvedDynamicVariables,
                 onStartNew: _handleStartNew,
+                onFormFilled: _handleFormFilled,
+                onProspectFound: _handleProspectFound,
                 onGoToRelationshipHub: _handleGoToRelationshipHub,
               ),
             );

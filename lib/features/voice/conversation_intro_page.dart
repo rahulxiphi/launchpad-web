@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/conversation_service.dart';
 import 'voice_page.dart';
@@ -123,12 +124,16 @@ class ConversationIntroPage extends StatefulWidget {
   /// Handled by AppShell — fetches a fresh token and replaces the inner nav.
   final Future<void> Function() onStartNew;
   final Future<void> Function() onGoToRelationshipHub;
+  final VoidCallback? onFormFilled;
+  final Function(ProspectInitResult)? onProspectFound;
 
   const ConversationIntroPage({
     super.key,
     required this.stageBucket,
     required this.onStartNew,
     required this.onGoToRelationshipHub,
+    this.onFormFilled,
+    this.onProspectFound,
     this.prospectId,
     this.dynamicVariables = const {},
   });
@@ -148,6 +153,10 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   final _companyController = TextEditingController();
   bool _preferManual = false;
   bool _disclaimerAccepted = false;
+  
+  Timer? _debounce;
+  String? _lastCheckedEmail;
+  bool _isCheckingEmail = false;
 
   // Core JPMC aesthetic colors
   static const jpmcDarkNavy = Color(0xFF131F2E);
@@ -165,9 +174,110 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
     _isPostIncorporated =
         widget.dynamicVariables['isPostIncorporated'] == true;
     _preferManual = widget.dynamicVariables['preferManual'] == true;
-    _emailController.addListener(_onFormChanged);
+    _emailController.addListener(_onEmailChanged);
     _companyController.addListener(_onFormChanged);
   }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _emailController.removeListener(_onEmailChanged);
+    _companyController.removeListener(_onFormChanged);
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _companyController.dispose();
+    super.dispose();
+  }
+
+  void _onEmailChanged() {
+    setState(() {});
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 1000), () {
+      final email = _emailController.text.trim();
+      if (_isValidEmail(email)) {
+        _lookupEmail(email);
+      }
+    });
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+
+  Future<void> _lookupEmail(String email) async {
+    if (email == _lastCheckedEmail || _isCheckingEmail || _isReadOnly) return;
+    
+    _lastCheckedEmail = email;
+    _isCheckingEmail = true;
+    
+    try {
+      final result = await _service.lookupProspectByEmail(email);
+      if (!mounted) return;
+      
+      // If we found a different prospect than the current one
+      if (result.prospectId != widget.prospectId) {
+        _showWelcomeBackModal(result);
+      }
+    } catch (e) {
+      // Not found or error, ignore
+    } finally {
+      if (mounted) setState(() => _isCheckingEmail = false);
+    }
+  }
+
+  void _showWelcomeBackModal(ProspectInitResult result) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline, color: AppThemeTokens.buttonPrimary),
+            const SizedBox(width: 12),
+            const Text('Existing Record Found', style: TextStyle(color: jpmcDarkNavy, fontWeight: FontWeight.w600)),
+          ],
+        ),
+        content: Text(
+          'We found an existing record for $lastCheckedEmail. Would you like to continue with your previous information?',
+          style: const TextStyle(color: Colors.black87, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('NO, START FRESH', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _hydrateFromLookup(result);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppThemeTokens.buttonPrimary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            ),
+            child: const Text('YES, CONTINUE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _hydrateFromLookup(ProspectInitResult result) {
+    setState(() {
+      _nameController.text = result.fullName ?? '';
+      _phoneController.text = result.phoneNumber ?? '';
+      _companyController.text = result.companyName ?? '';
+      _isPostIncorporated = result.incorporated;
+    });
+    
+    // Notify parent about the new prospect identity
+    widget.onProspectFound?.call(result);
+  }
+
+  String? get lastCheckedEmail => _lastCheckedEmail;
 
   void _onFormChanged() {
     setState(() {});
@@ -186,6 +296,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
     if (!_formKey.currentState!.validate()) return;
 
     final prospectId = widget.prospectId ?? ProspectIdProvider.of(context);
+    debugPrint('IntroPage: Submitting with prospectId=$prospectId (from widget=${widget.prospectId}, from provider=${ProspectIdProvider.of(context)})');
     if (prospectId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Prospect session is not ready yet.')),
@@ -225,6 +336,8 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
       vars['preferManual'] = _preferManual;
 
       if (!mounted) return;
+      widget.onFormFilled?.call();
+      
       Navigator.of(context).push(
         NoTransitionPageRoute(
           builder: (_) => ModeSelectionPage(
@@ -355,14 +468,6 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
     );
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _companyController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {

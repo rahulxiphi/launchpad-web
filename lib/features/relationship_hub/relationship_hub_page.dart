@@ -158,6 +158,8 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
               companyName: _companyName,
               initials: _initials,
               founderName: _founderName,
+              activeLabel: 'Relationship Hub',
+              isHubEnabled: true,
               onProfileTap: () => _showProfileModal(context),
             ),
             Expanded(
@@ -2148,57 +2150,58 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> with Singl
             children: [
               // ── Header ─────────────────────────────────────────────────────
               Container(
-                padding: const EdgeInsets.fromLTRB(24, 22, 16, 12),
-                color: AppThemeTokens.modalHeader,
+                height: 74,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                color: const Color(0xFF131F2E),
                 child: Row(
                   children: [
                     Container(
-                      width: 44,
-                      height: 44,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
                         color: const Color(0xFF223A56),
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFB99C4C), width: 1.5),
+                        border: Border.all(
+                            color: const Color(0xFFB99C4C), width: 1.5),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         widget.initials,
                         style: const TextStyle(
-                          color: AppThemeTokens.goldAccent,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFB99C4C),
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.founderName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
+                    const SizedBox(width: 16),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.founderName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
-                          if (widget.companyName.isNotEmpty && widget.companyName != 'Launchpad') ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              widget.companyName,
-                              style: const TextStyle(
-                                color: AppThemeTokens.goldAccent,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.companyName,
+                          style: const TextStyle(
+                            color: Color(0xFFB99C4C),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
+                    const Spacer(),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 24),
+                      icon: const Icon(Icons.close_rounded,
+                          color: Colors.white70, size: 24),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],

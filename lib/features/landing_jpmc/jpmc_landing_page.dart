@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/conversation_service.dart';
 import '../../shared/widgets/app_shell.dart';
+import '../../shared/widgets/hub_nav_bar.dart';
 import '../../theme/app_theme.dart';
+import '../../services/prospect_storage.dart';
 
 class JpmcLandingPage extends StatefulWidget {
   final String? invitationCode;
@@ -45,6 +47,8 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
   String? _errorMessage;
   ProspectInitResult? _resolvedProspect;
   bool _startAtModeSelection = false;
+  String? _storedProspectId;
+  final _prospectStorage = ProspectStorage();
 
   @override
   void initState() {
@@ -53,6 +57,9 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
         widget.returnProspectId ?? Uri.base.queryParameters['p'];
     final invitationCode =
         widget.invitationCode ?? Uri.base.queryParameters['invite'];
+
+    _checkStoredProspect();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (returnProspectId != null && returnProspectId.isNotEmpty) {
@@ -61,6 +68,13 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
         _handleInviteCode(invitationCode);
       }
     });
+  }
+
+  Future<void> _checkStoredProspect() async {
+    final pid = await _prospectStorage.getProspectId();
+    if (mounted && pid != null) {
+      setState(() => _storedProspectId = pid);
+    }
   }
 
   Future<void> _handleReturnVisit(String prospectId) async {
@@ -105,14 +119,15 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
 
     try {
       const stageBucket = 'super_agent';
-      final prospectId = await _service.createProspect(stageBucket);
+      final returnPid = _storedProspectId;
 
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => AppShell(
             stageBucket: stageBucket,
-            prospectId: prospectId,
+            prospectId: returnPid,
+            startAtModeSelection: returnPid != null,
           ),
         ),
       );
@@ -170,123 +185,14 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
                   ),
                 ),
               ),
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _StickyHeaderDelegate(
-                  height: 104,
-                  child: Container(
-                    color: navy,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: isMobile ? 20 : 40, vertical: 12),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              RichText(
-                                text: const TextSpan(
-                                  style: TextStyle(fontSize: 22, color: Colors.white, letterSpacing: 0.5),
-                                  children: [
-                                    TextSpan(text: 'J.P. '),
-                                    TextSpan(text: 'Morgan', style: TextStyle(color: gold)),
-                                  ],
-                                ),
-                              ),
-                              Row(
-                                children: [
-                                  if (!isMobile) ...[
-                                    _navLink('Commercial Banking'),
-                                    if (isDesktop) ...[
-                                      _navLink('Solutions'),
-                                      _navLink('Industries'),
-                                      _navLink('Insights'),
-                                      _navLink('About Us'),
-                                    ],
-                                    const SizedBox(width: 16),
-                                  ],
-                                  ElevatedButton(
-                                    onPressed: _startSession,
-                                    style: Theme.of(context)
-                                        .elevatedButtonTheme
-                                        .style
-                                        ?.copyWith(
-                                          shape: WidgetStateProperty.all(
-                                            RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(2),
-                                            ),
-                                          ),
-                                          padding: WidgetStateProperty.all(
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 20, vertical: 14),
-                                          ),
-                                        ),
-                                    child: const Text('GET IN TOUCH', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.9)),
-                                  ),
-                                ],
-                              )
-                            ],
-                          ),
-                        ),
-                        Container(height: 1, color: Colors.white.withOpacity(0.08)),
-                        Center(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 32),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: () {
-                                  final allSubItems = [
-                                    'Overview',
-                                    'Startups',
-                                    'Growth Companies',
-                                    'Industries',
-                                    'Chase Connect®',
-                                    'Startup Offers'
-                                  ];
-                                  
-                                  int visibleCount = isMobile ? 2 : (isTablet ? 4 : 6);
-                                  List<Widget> subNavWidgets = [];
-                                  
-                                  for (int i = 0; i < visibleCount; i++) {
-                                    subNavWidgets.add(_subNavLink(allSubItems[i], isActive: allSubItems[i] == 'Startups'));
-                                  }
-                                  
-                                  if (visibleCount < allSubItems.length) {
-                                    subNavWidgets.add(
-                                      Theme(
-                                        data: Theme.of(context).copyWith(
-                                          popupMenuTheme: const PopupMenuThemeData(
-                                            color: Color(0xFF0F3460), 
-                                          ),
-                                        ),
-                                        child: PopupMenuButton<String>(
-                                          offset: const Offset(0, 40),
-                                          child: _subNavLink('More', hasDropdown: true),
-                                          itemBuilder: (BuildContext context) {
-                                            return allSubItems.skip(visibleCount).map((String choice) {
-                                              return PopupMenuItem<String>(
-                                                value: choice,
-                                                height: 40,
-                                                child: Text(choice, style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.85))),
-                                              );
-                                            }).toList();
-                                          },
-                                        ),
-                                      )
-                                    );
-                                  }
-                                  return subNavWidgets;
-                                }(),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              SliverToBoxAdapter(
+                child: HubNavBar(
+                  companyName: 'Launchpad',
+                  founderName: 'Guest',
+                  initials: 'G',
+                  activeLabel: 'Dashboard',
+                  onInteractionsTap: _startSession,
+                  onProfileTap: () => {}, // No profile on landing page before login
                 ),
               ),
               SliverToBoxAdapter(
@@ -340,7 +246,10 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
                                                     vertical: 20),
                                               ),
                                             ),
-                                        child: const Text('GET IN TOUCH', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                                        child: Text(
+                                          (_resolvedProspect != null || _storedProspectId != null) ? 'CONTINUE' : 'GET IN TOUCH',
+                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1),
+                                        ),
                                       ),
                                       OutlinedButton(
                                         onPressed: () {},
@@ -682,7 +591,10 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
                                                         double.infinity, 50),
                                                   ),
                                                 ),
-                                            child: const Text('Get Started with LaunchPad', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                            child: Text(
+                                              (_resolvedProspect != null || _storedProspectId != null) ? 'Continue with LaunchPad' : 'Get Started with LaunchPad',
+                                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                            ),
                                           ),
                                           const SizedBox(height: 12),
                                           Text('Free for J.P. Morgan startup clients', style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.45))),

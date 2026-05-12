@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/conversation_service.dart';
 import '../../shared/widgets/app_shell.dart';
+import '../../shared/widgets/hub_nav_bar.dart';
 import '../../theme/app_theme.dart';
+import '../../services/prospect_storage.dart';
 
 class JpmcStartupsClonePage extends StatefulWidget {
   final String? invitationCode;
@@ -46,6 +48,8 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
   String? _errorMessage;
   ProspectInitResult? _resolvedProspect;
   bool _startAtModeSelection = false;
+  String? _storedProspectId;
+  final _prospectStorage = ProspectStorage();
 
   @override
   void initState() {
@@ -54,6 +58,9 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
         widget.returnProspectId ?? Uri.base.queryParameters['p'];
     final invitationCode =
         widget.invitationCode ?? Uri.base.queryParameters['invite'];
+    
+    _checkStoredProspect();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (returnProspectId != null && returnProspectId.isNotEmpty) {
@@ -62,6 +69,13 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
         _handleInviteCode(invitationCode);
       }
     });
+  }
+
+  Future<void> _checkStoredProspect() async {
+    final pid = await _prospectStorage.getProspectId();
+    if (mounted && pid != null) {
+      setState(() => _storedProspectId = pid);
+    }
   }
 
   Future<void> _handleReturnVisit(String prospectId) async {
@@ -106,13 +120,14 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
 
     try {
       const stageBucket = 'super_agent';
-      // Navigate immediately to the conversation shell.
-      // AppShell will now handle prospect creation lazily if none is provided.
+      final returnPid = _storedProspectId;
+      
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => const AppShell(
+          builder: (_) => AppShell(
             stageBucket: stageBucket,
-            prospectId: null,
+            prospectId: returnPid,
+            startAtModeSelection: returnPid != null,
           ),
         ),
       );
@@ -174,65 +189,14 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
                   ),
                 ),
               ),
-
-              // White Top Navigation Bar (Sticky)
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _StickyHeaderDelegate(
-                  height: 70,
-                  child: Container(
-                    color: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 48),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Logo
-                        InkWell(
-                          onTap: () {
-                            Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
-                            context.go('/');
-                          },
-                          child: const Text(
-                            'J.P.Morgan',
-                            style: TextStyle(
-                              fontSize: 26,
-                              color: jpmcBrown,
-                              letterSpacing: 1.2,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        
-                        // Desktop Center Links
-                        if (isDesktop)
-                          Row(
-                            children: [
-                              _topNavDropdown('Solutions'),
-                              _topNavDropdown('Who We Serve'),
-                              _topNavDropdown('Insights'),
-                              _topNavDropdown('About Us'),
-                            ],
-                          ),
-
-                        // Right Utilities
-                        if (!isMobile)
-                          Row(
-                            children: [
-                              const Icon(Icons.search, size: 18, color: Colors.black87),
-                              const SizedBox(width: 24),
-                              _topUtilityLink('Careers'),
-                              _topUtilityLink('News'),
-                              _topUtilityLink('Contact Us'),
-                              _topUtilityLink('Login'),
-                              _topUtilityLink('Global'),
-                            ],
-                          )
-                        else
-                          const Icon(Icons.menu, color: Colors.black87),
-                      ],
-                    ),
-                  ),
+              SliverToBoxAdapter(
+                child: HubNavBar(
+                  companyName: 'Launchpad',
+                  founderName: 'Guest',
+                  initials: 'G',
+                  activeLabel: 'Dashboard',
+                  onInteractionsTap: _startSession,
+                  onProfileTap: () => {}, // No profile on landing page before login
                 ),
               ),
 
@@ -332,9 +296,9 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
                                       ),
                                     ),
                                   ),
-                              child: const Text(
-                                'GET STARTED',
-                                style: TextStyle(
+                              child: Text(
+                                (_resolvedProspect != null || _storedProspectId != null) ? 'CONTINUE' : 'GET STARTED',
+                                style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.5,

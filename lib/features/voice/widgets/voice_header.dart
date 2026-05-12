@@ -46,30 +46,7 @@ class VoiceHeader extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'JPMC',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                    TextSpan(
-                      text: '  •  Innovation Economy Advisor',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: AppThemeTokens.goldAccent,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 4),
               const SizedBox(height: 6),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
