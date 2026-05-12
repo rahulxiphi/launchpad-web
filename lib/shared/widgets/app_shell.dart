@@ -10,6 +10,7 @@ import '../../services/conversation_service.dart';
 import 'no_transition_page_route.dart';
 import 'hub_nav_bar.dart';
 import '../../services/prospect_storage.dart';
+import 'prospect_id_provider.dart';
 
 /// Prospect conversation shell — full-width, no SideNav.
 ///
@@ -35,22 +36,6 @@ class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class ProspectIdProvider extends InheritedWidget {
-  final String? prospectId;
-  const ProspectIdProvider({
-    super.key,
-    required this.prospectId,
-    required super.child,
-  });
-
-  static String? of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<ProspectIdProvider>()?.prospectId;
-  }
-
-  @override
-  bool updateShouldNotify(ProspectIdProvider oldWidget) =>
-      prospectId != oldWidget.prospectId;
-}
 
 class _AppShellState extends ConsumerState<AppShell> {
   final _innerNavKey = GlobalKey<NavigatorState>();

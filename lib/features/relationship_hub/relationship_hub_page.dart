@@ -12,6 +12,7 @@ import '../voice/voice_page.dart';
 import '../../services/notification_service.dart';
 import '../../shared/widgets/hub_nav_bar.dart';
 import '../../shared/widgets/no_transition_page_route.dart';
+import '../../shared/widgets/prospect_id_provider.dart';
 
 class _GuideMessage {
   final bool isUser;
@@ -59,7 +60,7 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
   Future<void> _fetchProducts() async {
     setState(() => _loadingProducts = true);
     try {
-      final products = await _service.listProducts();
+      final products = await _service.listProducts(prospectId: widget.prospectId);
       if (mounted) setState(() => _products = products);
     } catch (e) {
       debugPrint('Error fetching products: $e');
@@ -164,7 +165,7 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 1180;
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: const Color(0xFFFAF7F0),
       body: SafeArea(
         child: Column(
@@ -240,6 +241,11 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
           ],
         ),
       ),
+    );
+
+    return ProspectIdProvider(
+      prospectId: widget.prospectId,
+      child: scaffold,
     );
   }
 }
@@ -681,6 +687,7 @@ class _HubMainColumnState extends State<_HubMainColumn> {
                     title: product.name,
                     description: product.shortDescription ?? product.description,
                     cta: 'By ${product.provider?.companyName ?? 'J.P. Morgan'}',
+                    matchScore: product.matchScore,
                     onInteraction: () =>
                         setState(() => _hasInteractedProducts = true),
                     onTap: () => widget.onTapProduct?.call(context, product),
@@ -1739,6 +1746,7 @@ class _ProductCard extends StatefulWidget {
   final String title;
   final String description;
   final String cta;
+  final double? matchScore;
   final VoidCallback? onTap;
 
   const _ProductCard({
@@ -1748,6 +1756,7 @@ class _ProductCard extends StatefulWidget {
     required this.title,
     required this.description,
     required this.cta,
+    this.matchScore,
     this.onTap,
     this.defaultHover = false,
     this.onInteraction,
@@ -1789,14 +1798,34 @@ class _ProductCardState extends State<_ProductCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: _isHovered ? Colors.white.withOpacity(0.12) : widget.tint.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(widget.icon, color: _isHovered ? Colors.white : widget.iconColor, size: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _isHovered
+                          ? Colors.white.withOpacity(0.12)
+                          : widget.tint.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(widget.icon,
+                        color: _isHovered ? Colors.white : widget.iconColor,
+                        size: 20),
+                  ),
+                  if (widget.matchScore != null)
+                    Text(
+                      '${(widget.matchScore! * 100).toInt()}% match',
+                      style: TextStyle(
+                        color: _isHovered
+                            ? AppThemeTokens.goldAccent
+                            : const Color(0xFF1D9E75),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
               Text(

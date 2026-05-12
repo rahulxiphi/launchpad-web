@@ -204,6 +204,7 @@ class ProductPublic {
   final List<String> benefits;
   final String? integrationInfo;
   final String? signupUrl;
+  final double? matchScore;
   final ProviderPublic? provider;
 
   ProductPublic({
@@ -222,6 +223,7 @@ class ProductPublic {
     this.benefits = const [],
     this.integrationInfo,
     this.signupUrl,
+    this.matchScore,
     this.provider,
   });
 
@@ -243,6 +245,7 @@ class ProductPublic {
       benefits: List<String>.from(json['benefits'] ?? []),
       integrationInfo: json['integration_info'] as String?,
       signupUrl: json['signup_url'] as String?,
+      matchScore: (json['match_score'] as num?)?.toDouble(),
       provider: json['provider'] != null
           ? ProviderPublic.fromJson(json['provider'])
           : null,
@@ -610,8 +613,13 @@ class ConversationService {
     );
   }
 
-  Future<List<ProductPublic>> listProducts() async {
-    final response = await _dio.get('${ApiConfig.baseUrl}/conversations/products');
+  Future<List<ProductPublic>> listProducts({String? prospectId}) async {
+    final response = await _dio.get(
+      '${ApiConfig.baseUrl}/conversations/products',
+      queryParameters: {
+        if (prospectId != null) 'prospect_id': prospectId,
+      },
+    );
     final data = response.data['products'] as List;
     return data.map((json) => ProductPublic.fromJson(json)).toList();
   }

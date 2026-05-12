@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/conversation_service.dart';
 import '../../shared/widgets/app_shell.dart';
 import '../../theme/app_theme.dart';
+import '../../shared/widgets/prospect_id_provider.dart';
 
 class ManualFormPage extends StatefulWidget {
   final String stageBucket;

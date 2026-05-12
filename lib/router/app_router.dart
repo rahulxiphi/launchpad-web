@@ -6,6 +6,7 @@ import '../features/auth/signup_page.dart';
 import '../features/landing_jpmc/jpmc_startups_clone_page.dart';
 import '../features/relationship_hub/relationship_hub_page.dart';
 import '../features/stage_selector/stage_selector_page.dart';
+import '../shared/widgets/app_shell.dart';
 
 // ── Route paths ───────────────────────────────────────────────────────────────
 
@@ -80,6 +81,19 @@ GoRouter createRouter({
             child: JpmcStartupsClonePage(
               invitationCode: invitationCode,
               returnProspectId: returnProspectId,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/p=:prospectId',
+        pageBuilder: (context, state) {
+          final prospectId = state.pathParameters['prospectId'];
+          return NoTransitionPage(
+            child: AppShell(
+              stageBucket: 'super_agent',
+              prospectId: prospectId,
+              startAtModeSelection: true,
             ),
           );
         },

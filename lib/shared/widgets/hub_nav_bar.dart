@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'notification_icon.dart';
+import 'prospect_id_provider.dart';
 
 class HubNavBar extends StatelessWidget {
   final String companyName;
@@ -34,7 +35,14 @@ class HubNavBar extends StatelessWidget {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => context.go('/'),
+            onTap: () {
+              final pid = ProspectIdProvider.of(context);
+              if (pid != null) {
+                context.go('/?p=$pid');
+              } else {
+                context.go('/');
+              }
+            },
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
               child: RichText(
@@ -75,7 +83,12 @@ class HubNavBar extends StatelessWidget {
                 active: activeLabel == 'Relationship Hub',
                 enabled: isHubEnabled,
                 onTap: isHubEnabled ? () {
-                  context.go('/relationship-hub');
+                  final pid = ProspectIdProvider.of(context);
+                  if (pid != null) {
+                    context.go('/relationship-hub?p=$pid');
+                  } else {
+                    context.go('/relationship-hub');
+                  }
                 } : null,
               ),
             ],

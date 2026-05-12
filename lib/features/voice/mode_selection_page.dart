@@ -5,6 +5,7 @@ import 'manual_form_page.dart';
 import '../../shared/widgets/app_shell.dart';
 import '../../shared/widgets/no_transition_page_route.dart';
 import '../../theme/app_theme.dart';
+import '../../shared/widgets/prospect_id_provider.dart';
 
 class ModeSelectionPage extends StatefulWidget {
   final String stageBucket;
