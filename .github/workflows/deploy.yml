@@ -50,13 +50,19 @@ jobs:
           username: ${{ secrets.VM_USERNAME }}
           # key: ${{ secrets.VM_SSH_KEY }}
           password: ${{ secrets.VM_PASSWORD }}
-          connect_timeout: 60s
           timeout: 600s
+          command_timeout: 30m
+          request_pty: true
           script: |
             set -e
 
             cd /root/launchpad-web
             git pull origin main
+
+            # API and web intentionally share one compose project name
+            # but are deployed from separate compose files.
+            # This suppresses expected orphan warnings in logs.
+            export COMPOSE_IGNORE_ORPHANS=1
 
             # Rebuild web image — --env-file passes .env.demo vars into compose substitution
             # so API_BASE_URL is correctly injected as a Docker build arg
@@ -66,8 +72,20 @@ jobs:
             docker compose -p launchpad_demo -f docker-compose.demo.yml --env-file .env.demo up -d --force-recreate web
 
             # Clean up dangling images
+            # Remove dangling images AND stale build cache to free disk space
             docker image prune -f
+            docker builder prune -f
 
-            # Health check
-            sleep 5
-            curl -f http://localhost:9010/health
+            # Health check with retries: container may need a few seconds
+            # to become ready after recreation.
+            for i in {1..20}; do
+              if curl -fsS http://localhost:9010/health > /dev/null; then
+                echo "Web health check passed"
+                exit 0
+              fi
+              echo "Waiting for web health... attempt $i/20"
+              sleep 3
+            done
+
+            echo "Web health check failed after retries"
+            exit 1
