@@ -435,8 +435,8 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                 context,
                                 isDark,
                                 textTheme,
-                                'Let\'s start with you',
-                                'A few basics so Nova can make the conversation immediately useful.',
+                                content.heading,
+                                content.description,
                               ),
                               
                               // ── Body ────────────────────────────────────────
@@ -444,13 +444,90 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                 child: SingleChildScrollView(
                                   padding: EdgeInsets.fromLTRB(
                                     isMobile ? 24 : 36,
-                                    16,
+                                    32,
                                     isMobile ? 24 : 36,
                                     24,
                                   ),
                                   child: Column(
-                                     crossAxisAlignment: CrossAxisAlignment.start,
-                                     children: [
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Lower Section: Balanced Form Fields
+                                      Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Left Form Fields: Name, Email
+                                          Expanded(
+                                            flex: 1,
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                _buildTextField('Name', _nameController, false, hint: 'Alex Rivera', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
+                                                _buildTextField('Email', _emailController, true, hint: 'alex@yourcompany.com', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 48),
+                                          // Right Form Fields: Phone, Checkbox, Company
+                                          Expanded(
+                                            flex: 1,
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                _buildTextField('Phone number', _phoneController, false, hint: '+1 (555) 000-0000', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
+                                                _buildTextField(
+                                                  'Company',
+                                                  _companyController,
+                                                  _isPostIncorporated,
+                                                  hint: 'e.g. Northline AI',
+                                                  onChanged: (_) => _onFormChanged(),
+                                                  readOnly: _isReadOnly,
+                                                  trailingLabelWidget: GestureDetector(
+                                                    onTap: _isReadOnly ? null : () {
+                                                      setState(() => _isPostIncorporated = !_isPostIncorporated);
+                                                      _onFormChanged();
+                                                    },
+                                                    behavior: HitTestBehavior.opaque,
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Container(
+                                                          width: 16,
+                                                          height: 16,
+                                                          decoration: BoxDecoration(
+                                                            color: _isPostIncorporated
+                                                                ? AppThemeTokens.buttonPrimary
+                                                                : Colors.transparent,
+                                                            borderRadius: BorderRadius.circular(4),
+                                                            border: Border.all(
+                                                              color: _isPostIncorporated
+                                                                  ? AppThemeTokens.buttonPrimary
+                                                                  : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+                                                              width: 1.5,
+                                                            ),
+                                                          ),
+                                                          child: _isPostIncorporated
+                                                              ? const Icon(Icons.check, size: 12, color: Colors.white)
+                                                              : null,
+                                                        ),
+                                                        const SizedBox(width: 8),
+                                                        Text(
+                                                          'Incorporated',
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            fontWeight: FontWeight.w500,
+                                                            color: isDark ? Colors.white70 : Colors.grey.shade800,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 16),
                                       // ── Agent model card ──────────────────
                                       Container(
                                         padding: const EdgeInsets.all(16),
@@ -493,14 +570,13 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                     crossAxisAlignment: CrossAxisAlignment.start,
                                                     children: [
                                                       Text(
-                                                        content.heading,
+                                                        'Let\'s start with you',
                                                         style: TextStyle(
                                                           fontSize: 15,
                                                           fontWeight: FontWeight.w700,
                                                           color: isDark ? Colors.white : AppThemeTokens.brandInk,
                                                         ),
                                                       ),
-                                                      const SizedBox(height: 2),
                                                       Row(
                                                         children: [
                                                           Icon(Icons.timer_outlined, size: 13, color: isDark ? Colors.white54 : const Color(0xFF9CA3AF)),
@@ -521,7 +597,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                             ),
                                             const SizedBox(height: 12),
                                             Text(
-                                              content.description,
+                                              'A few basics so Nova can make the conversation immediately useful.',
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 color: isDark ? Colors.white.withOpacity(0.70) : const Color(0xFF6B7280),
@@ -556,83 +632,6 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                           ],
                                         ),
                                       ),
-                                      const SizedBox(height: 32),
-                                      // Lower Section: Balanced Form Fields
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        // Left Form Fields: Name, Email
-                                        Expanded(
-                                          flex: 1,
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              _buildTextField('Name', _nameController, false, hint: 'Alex Rivera', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
-                                              _buildTextField('Email', _emailController, true, hint: 'alex@yourcompany.com', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(width: 48),
-                                        // Right Form Fields: Phone, Checkbox, Company
-                                        Expanded(
-                                          flex: 1,
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              _buildTextField('Phone number', _phoneController, false, hint: '+1 (555) 000-0000', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
-                                              _buildTextField(
-                                                'Company',
-                                                _companyController,
-                                                _isPostIncorporated,
-                                                hint: 'e.g. Northline AI',
-                                                onChanged: (_) => _onFormChanged(),
-                                                readOnly: _isReadOnly,
-                                                trailingLabelWidget: GestureDetector(
-                                                  onTap: _isReadOnly ? null : () {
-                                                    setState(() => _isPostIncorporated = !_isPostIncorporated);
-                                                    _onFormChanged();
-                                                  },
-                                                  behavior: HitTestBehavior.opaque,
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Container(
-                                                        width: 16,
-                                                        height: 16,
-                                                        decoration: BoxDecoration(
-                                                          color: _isPostIncorporated
-                                                              ? AppThemeTokens.buttonPrimary
-                                                              : Colors.transparent,
-                                                          borderRadius: BorderRadius.circular(4),
-                                                          border: Border.all(
-                                                            color: _isPostIncorporated
-                                                                ? AppThemeTokens.buttonPrimary
-                                                                : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
-                                                            width: 1.5,
-                                                          ),
-                                                        ),
-                                                        child: _isPostIncorporated
-                                                            ? const Icon(Icons.check, size: 12, color: Colors.white)
-                                                            : null,
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        'Incorporated',
-                                                        style: TextStyle(
-                                                          fontSize: 12,
-                                                          fontWeight: FontWeight.w500,
-                                                          color: isDark ? Colors.white70 : Colors.grey.shade800,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
                                       const SizedBox(height: 32),
                                       // Disclaimer Checkbox
                                       Container(
@@ -689,96 +688,51 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                         ),
                                       ),
                                       const SizedBox(height: 24),
-                                    SizedBox(
-                                      width: double.infinity,
-                                      child: Stack(
-                                        alignment: Alignment.center,
-                                        children: [
-                                          Align(
-                                            alignment: Alignment.centerLeft,
-                                            child: _buildBottomBackButton(
-                                                context),
-                                          ),
-                                          SizedBox(
-                                            height: 48,
-                                            width: isMobile
-                                                ? double.infinity
-                                                : 320,
-                                            child: ElevatedButton.icon(
-                                              onPressed: _canSubmit &&
-                                                      !_isSavingProfile
-                                                  ? _submitProfileAndContinue
-                                                  : null,
-                                              icon: _isSavingProfile
-                                                  ? const SizedBox(
-                                                      width: 18,
-                                                      height: 18,
-                                                      child:
-                                                          CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                        color: Colors.white,
-                                                      ),
-                                                    )
-                                                  : Icon(
-                                                      Icons.auto_awesome,
-                                                      size: 18,
-                                                      color: _canSubmit
-                                                          ? AppThemeTokens
-                                                              .goldAccent
-                                                          : Colors.white,
-                                                    ),
-                                              label: Text(_isSavingProfile
-                                                  ? 'SAVING...'
-                                                  : (_isReadOnly
-                                                      ? 'CONTINUE'
-                                                      : 'GET STARTED')),
-                                              style: Theme.of(context)
-                                                  .elevatedButtonTheme
-                                                  .style
-                                                  ?.copyWith(
-                                                    padding:
-                                                        WidgetStateProperty.all(
-                                                      const EdgeInsets
-                                                          .symmetric(
-                                                          horizontal: 32),
-                                                    ),
-                                                    shape:
-                                                        WidgetStateProperty.all(
-                                                      RoundedRectangleBorder(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(12),
-                                                      ),
-                                                    ),
-                                                    elevation:
-                                                        WidgetStateProperty.all(
-                                                      _canSubmit ? 4 : 0,
-                                                    ),
-                                                    shadowColor:
-                                                        WidgetStateProperty.all(
-                                                      AppThemeTokens
-                                                          .buttonPrimary
-                                                          .withOpacity(0.4),
-                                                    ),
-                                                    textStyle:
-                                                        WidgetStateProperty.all(
-                                                      const TextStyle(
-                                                        fontSize: 13,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        letterSpacing: 1.0,
-                                                      ),
-                                                    ),
-                                                  ),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: _buildBottomBackButton(context),
                                             ),
-                                          ),
-                                        ],
+                                            SizedBox(
+                                              height: 48,
+                                              width: isMobile ? double.infinity : 320,
+                                              child: ElevatedButton.icon(
+                                                onPressed: _canSubmit && !_isSavingProfile ? _submitProfileAndContinue : null,
+                                                icon: _isSavingProfile
+                                                    ? const SizedBox(
+                                                        width: 18,
+                                                        height: 18,
+                                                        child: CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          color: Colors.white,
+                                                        ),
+                                                      )
+                                                    : Icon(
+                                                        Icons.auto_awesome,
+                                                        size: 18,
+                                                        color: _canSubmit ? AppThemeTokens.goldAccent : Colors.white,
+                                                      ),
+                                                label: Text(_isSavingProfile ? 'SAVING...' : (_isReadOnly ? 'CONTINUE' : 'GET STARTED')),
+                                                style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
+                                                      padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 32)),
+                                                      shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                                                      elevation: WidgetStateProperty.all(_canSubmit ? 4 : 0),
+                                                      shadowColor: WidgetStateProperty.all(AppThemeTokens.buttonPrimary.withOpacity(0.4)),
+                                                      textStyle: WidgetStateProperty.all(const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
                             ],
                           ),
                         ),

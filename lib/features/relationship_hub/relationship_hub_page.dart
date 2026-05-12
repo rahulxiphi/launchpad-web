@@ -8,6 +8,10 @@ import 'dart:async';
 
 import '../../services/conversation_service.dart';
 import '../../theme/app_theme.dart';
+import '../voice/voice_page.dart';
+import '../../services/notification_service.dart';
+import '../../shared/widgets/hub_nav_bar.dart';
+import '../../shared/widgets/no_transition_page_route.dart';
 
 class _GuideMessage {
   final bool isUser;
@@ -150,7 +154,7 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
       body: SafeArea(
         child: Column(
           children: [
-            _HubNavBar(
+            HubNavBar(
               companyName: _companyName,
               initials: _initials,
               founderName: _founderName,
@@ -221,123 +225,6 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
   }
 }
 
-class _HubNavBar extends StatelessWidget {
-  final String companyName;
-  final String founderName;
-  final String initials;
-  final VoidCallback? onProfileTap;
-
-  const _HubNavBar({
-    required this.companyName,
-    required this.founderName,
-    required this.initials,
-    this.onProfileTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 74,
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      color: AppThemeTokens.modalHeader,
-      child: Row(
-        children: [
-          RichText(
-            text: const TextSpan(
-              style: TextStyle(
-                fontFamily: AppThemeTokens.fontFamily,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-              children: [
-                TextSpan(text: 'JPMorgan '),
-                TextSpan(
-                  text: 'Innovation Economy',
-                  style: TextStyle(color: AppThemeTokens.goldAccent),
-                ),
-              ],
-            ),
-          ),
-          const Spacer(),
-          Wrap(
-            spacing: 8,
-            children: const [
-              _NavPill(label: 'Hub', active: true),
-              _NavPill(label: 'My profile'),
-              _NavPill(label: 'Events'),
-              _NavPill(label: 'Resources'),
-            ],
-          ),
-          const Spacer(),
-          _NavbarNotificationIcon(),
-          const SizedBox(width: 16),
-          GestureDetector(
-            onTap: onProfileTap,
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF223A56),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: const Color(0xFFB99C4C), width: 1),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  initials,
-                  style: const TextStyle(
-                    color: AppThemeTokens.goldAccent,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            companyName.isNotEmpty && companyName != 'Launchpad'
-                ? companyName
-                : founderName.split(' ').first,
-            style: const TextStyle(
-              color: Color(0xFFE2E8F0),
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavPill extends StatelessWidget {
-  final String label;
-  final bool active;
-
-  const _NavPill({required this.label, this.active = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: active ? const Color(0xFF28486C) : Colors.transparent,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: active ? Colors.white : const Color(0xFFB6C2D2),
-          fontSize: 13,
-          fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-        ),
-      ),
-    );
-  }
-}
 
 class _NotificationsSection extends StatefulWidget {
   const _NotificationsSection();
@@ -347,17 +234,32 @@ class _NotificationsSection extends StatefulWidget {
 }
 
 class _NotificationsSectionState extends State<_NotificationsSection> {
-  final List<bool> _visibleCards = [true, true, true];
+  final NotificationService _notifService = NotificationService();
+
+  @override
+  void initState() {
+    super.initState();
+    _notifService.addListener(_onServiceUpdate);
+  }
+
+  @override
+  void dispose() {
+    _notifService.removeListener(_onServiceUpdate);
+    super.dispose();
+  }
+
+  void _onServiceUpdate() {
+    if (mounted) setState(() {});
+  }
 
   void _dismissCard(int index) {
-    setState(() {
-      _visibleCards[index] = false;
-    });
+    _notifService.markAsRead(index);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_visibleCards.contains(true)) {
+    final activeItems = _notifService.activeHubNotifications;
+    if (activeItems.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -383,50 +285,18 @@ class _NotificationsSectionState extends State<_NotificationsSection> {
             children: [
               ...() {
                 final List<Widget> activeCards = [];
-                if (_visibleCards[0]) {
+                for (int i = 0; i < activeItems.length; i++) {
+                  final item = activeItems[i];
                   activeCards.add(
                     Expanded(
                       child: _NotificationCard(
-                        icon: Icons.calendar_today_rounded,
-                        iconColor: const Color(0xFF7C5410),
-                        iconBg: const Color(0xFFFBEAD5),
-                        title: 'Meeting confirmed',
-                        message:
-                            'Intro call with Sarah on May 6 at 2:00 PM ET. Tap to prep.',
-                        footer: 'Apr 28 · Click to prepare',
-                        onDismiss: () => _dismissCard(0),
-                      ),
-                    ),
-                  );
-                }
-                if (_visibleCards[1]) {
-                  activeCards.add(
-                    Expanded(
-                      child: _NotificationCard(
-                        icon: Icons.call_outlined,
-                        iconColor: const Color(0xFF0F6E56),
-                        iconBg: const Color(0xFFE1F5EE),
-                        title: 'Call summary available',
-                        message:
-                            'Apr 29 call with Sarah. Topics, next steps, and new material added.',
-                        footer: 'Apr 29 · Click to view',
-                        onDismiss: () => _dismissCard(1),
-                      ),
-                    ),
-                  );
-                }
-                if (_visibleCards[2]) {
-                  activeCards.add(
-                    Expanded(
-                      child: _NotificationCard(
-                        icon: Icons.description_outlined,
-                        iconColor: const Color(0xFF5B55D9),
-                        iconBg: const Color(0xFFEEEDFE),
-                        title: 'New guide added by Sarah',
-                        message:
-                            'Preparing for your first credit facility, based on your call.',
-                        footer: 'Apr 29 · In your learning path',
-                        onDismiss: () => _dismissCard(2),
+                        icon: item.icon,
+                        iconColor: item.iconColor,
+                        iconBg: item.bg,
+                        title: item.title,
+                        message: item.message,
+                        footer: item.footer,
+                        onDismiss: () => _dismissCard(i),
                       ),
                     ),
                   );
@@ -454,7 +324,7 @@ class _NotificationsSectionState extends State<_NotificationsSection> {
   }
 }
 
-class _HubMainColumn extends StatelessWidget {
+class _HubMainColumn extends StatefulWidget {
   final String companyName;
   final String founderName;
   final String industry;
@@ -478,13 +348,21 @@ class _HubMainColumn extends StatelessWidget {
   });
 
   @override
+  State<_HubMainColumn> createState() => _HubMainColumnState();
+}
+
+class _HubMainColumnState extends State<_HubMainColumn> {
+  bool _hasInteractedProducts = false;
+  bool _hasInteractedLearning = false;
+
+  @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // On mobile, show notifications inside the scroll view
-          if (trailingPanel != null) const _NotificationsSection(),
+          if (widget.trailingPanel != null) const _NotificationsSection(),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
             child: Column(
@@ -729,7 +607,7 @@ class _HubMainColumn extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Products relevant to your stage${stageLabel.isNotEmpty ? ' — $stageLabel' : ''}',
+                  'Products relevant to your stage${widget.stageLabel.isNotEmpty ? ' — ${widget.stageLabel}' : ''}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: const Color(0xFF6F675B),
                       ),
@@ -753,7 +631,9 @@ class _HubMainColumn extends StatelessWidget {
                     description:
                         'Accounts built for startups — multi-user access, sweep options, and no minimum balance.',
                     cta: 'Learn more',
-                    onTap: () => onTapProduct?.call(context, 'Business checking & operating accounts',
+                    defaultHover: !_hasInteractedProducts,
+                    onInteraction: () => setState(() => _hasInteractedProducts = true),
+                    onTap: () => widget.onTapProduct?.call(context, 'Business checking & operating accounts',
                         'Accounts built for startups — multi-user access, sweep options, and no minimum balance. Ideal for separating operating cash, reserves, and payroll across multiple entities.',
                         Icons.account_balance_wallet_outlined, const Color(0xFF1A7B99), AppThemeTokens.buttonPrimary),
                   ),
@@ -768,7 +648,8 @@ class _HubMainColumn extends StatelessWidget {
                     description:
                         'Automated sweep structures, money market access, and yield optimization tuned for your operating rhythm.',
                     cta: 'Learn more',
-                    onTap: () => onTapProduct?.call(context, 'Treasury & cash management',
+                    onInteraction: () => setState(() => _hasInteractedProducts = true),
+                    onTap: () => widget.onTapProduct?.call(context, 'Treasury & cash management',
                         'Automated sweep structures, money market access, and yield optimization. Maximize returns on idle cash with minimal operational overhead.',
                         Icons.monitor_heart_outlined, const Color(0xFF1D9E75), const Color(0xFF1D9E75)),
                   ),
@@ -783,7 +664,8 @@ class _HubMainColumn extends StatelessWidget {
                     description:
                         'Pre-approved borrowing for growth capital, bridge financing, and optionality before your next equity round.',
                     cta: 'Ask Sarah about this',
-                    onTap: () => onTapProduct?.call(context, 'Venture debt & credit facilities',
+                    onInteraction: () => setState(() => _hasInteractedProducts = true),
+                    onTap: () => widget.onTapProduct?.call(context, 'Venture debt & credit facilities',
                         'Pre-approved borrowing for growth capital, bridge financing, and optionality before your next equity round. Flexible terms tailored to your stage.',
                         Icons.attach_money_rounded, const Color(0xFF996715), const Color(0xFF996715)),
                   ),
@@ -798,7 +680,8 @@ class _HubMainColumn extends StatelessWidget {
                     description:
                         'Vendor payments, payroll integration, and multi-currency operations for global-ready startups.',
                     cta: 'Learn more',
-                    onTap: () => onTapProduct?.call(context, 'Payments & operations',
+                    onInteraction: () => setState(() => _hasInteractedProducts = true),
+                    onTap: () => widget.onTapProduct?.call(context, 'Payments & operations',
                         'Streamlined vendor payments, payroll integration, and multi-currency operations. Built for startups operating across borders.',
                         Icons.payments_outlined, const Color(0xFF7C3AED), const Color(0xFF7C3AED)),
                   ),
@@ -813,7 +696,8 @@ class _HubMainColumn extends StatelessWidget {
                     description:
                         'New market entry support, FX strategy, and cross-border payment infrastructure.',
                     cta: 'Learn more',
-                    onTap: () => onTapProduct?.call(context, 'International expansion',
+                    onInteraction: () => setState(() => _hasInteractedProducts = true),
+                    onTap: () => widget.onTapProduct?.call(context, 'International expansion',
                         'New market entry support, FX strategy, and cross-border payment infrastructure. Navigate multi-currency operations with confidence.',
                         Icons.public_outlined, const Color(0xFF0891B2), const Color(0xFF0891B2)),
                   ),
@@ -870,6 +754,8 @@ class _HubMainColumn extends StatelessWidget {
                   description:
                       'Shared by Sarah to help streamline your initial operations.',
                   meta: '8 min read · Seed · Operations',
+                  defaultHover: !_hasInteractedLearning,
+                  onInteraction: () => setState(() => _hasInteractedLearning = true),
                 ),
                 _LearningCard(
                   stripe: const Color(0xFF378ADD),
@@ -878,6 +764,7 @@ class _HubMainColumn extends StatelessWidget {
                   description:
                       'Added by Sarah based on your discussion about cash management.',
                   meta: 'May 7 · 1:00 PM ET · 45 min',
+                  onInteraction: () => setState(() => _hasInteractedLearning = true),
                 ),
                 _LearningCard(
                   stripe: const Color(0xFF1D9E75),
@@ -898,9 +785,9 @@ class _HubMainColumn extends StatelessWidget {
               ],
             ),
           ),
-          if (trailingPanel != null) ...[
+          if (widget.trailingPanel != null) ...[
             Container(height: 1, color: const Color(0xFFE7DCC8)),
-            trailingPanel!,
+            widget.trailingPanel!,
           ],
         ],
       ),
@@ -1878,20 +1765,29 @@ class _ProductCard extends StatefulWidget {
     required this.description,
     required this.cta,
     this.onTap,
+    this.defaultHover = false,
+    this.onInteraction,
   });
+
+  final bool defaultHover;
+  final VoidCallback? onInteraction;
 
   @override
   State<_ProductCard> createState() => _ProductCardState();
 }
 
 class _ProductCardState extends State<_ProductCard> {
-  bool _isHovered = false;
+  bool? _localHovered;
+  bool get _isHovered => _localHovered ?? widget.defaultHover;
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
+      onEnter: (_) {
+        widget.onInteraction?.call();
+        setState(() => _localHovered = true);
+      },
+      onExit: (_) => setState(() => _localHovered = false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: widget.onTap,
@@ -1972,20 +1868,29 @@ class _LearningCard extends StatefulWidget {
     required this.title,
     required this.meta,
     this.description,
+    this.defaultHover = false,
+    this.onInteraction,
   });
+
+  final bool defaultHover;
+  final VoidCallback? onInteraction;
 
   @override
   State<_LearningCard> createState() => _LearningCardState();
 }
 
 class _LearningCardState extends State<_LearningCard> {
-  bool _isHovered = false;
+  bool? _localHovered;
+  bool get _isHovered => _localHovered ?? widget.defaultHover;
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
+      onEnter: (_) {
+        widget.onInteraction?.call();
+        setState(() => _localHovered = true);
+      },
+      onExit: (_) => setState(() => _localHovered = false),
       cursor: SystemMouseCursors.click,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -2139,16 +2044,78 @@ class _ProspectProfileModal extends StatefulWidget {
   State<_ProspectProfileModal> createState() => _ProspectProfileModalState();
 }
 
-class _ProspectProfileModalState extends State<_ProspectProfileModal> {
+class _ProspectProfileModalState extends State<_ProspectProfileModal> with SingleTickerProviderStateMixin {
   final ConversationService _service = ConversationService();
   ProspectFullProfile? _profile;
   bool _loading = true;
   String? _error;
 
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+  bool _isVoiceTriggerHovered = false;
+  bool _isFetchingToken = false;
+
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: false);
+
+    _pulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
+    );
     _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _startSession({required bool isChatMode}) async {
+    if (widget.prospectId == null) return;
+    setState(() => _isFetchingToken = true);
+    try {
+      // In the hub, we might need a specific stage or use the current bucket
+      final stage = widget.stageBucket ?? 'super_agent';
+      final tokenResult = await _service.getVoiceToken(
+        stage,
+        prospectId: widget.prospectId!,
+      );
+
+      final Map<String, dynamic> vars = {
+        'companyName': widget.companyName,
+        'userName': widget.founderName,
+        'initial_mode': isChatMode ? 'chat' : 'voice',
+      };
+      vars.addAll(tokenResult.dynamicVariables);
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close modal
+      
+      Navigator.of(context).push(
+        NoTransitionPageRoute(
+          builder: (_) => VoicePage(
+            conversationToken: tokenResult.conversationToken,
+            stageBucket: stage,
+            prospectId: widget.prospectId,
+            dynamicVariables: vars,
+            initialMode: isChatMode ? 'chat' : 'voice',
+            onStartNew: () async => GoRouter.of(context).go('/'),
+            onGoToRelationshipHub: () async => GoRouter.of(context).go('/relationship-hub?p=${widget.prospectId}'),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to start session: $e')),
+      );
+      setState(() => _isFetchingToken = false);
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -2181,7 +2148,7 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
             children: [
               // ── Header ─────────────────────────────────────────────────────
               Container(
-                padding: const EdgeInsets.fromLTRB(24, 24, 16, 20),
+                padding: const EdgeInsets.fromLTRB(24, 22, 16, 12),
                 color: AppThemeTokens.modalHeader,
                 child: Row(
                   children: [
@@ -2230,32 +2197,8 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                         ],
                       ),
                     ),
-                    if (!_loading && _profile != null && _profile!.aiAttributes.isEmpty) ...[
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          if (widget.prospectId != null) {
-                            GoRouter.of(context).go('/?p=${Uri.encodeComponent(widget.prospectId!)}');
-                          } else {
-                            GoRouter.of(context).go('/');
-                          }
-                        },
-                        style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
-                          padding: WidgetStateProperty.all(
-                            const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          ),
-                          shape: WidgetStateProperty.all(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                          ),
-                        ),
-                        child: const Text('Start Conversation', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      ),
-                      const SizedBox(width: 14),
-                    ],
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 20),
+                      icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 24),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -2266,138 +2209,37 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
                 child: Container(
                   color: Colors.white,
                   child: _loading
-                    ? const Padding(
-                        padding: EdgeInsets.all(48),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation(AppThemeTokens.buttonPrimary),
-                            strokeWidth: 2.5,
-                          ),
-                        ),
-                      )
+                    ? const Center(child: CircularProgressIndicator())
                     : _error != null
-                        ? Padding(
-                            padding: const EdgeInsets.all(32),
-                            child: Text(
-                              _error!,
-                              style: const TextStyle(color: Colors.red, fontSize: 14),
-                              textAlign: TextAlign.center,
-                            ),
-                          )
-                        : CustomScrollView(
-                            slivers: [
-                              SliverPadding(
-                                padding: const EdgeInsets.symmetric(vertical: 20),
-                                sliver: SliverFillRemaining(
-                                  hasScrollBody: false,
-                                  child: Builder(builder: (ctx) {
-                                    final manualFormRows = [
-                                      _buildRow('Industry', _profile!.industry),
-                                      _buildRow('Stage', _profile!.companyStage),
-                                      _buildRow('Headcount', _profile!.headcount),
-                                      _buildRow(
-                                          'Incorporated', _profile!.incorporated ? 'Yes' : 'No'),
-                                      if (_profile!.selectedPrioritiesJson.isNotEmpty)
-                                        _buildRow(
-                                          'Priorities',
-                                          _profile!.selectedPrioritiesJson.entries
-                                              .where((e) => e.value)
-                                              .map((e) => e.key)
-                                              .join(', '),
-                                        ),
-                                    ];
-                                    final hasManualFormRows =
-                                        manualFormRows.any((r) => r != null);
-
-                                    final firstFormRows = [
-                                      _buildRow('Email', _profile!.email),
-                                      _buildRow('Phone', _profile!.phoneNumber),
-                                      _buildRow('Company', _profile!.companyName),
-                                      _buildRow('Conversations',
-                                          '${_profile!.conversationCount}'),
-                                      if (_profile!.invitationCode != null)
-                                        _buildRow('Invite code', _profile!.invitationCode),
-                                    ];
-                                    final hasFirstFormRows =
-                                        firstFormRows.any((r) => r != null);
-
-                                    final insightRows = _profile!.aiAttributes.isNotEmpty
-                                        ? _profile!.aiAttributes.entries
-                                            .map((e) => _buildRow(
-                                                  e.key
-                                                      .replaceAll('_', ' ')
-                                                      .split(' ')
-                                                      .map((w) => w.isEmpty
-                                                          ? ''
-                                                          : '${w[0].toUpperCase()}${w.substring(1)}')
-                                                      .join(' '),
-                                                  e.value?.toString(),
-                                                ))
-                                            .toList()
-                                        : null;
-
-                                    final companyLabel = widget.companyName.isNotEmpty
-                                        ? '${widget.companyName.toUpperCase()} DETAILS'
-                                        : 'COMPANY DETAILS';
-
-                                    return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                                          child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              if (hasManualFormRows)
-                                                Expanded(
-                                                  child:
-                                                      _buildSection(companyLabel, manualFormRows),
-                                                ),
-                                              if (hasManualFormRows && hasFirstFormRows)
-                                                const SizedBox(width: 32),
-                                              if (hasFirstFormRows)
-                                                Expanded(
-                                                  child:
-                                                      _buildSection('YOUR DETAILS', firstFormRows),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                        if (insightRows != null && insightRows.isNotEmpty) ...[
-                                          const SizedBox(height: 32),
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                                            child: _buildSentenceSection(
-                                                'What We\'ve Collected', insightRows),
-                                          ),
-                                        ],
-                                        const Spacer(),
-                                        const SizedBox(height: 48),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                                          child: _buildSectionTitle('TEAM MEMBERS'),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        SizedBox(
-                                          height: 80,
-                                          child: ListView.separated(
-                                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                                            scrollDirection: Axis.horizontal,
-                                            itemCount: _mockTeam.length,
-                                            separatorBuilder: (context, index) =>
-                                                const SizedBox(width: 16),
-                                            itemBuilder: (context, index) {
-                                              return _TeamMemberCard(
-                                                  member: _mockTeam[index]);
-                                            },
-                                          ),
-                                        ),
-                                        const SizedBox(height: 24),
-                                      ],
-                                    );
-                                  }),
+                        ? Center(child: Text(_error!))
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // ── Left: Details Form ──────────────────────
+                                    Expanded(
+                                      flex: 5,
+                                      child: SingleChildScrollView(
+                                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                                        child: _buildDetailsList(),
+                                      ),
+                                    ),
+                                    // ── Right: Voice/Chat Orb ───────────────────
+                                    Expanded(
+                                      flex: 4,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(top: 16),
+                                        child: _buildVoiceInteractionArea(),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
+                              // ── Bottom: Team Members (Full Width) ────────
+                              _buildTeamSection(),
                             ],
                           ),
                 ),
@@ -2405,6 +2247,165 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDetailsList() {
+    if (_profile == null) return const SizedBox.shrink();
+    
+    final companyLabel = widget.companyName.isNotEmpty
+        ? '${widget.companyName.toUpperCase()} DETAILS'
+        : 'COMPANY DETAILS';
+
+    final manualFormRows = [
+      _buildRow('Industry', _profile!.industry),
+      _buildRow('Stage', _profile!.companyStage),
+      _buildRow('Headcount', _profile!.headcount),
+      _buildRow('Incorporated', _profile!.incorporated ? 'Yes' : 'No'),
+      if (_profile!.selectedPrioritiesJson.isNotEmpty)
+        _buildRow(
+          'Priorities',
+          _profile!.selectedPrioritiesJson.entries
+              .where((e) => e.value)
+              .map((e) => e.key)
+              .join(', '),
+        ),
+    ];
+
+    final firstFormRows = [
+      _buildRow('Email', _profile!.email),
+      _buildRow('Phone', _profile!.phoneNumber),
+      _buildRow('Company', _profile!.companyName),
+      _buildRow('Conversations', '${_profile!.conversationCount}'),
+    ];
+
+    final insightRows = _profile!.aiAttributes.isNotEmpty
+        ? _profile!.aiAttributes.entries
+            .map((e) => _buildRow(
+                  e.key.replaceAll('_', ' ').split(' ').map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}').join(' '),
+                  e.value?.toString(),
+                ))
+            .toList()
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSection(companyLabel, manualFormRows),
+        const SizedBox(height: 32),
+        _buildSection('YOUR DETAILS', firstFormRows),
+        if (insightRows != null && insightRows.isNotEmpty) ...[
+          const SizedBox(height: 32),
+          _buildSentenceSection('What We\'ve Collected', insightRows),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildVoiceInteractionArea() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        MouseRegion(
+          cursor: _isFetchingToken ? SystemMouseCursors.basic : SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _isVoiceTriggerHovered = true),
+          onExit: (_) => setState(() => _isVoiceTriggerHovered = false),
+          child: GestureDetector(
+            onTap: _isFetchingToken ? null : () => _startSession(isChatMode: false),
+            child: SizedBox(
+              height: 200,
+              width: 200,
+              child: AnimatedBuilder(
+                animation: _pulseAnimation,
+                builder: (ctx, child) {
+                  final color = _isVoiceTriggerHovered ? AppThemeTokens.buttonPrimaryHover : AppThemeTokens.buttonPrimary;
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      for (int i = 0; i < 3; i++)
+                        Container(
+                          width: 110 + (100 * ((_pulseAnimation.value + (i * 0.33)) % 1.0)),
+                          height: 110 + (100 * ((_pulseAnimation.value + (i * 0.33)) % 1.0)),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppThemeTokens.buttonPrimary.withOpacity(0.3 * (1.0 - ((_pulseAnimation.value + (i * 0.33)) % 1.0))),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      Container(
+                        width: 110,
+                        height: 110,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: color.withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            )
+                          ],
+                        ),
+                        child: const Icon(Icons.graphic_eq_rounded, color: Colors.white, size: 48),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        const Text(
+          'Tap the Orb to start conversation',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppThemeTokens.brandInk),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          '~10 min · Nova asks, you answer',
+          style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+        ),
+        const SizedBox(height: 48),
+        if (_isFetchingToken)
+          const CircularProgressIndicator(color: AppThemeTokens.buttonPrimary)
+        else
+          ElevatedButton(
+            onPressed: () => _startSession(isChatMode: true),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: const Text("Let's Chat", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTeamSection() {
+    return Container(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: _buildSectionTitle('TEAM MEMBERS'),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 80,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              scrollDirection: Axis.horizontal,
+              itemCount: _mockTeam.length,
+              separatorBuilder: (ctx, i) => const SizedBox(width: 16),
+              itemBuilder: (ctx, i) => _TeamMemberCard(member: _mockTeam[i]),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2526,6 +2527,9 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> {
   }
 }
 
+
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Product Detail Modal
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2629,343 +2633,6 @@ class _ProductDetailModal extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavbarNotificationIcon extends StatefulWidget {
-  const _NavbarNotificationIcon();
-
-  @override
-  State<_NavbarNotificationIcon> createState() => _NavbarNotificationIconState();
-}
-
-class _NavbarNotificationIconState extends State<_NavbarNotificationIcon> {
-  final LayerLink _link = LayerLink();
-  OverlayEntry? _overlayEntry;
-  bool _isHovered = false;
-  bool _isExpanded = false;
-  Timer? _hideTimer;
-
-  List<Map<String, dynamic>> _notifications = [
-    {
-      'title': 'Sarah reviewed your guide',
-      'time': '2 hours ago',
-      'icon': Icons.description_outlined,
-      'bg': const Color(0xFFEEEDFE),
-      'iconColor': const Color(0xFF5B55D9)
-    },
-    {
-      'title': 'New message from Alex',
-      'time': '5 hours ago',
-      'icon': Icons.message_outlined,
-      'bg': const Color(0xFFE1F5EE),
-      'iconColor': const Color(0xFF0F6E56)
-    },
-    {
-      'title': 'Upcoming meeting: Q3 Review',
-      'time': '1 day ago',
-      'icon': Icons.calendar_today_rounded,
-      'bg': const Color(0xFFFBEAD5),
-      'iconColor': const Color(0xFF7C5410)
-    },
-  ];
-
-  final List<Map<String, dynamic>> _extraNotifications = [
-    {
-      'title': 'New document shared: Pitch deck',
-      'time': '2 days ago',
-      'icon': Icons.file_present_rounded,
-      'bg': const Color(0xFFE1F5EE),
-      'iconColor': const Color(0xFF0F6E56)
-    },
-    {
-      'title': 'Your account was verified',
-      'time': '3 days ago',
-      'icon': Icons.verified_user_outlined,
-      'bg': const Color(0xFFEEEDFE),
-      'iconColor': const Color(0xFF5B55D9)
-    },
-    {
-      'title': 'Welcome to Innovation Economy',
-      'time': '4 days ago',
-      'icon': Icons.auto_awesome_outlined,
-      'bg': const Color(0xFFFBEAD5),
-      'iconColor': const Color(0xFF7C5410)
-    },
-    {
-      'title': 'Weekly insight report ready',
-      'time': '1 week ago',
-      'icon': Icons.bar_chart_rounded,
-      'bg': const Color(0xFFE1F5EE),
-      'iconColor': const Color(0xFF0F6E56)
-    },
-    {
-      'title': 'Security alert: New login',
-      'time': '1 week ago',
-      'icon': Icons.security_rounded,
-      'bg': const Color(0xFFFEE2E2),
-      'iconColor': const Color(0xFFB91C1C)
-    },
-  ];
-
-  void _showOverlay() {
-    if (_overlayEntry != null) return;
-    _overlayEntry = OverlayEntry(
-      builder: (context) => Stack(
-        children: [
-          Positioned(
-            child: CompositedTransformFollower(
-              link: _link,
-              showWhenUnlinked: false,
-              offset: const Offset(-250, 40),
-              child: MouseRegion(
-                onEnter: (_) {
-                  _hideTimer?.cancel();
-                  setState(() {
-                    _isHovered = true;
-                  });
-                },
-                onExit: (_) {
-                  setState(() {
-                    _isHovered = false;
-                    _startHideTimer();
-                  });
-                },
-                child: Material(
-                  color: Colors.transparent,
-                  child: Container(
-                    width: 320,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: const BoxDecoration(
-                            border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-                          ),
-                          child: Row(
-                            children: [
-                              const Text(
-                                'Notifications',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                  color: Color(0xFF202020),
-                                ),
-                              ),
-                              const Spacer(),
-                              if (_notifications.isNotEmpty)
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _notifications = [];
-                                      _isExpanded = false;
-                                      _hideOverlay();
-                                      _showOverlay();
-                                    });
-                                  },
-                                  child: const Text(
-                                    'Mark all as read',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF1A7B99),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        if (_notifications.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 32),
-                            child: Center(
-                              child: Text(
-                                'No notifications now',
-                                style: TextStyle(color: Color(0xFF8D8578), fontSize: 13),
-                              ),
-                            ),
-                          )
-                        else ...[
-                          Flexible(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxHeight: 400),
-                              child: ListView(
-                                shrinkWrap: true,
-                                padding: EdgeInsets.zero,
-                                children: [
-                                  ..._notifications
-                                      .map((n) => _buildDropdownItem(n['title'],
-                                          n['time'], n['icon'], n['bg'], n['iconColor']))
-                                      .toList(),
-                                  if (_isExpanded)
-                                    ..._extraNotifications
-                                        .map((n) => _buildDropdownItem(n['title'],
-                                            n['time'], n['icon'], n['bg'], n['iconColor']))
-                                        .toList(),
-                                ],
-                              ),
-                            ),
-                          ),
-                          if (!_isExpanded)
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _isExpanded = true;
-                                  _hideOverlay();
-                                  _showOverlay();
-                                });
-                              },
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                decoration: const BoxDecoration(
-                                  border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    'View all notifications',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Color(0xFF1A7B99),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-    Overlay.of(context).insert(_overlayEntry!);
-  }
-
-  Widget _buildDropdownItem(String title, String time, IconData icon, Color bg, Color iconColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, size: 16, color: iconColor),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF202020)),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  time,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF8D8578)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _startHideTimer() {
-    _hideTimer?.cancel();
-    _hideTimer = Timer(const Duration(milliseconds: 150), () {
-      if (!_isHovered) {
-        _hideOverlay();
-      }
-    });
-  }
-
-  void _hideOverlay() {
-    _hideTimer?.cancel();
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-  }
-
-  @override
-  void dispose() {
-    _hideTimer?.cancel();
-    _hideOverlay();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return CompositedTransformTarget(
-      link: _link,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) {
-          _hideTimer?.cancel();
-          setState(() {
-            _isHovered = true;
-            _showOverlay();
-          });
-        },
-        onExit: (_) {
-          setState(() {
-            _isHovered = false;
-            _startHideTimer();
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: _isHovered
-                ? const Color(0xFFF3F4F6).withOpacity(0.12)
-                : Colors.transparent,
-            shape: BoxShape.circle,
-          ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Icons.notifications_none_rounded, color: Color(0xFFE2E8F0), size: 20),
-              if (_notifications.isNotEmpty)
-                Positioned(
-                  right: -1,
-                  top: -1,
-                  child: Container(
-                    width: 7,
-                    height: 7,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF87171),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF0F172A), width: 1.5),
-                    ),
-                  ),
-                ),
-            ],
           ),
         ),
       ),
