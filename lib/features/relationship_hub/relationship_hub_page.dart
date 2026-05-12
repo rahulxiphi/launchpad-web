@@ -43,6 +43,8 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
   final ConversationService _service = ConversationService();
   ProspectInitResult? _prospect;
   bool _loading = false;
+  List<ProductPublic> _products = [];
+  bool _loadingProducts = false;
 
   static const _defaultCompany = 'Launchpad';
   static const _defaultFounder = 'Aditya Kumar';
@@ -51,6 +53,19 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
   void initState() {
     super.initState();
     _hydrateProspect();
+    _fetchProducts();
+  }
+
+  Future<void> _fetchProducts() async {
+    setState(() => _loadingProducts = true);
+    try {
+      final products = await _service.listProducts();
+      if (mounted) setState(() => _products = products);
+    } catch (e) {
+      debugPrint('Error fetching products: $e');
+    } finally {
+      if (mounted) setState(() => _loadingProducts = false);
+    }
   }
 
   Future<void> _hydrateProspect() async {
@@ -184,6 +199,7 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
                                     prospectId: widget.prospectId,
                                     email: _userEmail,
                                     onTapProduct: _showProductModal,
+                                    products: _products,
                                   )),
                                   SizedBox(
                                     width: 404,
@@ -209,6 +225,7 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
                           priorities: _priorities,
                           prospectId: widget.prospectId,
                           email: _userEmail,
+                          products: _products,
                           trailingPanel: _AiGuidePanel(
                             prospectId: widget.prospectId,
                             founderName: _founderName,
@@ -335,7 +352,9 @@ class _HubMainColumn extends StatefulWidget {
   final String? prospectId;
   final String email;
   final Widget? trailingPanel;
-  final void Function(BuildContext context, String title, String description, IconData icon, Color tint, Color iconColor)? onTapProduct;
+  final void Function(BuildContext context, ProductPublic product)? onTapProduct;
+
+  final List<ProductPublic> products;
 
   const _HubMainColumn({
     required this.companyName,
@@ -343,6 +362,7 @@ class _HubMainColumn extends StatefulWidget {
     required this.industry,
     required this.stageLabel,
     required this.priorities,
+    required this.products,
     this.prospectId,
     this.email = '',
     this.trailingPanel,
@@ -356,6 +376,32 @@ class _HubMainColumn extends StatefulWidget {
 class _HubMainColumnState extends State<_HubMainColumn> {
   bool _hasInteractedProducts = false;
   bool _hasInteractedLearning = false;
+
+  IconData _getIconForCategory(String category) {
+    final c = category.toLowerCase();
+    if (c.contains('payment')) return Icons.payments_outlined;
+    if (c.contains('treasury')) return Icons.monitor_heart_outlined;
+    if (c.contains('card')) return Icons.credit_card_outlined;
+    if (c.contains('international') || c.contains('cross-currency'))
+      return Icons.public_outlined;
+    if (c.contains('banking')) return Icons.account_balance_wallet_outlined;
+    if (c.contains('credit') || c.contains('lending'))
+      return Icons.attach_money_rounded;
+    return Icons.category_outlined;
+  }
+
+  Color _getTintForCategory(String category) {
+    final c = category.toLowerCase();
+    if (c.contains('payment')) return const Color(0xFF7C3AED);
+    if (c.contains('treasury')) return const Color(0xFF1D9E75);
+    if (c.contains('card')) return const Color(0xFF1A7B99);
+    if (c.contains('international') || c.contains('cross-currency'))
+      return const Color(0xFF0891B2);
+    if (c.contains('banking')) return const Color(0xFF1A7B99);
+    if (c.contains('credit') || c.contains('lending'))
+      return const Color(0xFF996715);
+    return const Color(0xFF64748B);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -622,89 +668,25 @@ class _HubMainColumnState extends State<_HubMainColumn> {
             child: Wrap(
               spacing: 14,
               runSpacing: 14,
-              children: [
-                SizedBox(
+              children: widget.products.map((product) {
+                final icon = _getIconForCategory(product.category);
+                final tint = _getTintForCategory(product.category);
+
+                return SizedBox(
                   width: 320,
                   child: _ProductCard(
-                    icon: Icons.account_balance_wallet_outlined,
-                    tint: const Color(0xFF1A7B99),
-                    iconColor: AppThemeTokens.buttonPrimary,
-                    title: 'Business checking & operating accounts',
-                    description:
-                        'Accounts built for startups — multi-user access, sweep options, and no minimum balance.',
-                    cta: 'Learn more',
-                    defaultHover: !_hasInteractedProducts,
-                    onInteraction: () => setState(() => _hasInteractedProducts = true),
-                    onTap: () => widget.onTapProduct?.call(context, 'Business checking & operating accounts',
-                        'Accounts built for startups — multi-user access, sweep options, and no minimum balance. Ideal for separating operating cash, reserves, and payroll across multiple entities.',
-                        Icons.account_balance_wallet_outlined, const Color(0xFF1A7B99), AppThemeTokens.buttonPrimary),
+                    icon: icon,
+                    tint: tint,
+                    iconColor: tint,
+                    title: product.name,
+                    description: product.shortDescription ?? product.description,
+                    cta: 'By ${product.provider?.companyName ?? 'J.P. Morgan'}',
+                    onInteraction: () =>
+                        setState(() => _hasInteractedProducts = true),
+                    onTap: () => widget.onTapProduct?.call(context, product),
                   ),
-                ),
-                SizedBox(
-                  width: 320,
-                  child: _ProductCard(
-                    icon: Icons.monitor_heart_outlined,
-                    tint: const Color(0xFF1D9E75),
-                    iconColor: const Color(0xFF1D9E75),
-                    title: 'Treasury & cash management',
-                    description:
-                        'Automated sweep structures, money market access, and yield optimization tuned for your operating rhythm.',
-                    cta: 'Learn more',
-                    onInteraction: () => setState(() => _hasInteractedProducts = true),
-                    onTap: () => widget.onTapProduct?.call(context, 'Treasury & cash management',
-                        'Automated sweep structures, money market access, and yield optimization. Maximize returns on idle cash with minimal operational overhead.',
-                        Icons.monitor_heart_outlined, const Color(0xFF1D9E75), const Color(0xFF1D9E75)),
-                  ),
-                ),
-                SizedBox(
-                  width: 320,
-                  child: _ProductCard(
-                    icon: Icons.attach_money_rounded,
-                    tint: const Color(0xFF996715),
-                    iconColor: const Color(0xFF996715),
-                    title: 'Venture debt & credit facilities',
-                    description:
-                        'Pre-approved borrowing for growth capital, bridge financing, and optionality before your next equity round.',
-                    cta: 'Ask Sarah about this',
-                    onInteraction: () => setState(() => _hasInteractedProducts = true),
-                    onTap: () => widget.onTapProduct?.call(context, 'Venture debt & credit facilities',
-                        'Pre-approved borrowing for growth capital, bridge financing, and optionality before your next equity round. Flexible terms tailored to your stage.',
-                        Icons.attach_money_rounded, const Color(0xFF996715), const Color(0xFF996715)),
-                  ),
-                ),
-                SizedBox(
-                  width: 320,
-                  child: _ProductCard(
-                    icon: Icons.payments_outlined,
-                    tint: const Color(0xFF7C3AED),
-                    iconColor: const Color(0xFF7C3AED),
-                    title: 'Payments & operations',
-                    description:
-                        'Vendor payments, payroll integration, and multi-currency operations for global-ready startups.',
-                    cta: 'Learn more',
-                    onInteraction: () => setState(() => _hasInteractedProducts = true),
-                    onTap: () => widget.onTapProduct?.call(context, 'Payments & operations',
-                        'Streamlined vendor payments, payroll integration, and multi-currency operations. Built for startups operating across borders.',
-                        Icons.payments_outlined, const Color(0xFF7C3AED), const Color(0xFF7C3AED)),
-                  ),
-                ),
-                SizedBox(
-                  width: 320,
-                  child: _ProductCard(
-                    icon: Icons.public_outlined,
-                    tint: const Color(0xFF0891B2),
-                    iconColor: const Color(0xFF0891B2),
-                    title: 'International expansion',
-                    description:
-                        'New market entry support, FX strategy, and cross-border payment infrastructure.',
-                    cta: 'Learn more',
-                    onInteraction: () => setState(() => _hasInteractedProducts = true),
-                    onTap: () => widget.onTapProduct?.call(context, 'International expansion',
-                        'New market entry support, FX strategy, and cross-border payment infrastructure. Navigate multi-currency operations with confidence.',
-                        Icons.public_outlined, const Color(0xFF0891B2), const Color(0xFF0891B2)),
-                  ),
-                ),
-              ],
+                );
+              }).toList(),
             ),
           ),
           Container(height: 1, color: const Color(0xFFE7DCC8)),
@@ -2011,15 +1993,11 @@ class _TinyBadge extends StatelessWidget {
   }
 }
 
-  void _showProductModal(BuildContext context, String title, String description, IconData icon, Color tint, Color iconColor) {
+  void _showProductModal(BuildContext context, ProductPublic product) {
     showDialog(
       context: context,
       builder: (_) => _ProductDetailModal(
-        icon: icon,
-        tint: tint,
-        iconColor: iconColor,
-        title: title,
-        description: description,
+        product: product,
       ),
     );
   }
@@ -2538,33 +2516,40 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> with Singl
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ProductDetailModal extends StatelessWidget {
-  final IconData icon;
-  final Color tint;
-  final Color iconColor;
-  final String title;
-  final String description;
+  final ProductPublic product;
 
-  const _ProductDetailModal({
-    required this.icon,
-    required this.tint,
-    required this.iconColor,
-    required this.title,
-    required this.description,
+  _ProductDetailModal({
+    required this.product,
   });
+
+  IconData _getIconForCategory(String category) {
+    final c = category.toLowerCase();
+    if (c.contains('payment')) return Icons.payments_outlined;
+    if (c.contains('treasury')) return Icons.monitor_heart_outlined;
+    if (c.contains('card')) return Icons.credit_card_outlined;
+    if (c.contains('international') || c.contains('cross-currency'))
+      return Icons.public_outlined;
+    if (c.contains('banking')) return Icons.account_balance_wallet_outlined;
+    if (c.contains('credit') || c.contains('lending'))
+      return Icons.attach_money_rounded;
+    return Icons.category_outlined;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final icon = _getIconForCategory(product.category);
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 560),
+      child: Container(
+        width: 840,
+        height: 680,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Container(
-            color: Colors.white.withOpacity(0.96),
+            color: Colors.white,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 // ── Header ─────────────────────────────────────────
                 Container(
@@ -2583,61 +2568,235 @@ class _ProductDetailModal extends StatelessWidget {
                       ),
                       const SizedBox(width: 14),
                       Expanded(
-                        child: Text(
-                          title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              product.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            if (product.provider != null) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Text(
+                                    '${product.provider!.companyName}${product.provider!.hqLocation != null ? ' • ${product.provider!.hqLocation}' : ''}',
+                                    style: const TextStyle(
+                                      color: Color(0xFFB99C4C),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  if (product.provider!.websiteUrl != null) ...[
+                                    const SizedBox(width: 8),
+                                    MouseRegion(
+                                      cursor: SystemMouseCursors.click,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          html.window.open(product.provider!.websiteUrl!, '_blank');
+                                        },
+                                        child: const Icon(
+                                          Icons.open_in_new_rounded,
+                                          color: Color(0xFFB99C4C),
+                                          size: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 20),
+                        icon: const Icon(Icons.close_rounded,
+                            color: Colors.white60, size: 24),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
                   ),
                 ),
                 // ── Body ───────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        description,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF374151),
-                          height: 1.6,
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton.icon(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.auto_awesome, size: 18, color: AppThemeTokens.goldAccent),
-                          label: const Text('Learn More', style: TextStyle(fontWeight: FontWeight.bold)),
-                          style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
-                            shape: WidgetStateProperty.all(
-                              RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionTitle('CLASSIFICATION'),
+                        const SizedBox(height: 12),
+                        Text(
+                          '${product.category}${product.subcategory != null ? ' • ${product.subcategory}' : ''}',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Color(0xFF334155),
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 32),
+                        const Text(
+                          'OVERVIEW',
+                          style: TextStyle(
+                            fontSize: 12,
+                            letterSpacing: 1.2,
+                            color: Color(0xFF64748B),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          product.description,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF1E293B),
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        if (product.features.isNotEmpty) ...[
+                          _buildSectionTitle('KEY FEATURES'),
+                          const SizedBox(height: 12),
+                          ...product.features
+                              .map((f) => _buildBulletPoint(f.toString())),
+                          const SizedBox(height: 32),
+                        ],
+                        if (product.benefits.isNotEmpty) ...[
+                          _buildSectionTitle('BENEFITS'),
+                          const SizedBox(height: 12),
+                          ...product.benefits.map((b) => _buildBulletPoint(b)),
+                          const SizedBox(height: 32),
+                        ],
+                        if (product.pricingDetails != null) ...[
+                          _buildSectionTitle('PRICING'),
+                          const SizedBox(height: 12),
+                          Text(
+                            product.pricingDetails!,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: Color(0xFF334155),
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                        ],
+                        if (product.eligibilityCriteria.isNotEmpty) ...[
+                          _buildSectionTitle('ELIGIBILITY'),
+                          const SizedBox(height: 12),
+                          ...product.eligibilityCriteria.entries.map((e) =>
+                              _buildBulletPoint('${e.key}: ${e.value}')),
+                          const SizedBox(height: 32),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 12,
+        letterSpacing: 1.2,
+        color: Color(0xFF64748B),
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+
+  Widget _buildBulletPoint(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Icon(Icons.circle, size: 6, color: Color(0xFF94A3B8)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 15,
+                color: Color(0xFF334155),
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProviderCard(ProviderPublic provider) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          if (provider.logoUrl != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                provider.logoUrl!,
+                width: 48,
+                height: 48,
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.business, size: 48, color: Color(0xFF94A3B8)),
+              ),
+            )
+          else
+            const Icon(Icons.business, size: 48, color: Color(0xFF94A3B8)),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  provider.companyName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+                if (provider.hqLocation != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    provider.hqLocation!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (provider.websiteUrl != null)
+            IconButton(
+              icon: const Icon(Icons.open_in_new_rounded,
+                  color: Color(0xFF94A3B8), size: 20),
+              onPressed: () {
+                html.window.open(provider.websiteUrl!, '_blank');
+              },
+            ),
+        ],
       ),
     );
   }

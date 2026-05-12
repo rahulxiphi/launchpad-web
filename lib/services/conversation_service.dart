@@ -156,6 +156,100 @@ class ChatHistoryResult {
 }
 
 /// Combined profile: form data + AI-collected attributes from ElevenLabs conversations.
+class ProviderPublic {
+  final String providerId;
+  final String companyName;
+  final String? description;
+  final String? websiteUrl;
+  final String? hqLocation;
+  final int? foundedYear;
+  final String? logoUrl;
+
+  ProviderPublic({
+    required this.providerId,
+    required this.companyName,
+    this.description,
+    this.websiteUrl,
+    this.hqLocation,
+    this.foundedYear,
+    this.logoUrl,
+  });
+
+  factory ProviderPublic.fromJson(Map<String, dynamic> json) {
+    return ProviderPublic(
+      providerId: json['provider_id'] as String,
+      companyName: json['company_name'] as String,
+      description: json['description'] as String?,
+      websiteUrl: json['website_url'] as String?,
+      hqLocation: json['hq_location'] as String?,
+      foundedYear: json['founded_year'] as int?,
+      logoUrl: json['logo_url'] as String?,
+    );
+  }
+}
+
+class ProductPublic {
+  final String productId;
+  final String name;
+  final String category;
+  final String? subcategory;
+  final String description;
+  final String? shortDescription;
+  final Map<String, dynamic> eligibilityCriteria;
+  final List<String> stageFit;
+  final List<String> targetIndustries;
+  final String? pricingModel;
+  final String? pricingDetails;
+  final List<dynamic> features;
+  final List<String> benefits;
+  final String? integrationInfo;
+  final String? signupUrl;
+  final ProviderPublic? provider;
+
+  ProductPublic({
+    required this.productId,
+    required this.name,
+    required this.category,
+    this.subcategory,
+    required this.description,
+    this.shortDescription,
+    this.eligibilityCriteria = const {},
+    this.stageFit = const [],
+    this.targetIndustries = const [],
+    this.pricingModel,
+    this.pricingDetails,
+    this.features = const [],
+    this.benefits = const [],
+    this.integrationInfo,
+    this.signupUrl,
+    this.provider,
+  });
+
+  factory ProductPublic.fromJson(Map<String, dynamic> json) {
+    return ProductPublic(
+      productId: json['product_id'] as String,
+      name: json['name'] as String,
+      category: json['category'] as String,
+      subcategory: json['subcategory'] as String?,
+      description: json['description'] as String,
+      shortDescription: json['short_description'] as String?,
+      eligibilityCriteria:
+          Map<String, dynamic>.from(json['eligibility_criteria'] ?? {}),
+      stageFit: List<String>.from(json['stage_fit'] ?? []),
+      targetIndustries: List<String>.from(json['target_industries'] ?? []),
+      pricingModel: json['pricing_model'] as String?,
+      pricingDetails: json['pricing_details'] as String?,
+      features: List<dynamic>.from(json['features'] ?? []),
+      benefits: List<String>.from(json['benefits'] ?? []),
+      integrationInfo: json['integration_info'] as String?,
+      signupUrl: json['signup_url'] as String?,
+      provider: json['provider'] != null
+          ? ProviderPublic.fromJson(json['provider'])
+          : null,
+    );
+  }
+}
+
 class ProspectFullProfile {
   final String prospectId;
   final String? email;
@@ -514,6 +608,12 @@ class ConversationService {
       total: data['total'] as int? ?? 0,
       hasMore: data['has_more'] as bool? ?? false,
     );
+  }
+
+  Future<List<ProductPublic>> listProducts() async {
+    final response = await _dio.get('${ApiConfig.baseUrl}/conversations/products');
+    final data = response.data['products'] as List;
+    return data.map((json) => ProductPublic.fromJson(json)).toList();
   }
 }
 
