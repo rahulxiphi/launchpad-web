@@ -676,9 +676,11 @@ class _HubMainColumnState extends State<_HubMainColumn> {
               spacing: 14,
               runSpacing: 14,
               children: [
-                ...widget.products
-                    .take(_showAllProducts ? widget.products.length : 5)
-                    .map((product) {
+                ...(() {
+                  final sorted = List<ProductPublic>.from(widget.products)
+                    ..sort((a, b) => (b.matchScore ?? 0).compareTo(a.matchScore ?? 0));
+                  return sorted.take(_showAllProducts ? sorted.length : 5);
+                })().map((product) {
                   final icon = _getIconForCategory(product.category);
                   final tint = _getTintForCategory(product.category);
 
@@ -1831,6 +1833,7 @@ class _ProductCardState extends State<_ProductCard> {
   bool _isMatchHovered = false;
   bool _showReasoning = false;
   final _overlayController = OverlayPortalController();
+  final GlobalKey _cardChipKey = GlobalKey();
   
   bool get _isHovered => _localHovered ?? widget.defaultHover;
 
@@ -1937,6 +1940,7 @@ class _ProductCardState extends State<_ProductCard> {
                             child: GestureDetector(
                               onTap: isMobile ? _toggleReasoning : null,
                               child: Container(
+                                key: _cardChipKey,
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF1D9E75).withOpacity(0.1),
@@ -2003,33 +2007,35 @@ class _ProductCardState extends State<_ProductCard> {
     
     return LayoutBuilder(
       builder: (context, constraints) {
-        // We need the card's position to show the overlay near it
-        final renderBox = this.context.findRenderObject() as RenderBox?;
+        // We need the chip's position to show the overlay near it
+        final renderBox = _cardChipKey.currentContext?.findRenderObject() as RenderBox?;
         if (renderBox == null) return const SizedBox.shrink();
         
         final offset = renderBox.localToGlobal(Offset.zero);
+        final chipSize = renderBox.size;
         
         return Stack(
           children: [
             Positioned(
-              left: offset.dx + 20,
-              top: offset.dy + 50, // Below the match percentage
+              left: offset.dx - (280 - chipSize.width),
+              top: offset.dy + chipSize.height + 8,
               width: 280,
-              child: Material(
+              child: IgnorePointer(
+                child: Material(
                 color: Colors.transparent,
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppThemeTokens.modalHeader,
+                    color: const Color(0xFFF0FDFA),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withOpacity(0.08),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
                     ],
-                    border: Border.all(color: Colors.white.withOpacity(0.12), width: 1.5),
+                    border: Border.all(color: const Color(0xFFCCFBF1), width: 1.5),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2040,7 +2046,7 @@ class _ProductCardState extends State<_ProductCard> {
                           const Icon(
                             Icons.psychology_outlined,
                             size: 16,
-                            color: AppThemeTokens.goldAccent,
+                            color: Color(0xFF1D9E75),
                           ),
                           const SizedBox(width: 8),
                           const Text(
@@ -2048,7 +2054,7 @@ class _ProductCardState extends State<_ProductCard> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w800,
-                              color: AppThemeTokens.goldAccent,
+                              color: Color(0xFF1D9E75),
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -2056,7 +2062,7 @@ class _ProductCardState extends State<_ProductCard> {
                           if (_showReasoning)
                             GestureDetector(
                               onTap: _toggleReasoning,
-                              child: const Icon(Icons.close, color: Colors.white54, size: 14),
+                              child: const Icon(Icons.close, color: Color(0xFF1D9E75), size: 14),
                             ),
                         ],
                       ),
@@ -2065,7 +2071,7 @@ class _ProductCardState extends State<_ProductCard> {
                         widget.matchReasoning!,
                         style: const TextStyle(
                           fontSize: 13,
-                          color: Color(0xFFE2E8F0),
+                          color: Color(0xFF0F766E),
                           height: 1.5,
                         ),
                       ),
@@ -2074,6 +2080,7 @@ class _ProductCardState extends State<_ProductCard> {
                 ),
               ),
             ),
+          ),
           ],
         );
       },
@@ -2815,12 +2822,40 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> with Singl
 // Product Detail Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ProductDetailModal extends StatelessWidget {
+class _ProductDetailModal extends StatefulWidget {
   final ProductPublic product;
 
   _ProductDetailModal({
     required this.product,
   });
+
+  @override
+  State<_ProductDetailModal> createState() => _ProductDetailModalState();
+}
+
+class _ProductDetailModalState extends State<_ProductDetailModal> {
+  final _overlayController = OverlayPortalController();
+  final GlobalKey _modalChipKey = GlobalKey();
+
+  void _showOverlay() {
+    if (_overlayController.isShowing) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _overlayController.show();
+    });
+  }
+
+  void _hideOverlay() {
+    if (!_overlayController.isShowing) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _overlayController.hide();
+    });
+  }
+
+  void _toggleOverlay() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _overlayController.toggle();
+    });
+  }
 
   IconData _getIconForCategory(String category) {
     final c = category.toLowerCase();
@@ -2837,6 +2872,7 @@ class _ProductDetailModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final product = widget.product;
     final icon = _getIconForCategory(product.category);
 
     return Dialog(
@@ -2915,22 +2951,37 @@ class _ProductDetailModal extends StatelessWidget {
                       ),
                       if (product.matchScore != null) ...[
                         const SizedBox(width: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1D9E75).withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFF1D9E75).withOpacity(0.3)),
-                          ),
-                          child: Text(
-                            '${(product.matchScore! * 100).toInt()}% match',
-                            style: const TextStyle(
-                              color: Color(0xFF34D399),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
+                        (() {
+                          final bool isMobile = MediaQuery.of(context).size.width < 768;
+                          return OverlayPortal(
+                            controller: _overlayController,
+                            overlayChildBuilder: (context) => _buildReasoningOverlay(context),
+                            child: MouseRegion(
+                              onEnter: (_) => _showOverlay(),
+                              onExit: (_) => _hideOverlay(),
+                              child: GestureDetector(
+                                onTap: _toggleOverlay,
+                                child: Container(
+                                  key: _modalChipKey,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1D9E75).withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFF1D9E75).withOpacity(0.3)),
+                                  ),
+                                  child: Text(
+                                    '${(product.matchScore! * 100).toInt()}% match',
+                                    style: const TextStyle(
+                                      color: Color(0xFF34D399),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        })(),
                       ],
                       const SizedBox(width: 8),
                       IconButton(
@@ -2944,106 +2995,67 @@ class _ProductDetailModal extends StatelessWidget {
                 // ── Body ───────────────────────────────────────────
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(32),
+                    padding: const EdgeInsets.fromLTRB(32, 12, 32, 32),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSectionTitle('CLASSIFICATION'),
-                        const SizedBox(height: 12),
-                        Text(
-                          '${product.category}${product.subcategory != null ? ' • ${product.subcategory}' : ''}',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            color: Color(0xFF334155),
+                        _buildDropdownSection(
+                          title: 'OVERVIEW',
+                          initiallyExpanded: true,
+                          content: Text(
+                            product.description,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF1E293B),
+                              height: 1.5,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 32),
-                        if (product.matchReasoning != null) ...[
-                          _buildSectionTitle('RECOMMENDATION REASONING'),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF0FDFA),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFCCFBF1)),
+                        
+                        if (product.features.isNotEmpty)
+                          _buildDropdownSection(
+                            title: 'KEY FEATURES',
+                            content: _buildColumnList(product.features.map((f) => f.toString()).toList()),
+                          ),
+                        
+                        if (product.benefits.isNotEmpty)
+                          _buildDropdownSection(
+                            title: 'BENEFITS',
+                            content: _buildColumnList(product.benefits),
+                          ),
+                        
+                        if (product.pricingDetails != null)
+                          _buildDropdownSection(
+                            title: 'PRICING',
+                            content: Text(
+                              product.pricingDetails!,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                color: Color(0xFF334155),
+                              ),
                             ),
-                            child: Row(
+                          ),
+                        
+                        if (product.eligibilityCriteria.isNotEmpty)
+                          _buildDropdownSection(
+                            title: 'ELIGIBILITY',
+                            content: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Icon(Icons.psychology_outlined, color: Color(0xFF1D9E75), size: 20),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    product.matchReasoning!,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      color: Color(0xFF0F766E),
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              children: product.eligibilityCriteria.entries.map((e) =>
+                                  _buildBulletPoint('${e.key}: ${e.value}')).toList(),
                             ),
                           ),
-                          const SizedBox(height: 32),
-                        ],
-                        const Text(
-                          'OVERVIEW',
-                          style: TextStyle(
-                            fontSize: 12,
-                            letterSpacing: 1.2,
-                            color: Color(0xFF64748B),
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          product.description,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF1E293B),
-                            height: 1.5,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        if (product.features.isNotEmpty) ...[
-                          _buildSectionTitle('KEY FEATURES'),
-                          const SizedBox(height: 12),
-                          ...product.features
-                              .map((f) => _buildBulletPoint(f.toString())),
-                          const SizedBox(height: 32),
-                        ],
-                        if (product.benefits.isNotEmpty) ...[
-                          _buildSectionTitle('BENEFITS'),
-                          const SizedBox(height: 12),
-                          ...product.benefits.map((b) => _buildBulletPoint(b)),
-                          const SizedBox(height: 32),
-                        ],
-                        if (product.pricingDetails != null) ...[
-                          _buildSectionTitle('PRICING'),
-                          const SizedBox(height: 12),
-                          Text(
-                            product.pricingDetails!,
+
+                        _buildDropdownSection(
+                          title: 'CLASSIFICATION',
+                          content: Text(
+                            '${product.category}${product.subcategory != null ? ' • ${product.subcategory}' : ''}',
                             style: const TextStyle(
                               fontSize: 15,
                               color: Color(0xFF334155),
                             ),
                           ),
-                          const SizedBox(height: 32),
-                        ],
-                        if (product.eligibilityCriteria.isNotEmpty) ...[
-                          _buildSectionTitle('ELIGIBILITY'),
-                          const SizedBox(height: 12),
-                          ...product.eligibilityCriteria.entries.map((e) =>
-                              _buildBulletPoint('${e.key}: ${e.value}')),
-                          const SizedBox(height: 32),
-                        ],
-                        if (product.provider != null) ...[
-                          _buildSectionTitle('PROVIDER'),
-                          const SizedBox(height: 12),
-                          _buildProviderCard(product.provider!),
-                        ],
+                        ),
                       ],
                     ),
                   ),
@@ -3053,6 +3065,96 @@ class _ProductDetailModal extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildColumnList(List<String> items) {
+    if (items.length <= 4) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: items.map((i) => _buildBulletPoint(i)).toList(),
+      );
+    } else {
+      int mid = (items.length / 2).ceil();
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: items.sublist(0, mid).map((i) => _buildBulletPoint(i)).toList(),
+            ),
+          ),
+          const SizedBox(width: 32),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: items.sublist(mid).map((i) => _buildBulletPoint(i)).toList(),
+            ),
+          ),
+        ],
+      );
+    }
+  }
+
+  Widget _buildReasoningOverlay(BuildContext context) {
+    if (widget.product.matchReasoning == null) return const SizedBox.shrink();
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final renderBox = _modalChipKey.currentContext?.findRenderObject() as RenderBox?;
+        if (renderBox == null) return const SizedBox.shrink();
+        
+        final offset = renderBox.localToGlobal(Offset.zero);
+        final chipSize = renderBox.size;
+        
+        return Stack(
+          children: [
+            Positioned(
+              left: offset.dx - (320 - chipSize.width), // Align right edge with chip right edge roughly
+              top: offset.dy + chipSize.height + 8,
+              width: 320,
+              child: IgnorePointer(
+                child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDFA),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFCCFBF1), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.psychology_outlined, color: Color(0xFF1D9E75), size: 18),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          widget.product.matchReasoning!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF0F766E),
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          ],
+        );
+      },
     );
   }
 
@@ -3094,65 +3196,83 @@ class _ProductDetailModal extends StatelessWidget {
     );
   }
 
-  Widget _buildProviderCard(ProviderPublic provider) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        children: [
-          if (provider.logoUrl != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                provider.logoUrl!,
-                width: 48,
-                height: 48,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.business, size: 48, color: Color(0xFF94A3B8)),
-              ),
-            )
-          else
-            const Icon(Icons.business, size: 48, color: Color(0xFF94A3B8)),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildDropdownSection({
+    required String title,
+    required Widget content,
+    bool initiallyExpanded = false,
+  }) {
+    return _ModalDropdownSection(
+      title: title,
+      content: content,
+      initiallyExpanded: initiallyExpanded,
+    );
+  }
+}
+
+class _ModalDropdownSection extends StatefulWidget {
+  final String title;
+  final Widget content;
+  final bool initiallyExpanded;
+
+  const _ModalDropdownSection({
+    required this.title,
+    required this.content,
+    this.initiallyExpanded = false,
+  });
+
+  @override
+  State<_ModalDropdownSection> createState() => _ModalDropdownSectionState();
+}
+
+class _ModalDropdownSectionState extends State<_ModalDropdownSection> {
+  late bool _isExpanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.initiallyExpanded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => setState(() => _isExpanded = !_isExpanded),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+            child: Row(
               children: [
                 Text(
-                  provider.companyName,
+                  widget.title,
                   style: const TextStyle(
+                    fontSize: 12,
+                    letterSpacing: 1.2,
+                    color: Color(0xFF64748B),
                     fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    color: Color(0xFF1E293B),
                   ),
                 ),
-                if (provider.hqLocation != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    provider.hqLocation!,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ],
+                const Spacer(),
+                Icon(
+                  _isExpanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: const Color(0xFF64748B),
+                  size: 20,
+                ),
               ],
             ),
           ),
-          if (provider.websiteUrl != null)
-            IconButton(
-              icon: const Icon(Icons.open_in_new_rounded,
-                  color: Color(0xFF94A3B8), size: 20),
-              onPressed: () {
-                html.window.open(provider.websiteUrl!, '_blank');
-              },
-            ),
-        ],
-      ),
+        ),
+        if (_isExpanded)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
+            child: widget.content,
+          ),
+        const Divider(color: Color(0xFFE2E8F0), height: 1),
+      ],
     );
   }
 }
