@@ -30,9 +30,9 @@ const _stageContent = {
     description:
         'Nova will get to know your startup — stage, priorities, and financial needs — then route you to the right specialist and surface personalised JPMC product recommendations.',
     topics: [
-      'Your startup stage, business model, and key priorities',
-      'Banking, payments, treasury, and credit options for your stage',
-      'Personalised JPMC product recommendations and next steps',
+      'Calibrate your startup stage — from Pre-seed to IPO & Beyond',
+      'Identify immediate financial priorities like Fundraising or Treasury',
+      'Surface personalized JPMC product recommendations for your needs',
     ],
     duration: '10–15 min',
   ),
@@ -469,7 +469,6 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     final content = _stageContent[widget.stageBucket]!;
@@ -480,14 +479,12 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Background Image
           Positioned.fill(
             child: Image.network(
               'https://images.unsplash.com/photo-1556761175-b413da4baf72?q=80&w=2000&auto=format&fit=crop',
               fit: BoxFit.cover,
             ),
           ),
-          // Gradient Overlay for readability
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -536,7 +533,6 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // ── Header bar ──────────────────────────────────
                               _buildHeader(
                                 context,
                                 isDark,
@@ -545,156 +541,83 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                 content.description,
                               ),
                               
-                              // ── Body ────────────────────────────────────────
                               Expanded(
-                                child: SingleChildScrollView(
-                                  padding: EdgeInsets.fromLTRB(
-                                    isMobile ? 24 : 36,
-                                    32,
-                                    isMobile ? 24 : 36,
-                                    24,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      // Lower Section: Balanced Form Fields
-                                      Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          // Left Form Fields: Name, Email
-                                          Expanded(
-                                            flex: 1,
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                _buildTextField('Name', _nameController, false, hint: 'Alex Rivera', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
-                                                _buildTextField('Email', _emailController, true, hint: 'alex@yourcompany.com', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 48),
-                                          // Right Form Fields: Phone, Checkbox, Company
-                                          Expanded(
-                                            flex: 1,
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                _buildTextField('Phone number', _phoneController, false, hint: '+1 (555) 000-0000', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
-                                                _buildTextField(
-                                                  'Company',
-                                                  _companyController,
-                                                  _isPostIncorporated,
-                                                  hint: 'e.g. Northline AI',
-                                                  onChanged: (_) => _onFormChanged(),
-                                                  readOnly: _isReadOnly,
-                                                  trailingLabelWidget: GestureDetector(
-                                                    onTap: _isReadOnly ? null : () {
-                                                      setState(() => _isPostIncorporated = !_isPostIncorporated);
-                                                      _onFormChanged();
-                                                    },
-                                                    behavior: HitTestBehavior.opaque,
-                                                    child: Row(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        Container(
-                                                          width: 16,
-                                                          height: 16,
-                                                          decoration: BoxDecoration(
-                                                            color: _isPostIncorporated
-                                                                ? AppThemeTokens.buttonPrimary
-                                                                : Colors.transparent,
-                                                            borderRadius: BorderRadius.circular(4),
-                                                            border: Border.all(
-                                                              color: _isPostIncorporated
-                                                                  ? AppThemeTokens.buttonPrimary
-                                                                  : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
-                                                              width: 1.5,
-                                                            ),
-                                                          ),
-                                                          child: _isPostIncorporated
-                                                              ? const Icon(Icons.check, size: 12, color: Colors.white)
-                                                              : null,
-                                                        ),
-                                                        const SizedBox(width: 8),
-                                                        Text(
-                                                          'Incorporated',
-                                                          style: TextStyle(
-                                                            fontSize: 12,
-                                                            fontWeight: FontWeight.w500,
-                                                            color: isDark ? Colors.white70 : Colors.grey.shade800,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
+                                child: LayoutBuilder(
+                                  builder: (context, bodyConstraints) {
+                                    return SingleChildScrollView(
+                                      padding: EdgeInsets.fromLTRB(
+                                        isMobile ? 24 : 36,
+                                        20,
+                                        isMobile ? 24 : 36,
+                                        24,
                                       ),
-                                      const SizedBox(height: 16),
-                                      // ── Agent model card ──────────────────
-                                      Container(
-                                        padding: const EdgeInsets.all(16),
-                                        decoration: BoxDecoration(
-                                          color: isDark ? const Color(0xFF1A202C) : Colors.white,
-                                          borderRadius: BorderRadius.circular(14),
-                                          border: Border.all(
-                                            color: isDark ? Colors.grey.shade700 : const Color(0xFFE5E0D4),
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.04),
-                                              blurRadius: 12,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(minHeight: bodyConstraints.maxHeight - 44),
                                         child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                Container(
-                                                  width: 42,
-                                                  height: 42,
-                                                  decoration: BoxDecoration(
-                                                    gradient: LinearGradient(
-                                                      colors: [
-                                                        AppThemeTokens.modalHeader,
-                                                        AppThemeTokens.modalHeader.withOpacity(0.8),
-                                                      ],
-                                                    ),
-                                                    borderRadius: BorderRadius.circular(12),
-                                                  ),
-                                                  child: Icon(Icons.auto_awesome_rounded, size: 20, color: AppThemeTokens.goldAccent),
-                                                ),
-                                                const SizedBox(width: 14),
                                                 Expanded(
+                                                  flex: 1,
                                                   child: Column(
                                                     crossAxisAlignment: CrossAxisAlignment.start,
                                                     children: [
-                                                      Text(
-                                                        'Let\'s start with you',
-                                                        style: TextStyle(
-                                                          fontSize: 15,
-                                                          fontWeight: FontWeight.w700,
-                                                          color: isDark ? Colors.white : AppThemeTokens.brandInk,
-                                                        ),
-                                                      ),
-                                                      Row(
-                                                        children: [
-                                                          Icon(Icons.timer_outlined, size: 13, color: isDark ? Colors.white54 : const Color(0xFF9CA3AF)),
-                                                          const SizedBox(width: 4),
-                                                          Text(
-                                                            content.duration,
-                                                            style: TextStyle(
-                                                              fontSize: 12,
-                                                              color: isDark ? Colors.white54 : const Color(0xFF9CA3AF),
-                                                            ),
+                                                      _buildTextField('Name', _nameController, false, hint: 'Alex Rivera', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
+                                                      _buildTextField('Email', _emailController, true, hint: 'alex@yourcompany.com', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 48),
+                                                Expanded(
+                                                  flex: 1,
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      _buildTextField('Phone number', _phoneController, false, hint: '+1 (555) 000-0000', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
+                                                      _buildTextField(
+                                                        'Company',
+                                                        _companyController,
+                                                        _isPostIncorporated,
+                                                        hint: 'e.g. Northline AI',
+                                                        onChanged: (_) => _onFormChanged(),
+                                                        readOnly: _isReadOnly,
+                                                        trailingLabelWidget: GestureDetector(
+                                                          onTap: _isReadOnly ? null : () {
+                                                            setState(() => _isPostIncorporated = !_isPostIncorporated);
+                                                            _onFormChanged();
+                                                          },
+                                                          behavior: HitTestBehavior.opaque,
+                                                          child: Row(
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: [
+                                                              Container(
+                                                                width: 16,
+                                                                height: 16,
+                                                                decoration: BoxDecoration(
+                                                                  color: _isPostIncorporated ? AppThemeTokens.buttonPrimary : Colors.transparent,
+                                                                  borderRadius: BorderRadius.circular(4),
+                                                                  border: Border.all(
+                                                                    color: _isPostIncorporated ? AppThemeTokens.buttonPrimary : (isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+                                                                    width: 1.5,
+                                                                  ),
+                                                                ),
+                                                                child: _isPostIncorporated ? const Icon(Icons.check, size: 12, color: Colors.white) : null,
+                                                              ),
+                                                              const SizedBox(width: 8),
+                                                              Text(
+                                                                'Incorporated',
+                                                                style: TextStyle(
+                                                                  fontSize: 12,
+                                                                  fontWeight: FontWeight.w500,
+                                                                  color: isDark ? Colors.white70 : Colors.grey.shade800,
+                                                                ),
+                                                              ),
+                                                            ],
                                                           ),
-                                                        ],
+                                                        ),
                                                       ),
                                                     ],
                                                   ),
@@ -702,141 +625,168 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                               ],
                                             ),
                                             const SizedBox(height: 12),
-                                            Text(
-                                              'A few basics so Nova can make the conversation immediately useful.',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                color: isDark ? Colors.white.withOpacity(0.70) : const Color(0xFF6B7280),
-                                                height: 1.5,
+                                            Container(
+                                              padding: const EdgeInsets.all(16),
+                                              decoration: BoxDecoration(
+                                                color: isDark ? const Color(0xFF1A202C) : Colors.white,
+                                                borderRadius: BorderRadius.circular(14),
+                                                border: Border.all(color: isDark ? Colors.grey.shade700 : const Color(0xFFE5E0D4)),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withOpacity(0.04),
+                                                    blurRadius: 12,
+                                                    offset: const Offset(0, 4),
+                                                  ),
+                                                ],
                                               ),
-                                            ),
-                                            const SizedBox(height: 12),
-                                            Wrap(
-                                              spacing: 8,
-                                              runSpacing: 6,
-                                              children: content.topics.map((topic) {
-                                                return Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                                  decoration: BoxDecoration(
-                                                    color: isDark ? const Color(0xFF2D3748) : const Color(0xFFF8F5EE),
-                                                    borderRadius: BorderRadius.circular(999),
-                                                    border: Border.all(
-                                                      color: isDark ? Colors.grey.shade600 : const Color(0xFFE5E0D4),
-                                                    ),
-                                                  ),
-                                                  child: Text(
-                                                    topic,
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      fontWeight: FontWeight.w500,
-                                                      color: isDark ? Colors.white70 : const Color(0xFF4B5563),
-                                                    ),
-                                                  ),
-                                                );
-                                              }).toList(),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 32),
-                                      // Disclaimer Checkbox
-                                      Container(
-                                        width: double.infinity,
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                        decoration: BoxDecoration(
-                                          color: isDark ? const Color(0xFF2C261A) : const Color(0xFFFDF8E1),
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: isDark ? const Color(0xFF423C2B) : const Color(0xFFF0E6C5)),
-                                        ),
-                                        child: _buildCheckbox(
-                                          _disclaimerAccepted,
-                                          (val) => setState(() => _disclaimerAccepted = val ?? false),
-                                          '', // We'll use a custom label to make "disclaimer" clickable
-                                          isDark,
-                                          customLabel: Text.rich(
-                                            TextSpan(
-                                              text: 'I understand and agree to the ',
-                                              style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : const Color(0xFF6B7280)),
-                                              children: [
-                                                WidgetSpan(
-                                                  alignment: PlaceholderAlignment.middle,
-                                                  child: GestureDetector(
-                                                    onTap: _showDisclaimerModal,
-                                                    child: Container(
-                                                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                                                      decoration: BoxDecoration(
-                                                        border: Border(
-                                                          bottom: BorderSide(
-                                                            color: isDark ? Colors.white : Colors.black,
-                                                            width: 1.2,
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      Container(
+                                                        width: 42,
+                                                        height: 42,
+                                                        decoration: BoxDecoration(
+                                                          gradient: LinearGradient(
+                                                            colors: [AppThemeTokens.modalHeader, AppThemeTokens.modalHeader.withOpacity(0.8)],
                                                           ),
+                                                          borderRadius: BorderRadius.circular(12),
+                                                        ),
+                                                        child: Icon(Icons.auto_awesome_rounded, size: 20, color: AppThemeTokens.goldAccent),
+                                                      ),
+                                                      const SizedBox(width: 14),
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Text(
+                                                              'Let\'s start with you',
+                                                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppThemeTokens.brandInk),
+                                                            ),
+                                                            Row(
+                                                              children: [
+                                                                Icon(Icons.timer_outlined, size: 13, color: isDark ? Colors.white54 : const Color(0xFF9CA3AF)),
+                                                                const SizedBox(width: 4),
+                                                                Text(content.duration, style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : const Color(0xFF9CA3AF))),
+                                                              ],
+                                                            ),
+                                                          ],
                                                         ),
                                                       ),
-                                                      padding: const EdgeInsets.only(bottom: 1),
-                                                      child: Text(
-                                                        'Disclaimer',
-                                                        style: TextStyle(
-                                                          fontSize: 12,
-                                                          color: isDark ? Colors.white : Colors.black,
-                                                          fontWeight: FontWeight.bold,
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                  Text(
+                                                    'A few basics so Nova can make the conversation immediately useful.',
+                                                    style: TextStyle(fontSize: 13, color: isDark ? Colors.white.withOpacity(0.70) : const Color(0xFF6B7280), height: 1.5),
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                  Column(
+                                                    children: content.topics.take(3).map((topic) {
+                                                      return Padding(
+                                                        padding: const EdgeInsets.only(bottom: 10),
+                                                        child: Row(
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Padding(
+                                                              padding: const EdgeInsets.only(top: 6),
+                                                              child: Container(
+                                                                width: 5,
+                                                                height: 5,
+                                                                decoration: BoxDecoration(color: AppThemeTokens.goldAccent, shape: BoxShape.circle),
+                                                              ),
+                                                            ),
+                                                            const SizedBox(width: 12),
+                                                            Expanded(
+                                                              child: Text(
+                                                                topic,
+                                                                style: TextStyle(fontSize: 13, color: isDark ? Colors.white.withOpacity(0.80) : const Color(0xFF4B5563), height: 1.4),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      );
+                                                    }).toList(),
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                  Container(
+                                                    width: double.infinity,
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                                    decoration: BoxDecoration(
+                                                      color: isDark ? const Color(0xFF2C261A) : const Color(0xFFFDF8E1),
+                                                      borderRadius: BorderRadius.circular(12),
+                                                      border: Border.all(color: isDark ? const Color(0xFF423C2B) : const Color(0xFFF0E6C5)),
+                                                    ),
+                                                    child: _buildCheckbox(
+                                                      _disclaimerAccepted,
+                                                      (val) => setState(() => _disclaimerAccepted = val ?? false),
+                                                      '',
+                                                      isDark,
+                                                      customLabel: Text.rich(
+                                                        TextSpan(
+                                                          text: 'I understand and agree to the ',
+                                                          style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : const Color(0xFF6B7280)),
+                                                          children: [
+                                                            WidgetSpan(
+                                                              alignment: PlaceholderAlignment.middle,
+                                                              child: GestureDetector(
+                                                                onTap: _showDisclaimerModal,
+                                                                child: Container(
+                                                                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                                                                  decoration: BoxDecoration(
+                                                                    border: Border(bottom: BorderSide(color: isDark ? Colors.white : Colors.black, width: 1.2)),
+                                                                  ),
+                                                                  padding: const EdgeInsets.only(bottom: 1),
+                                                                  child: Text('Disclaimer', style: TextStyle(fontSize: 12, color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            TextSpan(text: ' and the terms of this advisory session.', style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : const Color(0xFF6B7280))),
+                                                          ],
                                                         ),
                                                       ),
                                                     ),
                                                   ),
-                                                ),
-                                                TextSpan(
-                                                  text: ' and the terms of this advisory session.',
-                                                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : const Color(0xFF6B7280)),
-                                                ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 24),
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: Stack(
-                                          alignment: Alignment.center,
-                                          children: [
-                                            Align(
-                                              alignment: Alignment.centerLeft,
-                                              child: _buildBottomBackButton(context),
-                                            ),
+                                            const SizedBox(height: 24),
                                             SizedBox(
-                                              height: 48,
-                                              width: isMobile ? double.infinity : 320,
-                                              child: ElevatedButton.icon(
-                                                onPressed: _canSubmit && !_isSavingProfile ? _submitProfileAndContinue : null,
-                                                icon: _isSavingProfile
-                                                    ? const SizedBox(
-                                                        width: 18,
-                                                        height: 18,
-                                                        child: CircularProgressIndicator(
-                                                          strokeWidth: 2,
-                                                          color: Colors.white,
-                                                        ),
-                                                      )
-                                                    : Icon(
-                                                        Icons.auto_awesome,
-                                                        size: 18,
-                                                        color: _canSubmit ? AppThemeTokens.goldAccent : Colors.white,
-                                                      ),
-                                                label: Text(_isSavingProfile ? 'SAVING...' : (_isReadOnly ? 'CONTINUE' : 'GET STARTED')),
-                                                style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
-                                                      padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 32)),
-                                                      shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                                                      elevation: WidgetStateProperty.all(_canSubmit ? 4 : 0),
-                                                      shadowColor: WidgetStateProperty.all(AppThemeTokens.buttonPrimary.withOpacity(0.4)),
-                                                      textStyle: WidgetStateProperty.all(const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                                              width: double.infinity,
+                                              child: Stack(
+                                                alignment: Alignment.center,
+                                                children: [
+                                                  Positioned(
+                                                    left: 0,
+                                                    child: _buildBottomBackButton(context),
+                                                  ),
+                                                  SizedBox(
+                                                    height: 48,
+                                                    width: isMobile ? double.infinity : 320,
+                                                    child: ElevatedButton.icon(
+                                                      onPressed: _canSubmit && !_isSavingProfile ? _submitProfileAndContinue : null,
+                                                      icon: _isSavingProfile
+                                                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                                          : Icon(Icons.auto_awesome, size: 18, color: _canSubmit ? AppThemeTokens.goldAccent : Colors.white),
+                                                      label: Text(_isSavingProfile ? "SAVING..." : (_isReadOnly ? "CONTINUE" : "GET STARTED")),
+                                                      style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
+                                                            padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 32)),
+                                                            shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                                                            elevation: WidgetStateProperty.all(_canSubmit ? 4 : 0),
+                                                            shadowColor: WidgetStateProperty.all(AppThemeTokens.buttonPrimary.withOpacity(0.4)),
+                                                            textStyle: WidgetStateProperty.all(const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                                                          ),
                                                     ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    );
+                                  },
                                 ),
                               ),
                             ],
