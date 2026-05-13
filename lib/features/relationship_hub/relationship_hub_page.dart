@@ -730,50 +730,61 @@ class _HubMainColumnState extends State<_HubMainColumn> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-            child: GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisExtent: 140,
-              children: [
-                _LearningCard(
-                  stripe: AppThemeTokens.goldAccent,
-                  tag: 'Guide',
-                  title: 'Setting up efficient banking early',
-                  description:
-                      'Shared by Sarah to help streamline your initial operations.',
-                  meta: '8 min read · Seed · Operations',
-                  defaultHover: !_hasInteractedLearning,
-                  onInteraction: () => setState(() => _hasInteractedLearning = true),
-                ),
-                _LearningCard(
-                  stripe: const Color(0xFF378ADD),
-                  tag: 'Event',
-                  title: 'Treasury habits that scale with you',
-                  description:
-                      'Added by Sarah based on your discussion about cash management.',
-                  meta: 'May 7 · 1:00 PM ET · 45 min',
-                  onInteraction: () => setState(() => _hasInteractedLearning = true),
-                ),
-                _LearningCard(
-                  stripe: const Color(0xFF1D9E75),
-                  tag: 'Explainer',
-                  title: 'How early-stage treasury accounts work',
-                  description:
-                      'A brief explainer shared by Sarah to clarify treasury basics.',
-                  meta: '5 min read · Finance leads',
-                ),
-                _LearningCard(
-                  stripe: const Color(0xFF7F77DD),
-                  tag: 'Guide',
-                  title: 'Preparing for your first credit facility',
-                  description:
-                      'Recommended reading by Sarah ahead of your Series A raise.',
-                  meta: '10 min read · Series A · Capital structure',
-                ),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const spacing = 16.0;
+                const targetItemHeight = 140.0;
+                final itemWidth = (constraints.maxWidth - spacing) / 2;
+                final childAspectRatio = itemWidth / targetItemHeight;
+
+                return GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: spacing,
+                  mainAxisSpacing: spacing,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  childAspectRatio: childAspectRatio,
+                  children: [
+                    _LearningCard(
+                      stripe: AppThemeTokens.goldAccent,
+                      tag: 'Guide',
+                      title: 'Setting up efficient banking early',
+                      description:
+                          'Shared by Sarah to help streamline your initial operations.',
+                      meta: '8 min read · Seed · Operations',
+                      defaultHover: !_hasInteractedLearning,
+                      onInteraction:
+                          () => setState(() => _hasInteractedLearning = true),
+                    ),
+                    _LearningCard(
+                      stripe: const Color(0xFF378ADD),
+                      tag: 'Event',
+                      title: 'Treasury habits that scale with you',
+                      description:
+                          'Added by Sarah based on your discussion about cash management.',
+                      meta: 'May 7 · 1:00 PM ET · 45 min',
+                      onInteraction:
+                          () => setState(() => _hasInteractedLearning = true),
+                    ),
+                    _LearningCard(
+                      stripe: const Color(0xFF1D9E75),
+                      tag: 'Explainer',
+                      title: 'How early-stage treasury accounts work',
+                      description:
+                          'A brief explainer shared by Sarah to clarify treasury basics.',
+                      meta: '5 min read · Finance leads',
+                    ),
+                    _LearningCard(
+                      stripe: const Color(0xFF7F77DD),
+                      tag: 'Guide',
+                      title: 'Preparing for your first credit facility',
+                      description:
+                          'Recommended reading by Sarah ahead of your Series A raise.',
+                      meta: '10 min read · Series A · Capital structure',
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           if (widget.trailingPanel != null) ...[
