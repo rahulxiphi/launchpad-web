@@ -488,7 +488,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
   Widget _buildTopHeader(
       BuildContext context, bool isDark, TextTheme textTheme) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(36, 24, 36, 20),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
       decoration: const BoxDecoration(
         color: AppThemeTokens.modalHeader,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -503,17 +503,19 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
               children: [
                 Text(
                   'Nova — Your JPMC AI Advisor',
-                  style: textTheme.titleMedium?.copyWith(
+                  style: const TextStyle(
                     color: AppThemeTokens.goldAccent,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   'Gets to know your company, then connects you to the right banking team and resources.',
-                  style: textTheme.bodySmall?.copyWith(
+                  style: TextStyle(
                     color: Colors.white.withOpacity(0.50),
-                    fontSize: 12,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                     height: 1.4,
                   ),
                 ),
@@ -527,11 +529,11 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
 
   Widget _buildHeaderAiBadge() {
     return Container(
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         color: const Color(0xFFF3F4F6).withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(11),
         border: Border.all(
           color: const Color(0xFFE5E7EB).withOpacity(0.22),
         ),
@@ -540,7 +542,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
         child: Icon(
           Icons.auto_awesome_rounded,
           color: Colors.white,
-          size: 18,
+          size: 22,
         ),
       ),
     );

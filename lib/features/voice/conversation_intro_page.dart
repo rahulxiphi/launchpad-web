@@ -34,7 +34,7 @@ const _stageContent = {
       'Identify immediate financial priorities like Fundraising or Treasury',
       'Surface personalized JPMC product recommendations for your needs',
     ],
-    duration: '10–15 min',
+    duration: '4-7 min',
   ),
   // ── Legacy stages (kept for backward compat) ──────────────────────────────
   'pre_seed': _StageContent(
@@ -117,6 +117,11 @@ const _stageContent = {
   ),
 };
 
+enum _EmailLookupAction {
+  resume,
+  startFresh,
+}
+
 class ConversationIntroPage extends StatefulWidget {
   final String stageBucket;
   final String? prospectId;
@@ -154,10 +159,12 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   final _companyController = TextEditingController();
   bool _preferManual = false;
   bool _disclaimerAccepted = false;
-  
+
   Timer? _debounce;
   String? _lastCheckedEmail;
   bool _isCheckingEmail = false;
+  bool _emailLookupDialogOpen = false;
+  ProspectInitResult? _pendingResumeProspect;
 
   // Core JPMC aesthetic colors
   static const jpmcDarkNavy = Color(0xFF131F2E);
@@ -165,16 +172,22 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   bool get _isReadOnly =>
       widget.dynamicVariables['lock_profile_fields'] == true;
 
+  bool get _isProfileLocked => _isReadOnly || _pendingResumeProspect != null;
+
   @override
   void initState() {
     super.initState();
     _nameController.text = widget.dynamicVariables['userName']?.toString() ?? '';
-    _emailController.text = widget.dynamicVariables['userEmail']?.toString() ?? '';
-    _phoneController.text = widget.dynamicVariables['userPhone']?.toString() ?? '';
-    _companyController.text = widget.dynamicVariables['companyName']?.toString() ?? '';
+    _emailController.text =
+        widget.dynamicVariables['userEmail']?.toString() ?? '';
+    _phoneController.text =
+        widget.dynamicVariables['userPhone']?.toString() ?? '';
+    _companyController.text =
+        widget.dynamicVariables['companyName']?.toString() ?? '';
     _isPostIncorporated =
         widget.dynamicVariables['isPostIncorporated'] == true;
     _preferManual = widget.dynamicVariables['preferManual'] == true;
+    _disclaimerAccepted = _isReadOnly;
     _emailController.addListener(_onEmailChanged);
     _companyController.addListener(_onFormChanged);
   }
@@ -192,12 +205,18 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   }
 
   void _onEmailChanged() {
-    setState(() {});
+    final email = _emailController.text.trim();
+    setState(() {
+      if (_pendingResumeProspect?.email != null &&
+          _pendingResumeProspect!.email != email) {
+        _pendingResumeProspect = null;
+      }
+    });
     if (_debounce?.isActive ?? false) _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 1000), () {
-      final email = _emailController.text.trim();
-      if (_isValidEmail(email)) {
-        _lookupEmail(email);
+      final settledEmail = _emailController.text.trim();
+      if (_isValidEmail(settledEmail)) {
+        _lookupEmail(settledEmail);
       }
     });
   }
@@ -207,18 +226,24 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   }
 
   Future<void> _lookupEmail(String email) async {
-    if (email == _lastCheckedEmail || _isCheckingEmail || _isReadOnly) return;
-    
+    if (email == _lastCheckedEmail ||
+        _isCheckingEmail ||
+        _emailLookupDialogOpen ||
+        _isReadOnly) {
+      return;
+    }
+
     _lastCheckedEmail = email;
     _isCheckingEmail = true;
-    
+
     try {
       final result = await _service.lookupProspectByEmail(email);
       if (!mounted) return;
-      
+
       // If we found a different prospect than the current one
-      if (result.prospectId != widget.prospectId) {
-        _showWelcomeBackModal(result);
+      if (result.prospectId != widget.prospectId &&
+          result.prospectId != _pendingResumeProspect?.prospectId) {
+        await _showWelcomeBackModal(result);
       }
     } catch (e) {
       // Not found or error, ignore
@@ -227,55 +252,210 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
     }
   }
 
-  void _showWelcomeBackModal(ProspectInitResult result) {
-    showDialog(
+  Future<void> _showWelcomeBackModal(ProspectInitResult result) async {
+    if (_emailLookupDialogOpen) return;
+    setState(() => _emailLookupDialogOpen = true);
+
+    final action = await showDialog<_EmailLookupAction>(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        title: Row(
-          children: [
-            const Icon(Icons.info_outline, color: AppThemeTokens.buttonPrimary),
-            const SizedBox(width: 12),
-            const Text('Existing Record Found', style: TextStyle(color: jpmcDarkNavy, fontWeight: FontWeight.w600)),
-          ],
-        ),
-        content: Text(
-          'We found an existing record for $lastCheckedEmail. Would you like to continue with your previous information?',
-          style: const TextStyle(color: Colors.black87, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('NO, START FRESH', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12)),
+      barrierDismissible: true,
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        backgroundColor: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: 460,
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _hydrateFromLookup(result);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppThemeTokens.buttonPrimary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.22),
+                  blurRadius: 36,
+                  offset: const Offset(0, 18),
+                ),
+              ],
             ),
-            child: const Text('YES, CONTINUE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 16, 20),
+                  decoration: const BoxDecoration(
+                    color: AppThemeTokens.modalHeader,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(11),
+                          border:
+                              Border.all(color: Colors.white.withOpacity(0.18)),
+                        ),
+                        child: const Icon(
+                          Icons.history_rounded,
+                          color: AppThemeTokens.goldAccent,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Text(
+                          'Existing record found',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white70,
+                        ),
+                        tooltip: 'Close',
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        result.email ?? lastCheckedEmail ?? 'This email',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: jpmcDarkNavy,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'We can pre-fill the profile we already have, or you can keep this as a fresh session.',
+                        style: TextStyle(
+                          color: Color(0xFF4B5563),
+                          fontSize: 13,
+                          height: 1.45,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(
+                                dialogContext,
+                                _EmailLookupAction.startFresh,
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF374151),
+                                side: const BorderSide(
+                                  color: Color(0xFFD1D5DB),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: const Text(
+                                'START FRESH',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(
+                                dialogContext,
+                                _EmailLookupAction.resume,
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppThemeTokens.buttonPrimary,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                'RESUME',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
+
+    if (!mounted) return;
+    setState(() => _emailLookupDialogOpen = false);
+
+    switch (action) {
+      case _EmailLookupAction.resume:
+        _hydrateFromLookup(result);
+        break;
+      case _EmailLookupAction.startFresh:
+        await _startFreshFromLookup();
+        break;
+      case null:
+        setState(() => _lastCheckedEmail = null);
+    }
   }
 
   void _hydrateFromLookup(ProspectInitResult result) {
     setState(() {
+      _pendingResumeProspect = result;
+      _emailController.text = result.email ?? _emailController.text.trim();
       _nameController.text = result.fullName ?? '';
       _phoneController.text = result.phoneNumber ?? '';
       _companyController.text = result.companyName ?? '';
       _isPostIncorporated = result.incorporated;
+      _disclaimerAccepted = true;
     });
-    
-    // Notify parent about the new prospect identity
-    widget.onProspectFound?.call(result);
+  }
+
+  Future<void> _startFreshFromLookup() async {
+    setState(() {
+      _pendingResumeProspect = null;
+      _lastCheckedEmail = null;
+      _nameController.clear();
+      _phoneController.clear();
+      _companyController.clear();
+      _isPostIncorporated = false;
+      _disclaimerAccepted = false;
+    });
+    await widget.onStartNew();
   }
 
   String? get lastCheckedEmail => _lastCheckedEmail;
@@ -296,7 +476,10 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   Future<void> _submitProfileAndContinue() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final prospectId = widget.prospectId ?? ProspectIdProvider.of(context);
+    final pendingResume = _pendingResumeProspect;
+    final prospectId = pendingResume?.prospectId ??
+        widget.prospectId ??
+        ProspectIdProvider.of(context);
     debugPrint('IntroPage: Submitting with prospectId=$prospectId (from widget=${widget.prospectId}, from provider=${ProspectIdProvider.of(context)})');
     if (prospectId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -307,6 +490,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
 
     setState(() => _isSavingProfile = true);
     try {
+      final bool isResuming = pendingResume != null;
       await _service.updateProspectProfile(
         prospectId,
         email: _emailController.text.trim(),
@@ -322,7 +506,10 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
         incorporated: _isPostIncorporated,
       );
 
-      final vars = Map<String, dynamic>.from(widget.dynamicVariables);
+      final hydratedResume =
+          isResuming ? await _service.getProspect(prospectId) : null;
+      final vars = hydratedResume?.toDynamicVariables(lockProfileFields: true) ??
+          Map<String, dynamic>.from(widget.dynamicVariables);
       if (_nameController.text.trim().isNotEmpty) {
         vars['userName'] = _nameController.text.trim();
       }
@@ -337,12 +524,17 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
       vars['preferManual'] = _preferManual;
 
       if (!mounted) return;
+      if (hydratedResume != null) {
+        widget.onProspectFound?.call(hydratedResume);
+      }
       widget.onFormFilled?.call();
       
       Navigator.of(context).push(
         NoTransitionPageRoute(
           builder: (_) => ModeSelectionPage(
-            stageBucket: widget.stageBucket,
+            stageBucket: hydratedResume?.stageBucket ??
+                pendingResume?.stageBucket ??
+                widget.stageBucket,
             prospectId: prospectId,
             dynamicVariables: vars,
             onStartNew: widget.onStartNew,
@@ -361,7 +553,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   }
 
   bool get _canSubmit {
-    if (_isReadOnly) return true;
+    if (_isProfileLocked) return true;
     final email = _emailController.text.trim();
     if (email.isEmpty) return false;
     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) return false;
@@ -385,20 +577,37 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(24, 24, 16, 20),
                 decoration: const BoxDecoration(
                   color: AppThemeTokens.modalHeader,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline_rounded, color: AppThemeTokens.goldAccent),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Important Disclaimer',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      child: const Icon(
+                        Icons.info_outline_rounded,
+                        color: AppThemeTokens.goldAccent,
+                        size: 22,
+                      ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Text(
+                        'Important Disclaimer',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                     IconButton(
                       icon: const Icon(Icons.close_rounded, color: Colors.white70),
                       onPressed: () => Navigator.pop(context),
@@ -551,7 +760,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                         isMobile ? 24 : 36,
                                         20,
                                         isMobile ? 24 : 36,
-                                        24,
+                                        32,
                                       ),
                                       child: ConstrainedBox(
                                         constraints: BoxConstraints(minHeight: bodyConstraints.maxHeight - 44),
@@ -567,8 +776,8 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                   child: Column(
                                                     crossAxisAlignment: CrossAxisAlignment.start,
                                                     children: [
-                                                      _buildTextField('Name', _nameController, false, hint: 'Alex Rivera', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
-                                                      _buildTextField('Email', _emailController, true, hint: 'alex@yourcompany.com', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
+                                                      _buildTextField('Name', _nameController, false, hint: 'Alex Rivera', onChanged: (_) => _onFormChanged(), readOnly: _isProfileLocked),
+                                                      _buildTextField('Email', _emailController, true, hint: 'alex@yourcompany.com', onChanged: (_) => _onFormChanged(), readOnly: _isProfileLocked),
                                                     ],
                                                   ),
                                                 ),
@@ -578,16 +787,16 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                   child: Column(
                                                     crossAxisAlignment: CrossAxisAlignment.start,
                                                     children: [
-                                                      _buildTextField('Phone number', _phoneController, false, hint: '+1 (555) 000-0000', onChanged: (_) => _onFormChanged(), readOnly: _isReadOnly),
+                                                      _buildTextField('Phone number', _phoneController, false, hint: '+1 (555) 000-0000', onChanged: (_) => _onFormChanged(), readOnly: _isProfileLocked),
                                                       _buildTextField(
                                                         'Company',
                                                         _companyController,
                                                         _isPostIncorporated,
                                                         hint: 'e.g. Northline AI',
                                                         onChanged: (_) => _onFormChanged(),
-                                                        readOnly: _isReadOnly,
+                                                        readOnly: _isProfileLocked,
                                                         trailingLabelWidget: GestureDetector(
-                                                          onTap: _isReadOnly ? null : () {
+                                                          onTap: _isProfileLocked ? null : () {
                                                             setState(() => _isPostIncorporated = !_isPostIncorporated);
                                                             _onFormChanged();
                                                           },
@@ -626,7 +835,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(height: 12),
+                                            const SizedBox(height: 36),
                                             Container(
                                               padding: const EdgeInsets.all(16),
                                               decoration: BoxDecoration(
@@ -644,44 +853,18 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                               child: Column(
                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
-                                                  Row(
+                                                  Wrap(
+                                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                                    spacing: 6,
+                                                    runSpacing: 4,
                                                     children: [
-                                                      Container(
-                                                        width: 42,
-                                                        height: 42,
-                                                        decoration: BoxDecoration(
-                                                          gradient: LinearGradient(
-                                                            colors: [AppThemeTokens.modalHeader, AppThemeTokens.modalHeader.withOpacity(0.8)],
-                                                          ),
-                                                          borderRadius: BorderRadius.circular(12),
-                                                        ),
-                                                        child: Icon(Icons.auto_awesome_rounded, size: 20, color: AppThemeTokens.goldAccent),
+                                                      Text(
+                                                        'A few basics so Nova can make the conversation immediately useful.',
+                                                        style: TextStyle(fontSize: 13, color: isDark ? Colors.white.withOpacity(0.70) : const Color(0xFF6B7280), height: 1.5),
                                                       ),
-                                                      const SizedBox(width: 14),
-                                                      Expanded(
-                                                        child: Column(
-                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                          children: [
-                                                            Text(
-                                                              'Let\'s start with you',
-                                                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppThemeTokens.brandInk),
-                                                            ),
-                                                            Row(
-                                                              children: [
-                                                                Icon(Icons.timer_outlined, size: 13, color: isDark ? Colors.white54 : const Color(0xFF9CA3AF)),
-                                                                const SizedBox(width: 4),
-                                                                Text(content.duration, style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : const Color(0xFF9CA3AF))),
-                                                              ],
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
+                                                      Icon(Icons.timer_outlined, size: 13, color: isDark ? Colors.white54 : const Color(0xFF9CA3AF)),
+                                                      Text(content.duration, style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : const Color(0xFF9CA3AF))),
                                                     ],
-                                                  ),
-                                                  const SizedBox(height: 12),
-                                                  Text(
-                                                    'A few basics so Nova can make the conversation immediately useful.',
-                                                    style: TextStyle(fontSize: 13, color: isDark ? Colors.white.withOpacity(0.70) : const Color(0xFF6B7280), height: 1.5),
                                                   ),
                                                   const SizedBox(height: 16),
                                                   Column(
@@ -722,7 +905,10 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                     ),
                                                     child: _buildCheckbox(
                                                       _disclaimerAccepted,
-                                                      (val) => setState(() => _disclaimerAccepted = val ?? false),
+                                                      (val) {
+                                                        if (_isProfileLocked) return;
+                                                        setState(() => _disclaimerAccepted = val ?? false);
+                                                      },
                                                       '',
                                                       isDark,
                                                       customLabel: Text.rich(
@@ -759,19 +945,26 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                               child: Stack(
                                                 alignment: Alignment.center,
                                                 children: [
-                                                  Positioned(
-                                                    left: 0,
-                                                    child: _buildBottomBackButton(context),
+                                                  Align(
+                                                    alignment: Alignment.centerLeft,
+                                                    child:
+                                                        _buildBottomBackButton(context),
                                                   ),
                                                   SizedBox(
-                                                    height: 48,
-                                                    width: isMobile ? double.infinity : 320,
+                                                    height: 52,
+                                                    width: isMobile ? double.infinity : 360,
                                                     child: ElevatedButton.icon(
                                                       onPressed: _canSubmit && !_isSavingProfile ? _submitProfileAndContinue : null,
                                                       icon: _isSavingProfile
                                                           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                                           : Icon(Icons.auto_awesome, size: 18, color: _canSubmit ? AppThemeTokens.goldAccent : Colors.white),
-                                                      label: Text(_isSavingProfile ? "SAVING..." : (_isReadOnly ? "CONTINUE" : "GET STARTED")),
+                                                      label: Text(
+                                                        _isSavingProfile
+                                                            ? "SAVING..."
+                                                            : (_isProfileLocked
+                                                                ? "CONTINUE"
+                                                                : "GET STARTED"),
+                                                      ),
                                                       style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
                                                             padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 32)),
                                                             shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
@@ -815,7 +1008,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   Widget _buildHeader(
       BuildContext context, bool isDark, TextTheme textTheme, String title, String description) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(36, 24, 36, 20),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
       decoration: const BoxDecoration(
         color: AppThemeTokens.modalHeader,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -830,17 +1023,19 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
               children: [
                 Text(
                   title,
-                  style: textTheme.titleLarge?.copyWith(
+                  style: const TextStyle(
                     color: AppThemeTokens.goldAccent,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   description,
-                  style: textTheme.bodySmall?.copyWith(
+                  style: TextStyle(
                     color: Colors.white.withOpacity(0.50),
-                    fontSize: 12,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                     height: 1.4,
                   ),
                 ),
@@ -854,11 +1049,11 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
 
   Widget _buildHeaderAiBadge() {
     return Container(
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         color: const Color(0xFFF3F4F6).withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(11),
         border: Border.all(
           color: const Color(0xFFE5E7EB).withOpacity(0.22),
         ),

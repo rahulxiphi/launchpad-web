@@ -140,16 +140,28 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   /// Called by VoicePage when the user taps "Start new session".
-  /// Fetches a fresh token for the same stage + prospect, then replaces
-  /// the inner navigator stack with a new ConversationIntroPage.
+  /// Creates a fresh prospect, then replaces the inner navigator stack with
+  /// a new ConversationIntroPage.
   Future<void> _handleStartNew() async {
+    final freshProspectId = await _service.createProspect(widget.stageBucket);
+    if (!mounted) return;
+
+    setState(() {
+      _prospectId = freshProspectId;
+      _resolvedDynamicVariables = {};
+      _isHubEnabled = false;
+    });
+    await _prospectStorage.saveProspectId(freshProspectId);
+
     _innerNavKey.currentState?.pushAndRemoveUntil(
       NoTransitionPageRoute(
         builder: (_) => ConversationIntroPage(
           stageBucket: widget.stageBucket,
-          prospectId: _prospectId,
-          dynamicVariables: widget.dynamicVariables,
+          prospectId: freshProspectId,
+          dynamicVariables: const {},
           onStartNew: _handleStartNew,
+          onFormFilled: _handleFormFilled,
+          onProspectFound: _handleProspectFound,
           onGoToRelationshipHub: _handleGoToRelationshipHub,
         ),
       ),

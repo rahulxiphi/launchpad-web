@@ -553,7 +553,7 @@ class ConversationService {
     );
   }
 
-  /// Fetches full merged profile: form data + latest AI-collected attributes.
+  /// Fetches profile form data plus the latest AI-collected attribute list.
   Future<ProspectFullProfile> getProspectFullProfile(String prospectId) async {
     final response = await _dio.get(
       '${ApiConfig.baseUrl}/conversations/prospect/$prospectId/full-profile',
@@ -627,4 +627,3 @@ class ConversationService {
     return data.map((json) => ProductPublic.fromJson(json)).toList();
   }
 }
-

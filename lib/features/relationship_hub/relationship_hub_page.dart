@@ -1057,8 +1057,12 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
       child: Row(
         children: [
           Icon(
-            _viewingHistory ? Icons.history_rounded : Icons.auto_awesome_rounded,
-            color: _viewingHistory ? const Color(0xFF6B7280) : AppThemeTokens.buttonPrimary,
+            _viewingHistory
+                ? Icons.history_rounded
+                : Icons.auto_awesome_rounded,
+            color: _viewingHistory
+                ? const Color(0xFF6B7280)
+                : AppThemeTokens.buttonPrimary,
             size: 18,
           ),
           const SizedBox(width: 8),
@@ -1071,34 +1075,44 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
             ),
           ),
           const Spacer(),
-          if (_viewingHistory)
-            GestureDetector(
-              onTap: _closeHistory,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppThemeTokens.buttonPrimary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: AppThemeTokens.buttonPrimary.withValues(alpha: 0.4)),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.arrow_back_rounded, size: 13, color: AppThemeTokens.buttonPrimary),
-                    SizedBox(width: 5),
-                    Text(
-                      'Back to Chat',
-                      style: TextStyle(
-                        color: AppThemeTokens.buttonPrimary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+          GestureDetector(
+            onTap: _viewingHistory
+                ? _closeHistory
+                : (widget.prospectId == null ? null : _openHistory),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppThemeTokens.buttonPrimary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: AppThemeTokens.buttonPrimary.withValues(alpha: 0.35),
                 ),
               ),
-            )
-          else
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _viewingHistory
+                        ? Icons.arrow_back_rounded
+                        : Icons.history_rounded,
+                    size: 13,
+                    color: AppThemeTokens.buttonPrimary,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    _viewingHistory ? 'Back to Chat' : 'History',
+                    style: const TextStyle(
+                      color: AppThemeTokens.buttonPrimary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (!_viewingHistory) ...[
+            const SizedBox(width: 12),
             GestureDetector(
               onTap: _openReturnLink,
               child: Container(
@@ -1124,6 +1138,7 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
                 ),
               ),
             ),
+          ],
         ],
       ),
     );
@@ -1447,8 +1462,6 @@ class _GuideMessageBubble extends StatelessWidget {
       children: isUser
           ? [
               Flexible(child: bubble),
-              const SizedBox(width: 8),
-              if (isNextSame) const SizedBox(width: 28) else userAvatar,
             ]
           : [
               if (isNextSame) const SizedBox(width: 28) else aiAvatar,
@@ -1834,13 +1847,21 @@ class _ProductCardState extends State<_ProductCard> {
 
   void _showOverlay() {
     if (!_showReasoning) {
-      _overlayController.show();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_showReasoning) {
+          _overlayController.show();
+        }
+      });
     }
   }
 
   void _hideOverlay() {
     if (!_showReasoning) {
-      _overlayController.hide();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_showReasoning) {
+          _overlayController.hide();
+        }
+      });
     }
   }
 
@@ -2377,14 +2398,13 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> with Singl
             children: [
               // ── Header ─────────────────────────────────────────────────────
               Container(
-                height: 74,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.fromLTRB(24, 24, 16, 20),
                 color: const Color(0xFF131F2E),
                 child: Row(
                   children: [
                     Container(
-                      width: 40,
-                      height: 40,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
                         color: const Color(0xFF223A56),
                         shape: BoxShape.circle,
@@ -2396,36 +2416,37 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> with Singl
                         widget.initials,
                         style: const TextStyle(
                           color: Color(0xFFB99C4C),
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.founderName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.founderName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.companyName,
-                          style: const TextStyle(
-                            color: Color(0xFFB99C4C),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.companyName,
+                            style: const TextStyle(
+                              color: Color(0xFFB99C4C),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    const Spacer(),
                     IconButton(
                       icon: const Icon(Icons.close_rounded,
                           color: Colors.white70, size: 24),
@@ -2513,8 +2534,8 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> with Singl
     final insightRows = _profile!.aiAttributes.isNotEmpty
         ? _profile!.aiAttributes.entries
             .map((e) => _buildRow(
-                  e.key.replaceAll('_', ' ').split(' ').map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}').join(' '),
-                  e.value?.toString(),
+                  _formatAttributeLabel(e.key),
+                  _formatAttributeValue(e.value),
                 ))
             .toList()
         : null;
@@ -2527,10 +2548,40 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> with Singl
         _buildSection('YOUR DETAILS', firstFormRows),
         if (insightRows != null && insightRows.isNotEmpty) ...[
           const SizedBox(height: 32),
-          _buildSentenceSection('What We\'ve Collected', insightRows),
+          _buildSentenceSection('What We Have Collected', insightRows),
         ],
       ],
     );
+  }
+
+  String _formatAttributeLabel(String key) {
+    final spaced = key
+        .replaceAll('_', ' ')
+        .replaceAllMapped(
+          RegExp(r'([a-z0-9])([A-Z])'),
+          (match) => '${match.group(1)} ${match.group(2)}',
+        );
+    return spaced
+        .split(' ')
+        .where((word) => word.isNotEmpty)
+        .map((word) => '${word[0].toUpperCase()}${word.substring(1)}')
+        .join(' ');
+  }
+
+  String? _formatAttributeValue(dynamic value) {
+    if (value == null || value == '') return null;
+    if (value is bool) return value ? 'Yes' : 'No';
+    if (value is Iterable) {
+      final values = value.where((item) => item != null && item.toString().isNotEmpty);
+      return values.isEmpty ? null : values.join(', ');
+    }
+    if (value is Map) {
+      final values = value.entries
+          .where((entry) => entry.value != null && entry.value.toString().isNotEmpty)
+          .map((entry) => '${_formatAttributeLabel(entry.key.toString())}: ${entry.value}');
+      return values.isEmpty ? null : values.join(', ');
+    }
+    return value.toString();
   }
 
   Widget _buildVoiceInteractionArea() {
@@ -3515,7 +3566,7 @@ class _TeamMemberProfileModal extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 20),
               decoration: const BoxDecoration(
                 color: AppThemeTokens.modalHeader,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -3535,24 +3586,24 @@ class _TeamMemberProfileModal extends StatelessWidget {
                       member.initials,
                       style: const TextStyle(
                         color: AppThemeTokens.goldAccent,
-                        fontSize: 16,
+                        fontSize: 20,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           member.name,
-                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           member.role,
-                          style: const TextStyle(color: AppThemeTokens.goldAccent, fontSize: 14),
+                          style: const TextStyle(color: AppThemeTokens.goldAccent, fontSize: 13, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),

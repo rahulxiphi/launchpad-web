@@ -568,7 +568,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
   Widget _buildHeader(
       BuildContext context, bool isDark, TextTheme textTheme) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(36, 24, 36, 20),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
       decoration: BoxDecoration(
         color: AppThemeTokens.modalHeader,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -583,17 +583,20 @@ class _ManualFormPageState extends State<ManualFormPage> {
               children: [
                 Text(
                   'ABOUT YOUR COMPANY',
-                  style: textTheme.titleMedium?.copyWith(
+                  style: const TextStyle(
                     color: AppThemeTokens.goldAccent,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   'Helps Nova calibrate every recommendation to your actual situation — not a generic playbook.',
-                  style: textTheme.bodySmall?.copyWith(
+                  style: TextStyle(
                     color: Colors.white.withOpacity(0.38),
-                    fontSize: 12,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
                   ),
                 ),
               ],
@@ -606,11 +609,11 @@ class _ManualFormPageState extends State<ManualFormPage> {
 
   Widget _buildHeaderAiBadge() {
     return Container(
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         color: const Color(0xFFF3F4F6).withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(11),
         border: Border.all(
           color: const Color(0xFFE5E7EB).withOpacity(0.22),
         ),
@@ -619,7 +622,7 @@ class _ManualFormPageState extends State<ManualFormPage> {
         child: Icon(
           Icons.auto_awesome_rounded,
           color: Colors.white,
-          size: 18,
+          size: 22,
         ),
       ),
     );
