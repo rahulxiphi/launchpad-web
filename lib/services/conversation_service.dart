@@ -205,6 +205,7 @@ class ProductPublic {
   final String? integrationInfo;
   final String? signupUrl;
   final double? matchScore;
+  final String? matchReasoning;
   final ProviderPublic? provider;
 
   ProductPublic({
@@ -224,6 +225,7 @@ class ProductPublic {
     this.integrationInfo,
     this.signupUrl,
     this.matchScore,
+    this.matchReasoning,
     this.provider,
   });
 
@@ -246,6 +248,7 @@ class ProductPublic {
       integrationInfo: json['integration_info'] as String?,
       signupUrl: json['signup_url'] as String?,
       matchScore: (json['match_score'] as num?)?.toDouble(),
+      matchReasoning: json['match_reasoning'] as String?,
       provider: json['provider'] != null
           ? ProviderPublic.fromJson(json['provider'])
           : null,
@@ -292,8 +295,8 @@ class ProspectFullProfile {
 
 class ConversationService {
   final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 30),
+    connectTimeout: const Duration(seconds: 60),
+    receiveTimeout: const Duration(seconds: 60),
   ));
 
   /// Creates a pre-auth prospect and returns the prospect_id.

@@ -382,6 +382,7 @@ class _HubMainColumn extends StatefulWidget {
 class _HubMainColumnState extends State<_HubMainColumn> {
   bool _hasInteractedProducts = false;
   bool _hasInteractedLearning = false;
+  bool _showAllProducts = false;
 
   IconData _getIconForCategory(String category) {
     final c = category.toLowerCase();
@@ -674,26 +675,57 @@ class _HubMainColumnState extends State<_HubMainColumn> {
             child: Wrap(
               spacing: 14,
               runSpacing: 14,
-              children: widget.products.map((product) {
-                final icon = _getIconForCategory(product.category);
-                final tint = _getTintForCategory(product.category);
+              children: [
+                ...widget.products
+                    .take(_showAllProducts ? widget.products.length : 5)
+                    .map((product) {
+                  final icon = _getIconForCategory(product.category);
+                  final tint = _getTintForCategory(product.category);
 
-                return SizedBox(
-                  width: 320,
-                  child: _ProductCard(
-                    icon: icon,
-                    tint: tint,
-                    iconColor: tint,
-                    title: product.name,
-                    description: product.shortDescription ?? product.description,
-                    cta: 'By ${product.provider?.companyName ?? 'J.P. Morgan'}',
-                    matchScore: product.matchScore,
-                    onInteraction: () =>
-                        setState(() => _hasInteractedProducts = true),
-                    onTap: () => widget.onTapProduct?.call(context, product),
+                  return SizedBox(
+                    width: 320,
+                    child: _ProductCard(
+                      icon: icon,
+                      tint: tint,
+                      iconColor: tint,
+                      title: product.name,
+                      description: product.shortDescription ?? product.description,
+                      cta: 'By ${product.provider?.companyName ?? 'J.P. Morgan'}',
+                      matchScore: product.matchScore,
+                      matchReasoning: product.matchReasoning,
+                      onInteraction: () =>
+                          setState(() => _hasInteractedProducts = true),
+                      onTap: () => widget.onTapProduct?.call(context, product),
+                    ),
+                  );
+                }).toList(),
+                if (!_showAllProducts && widget.products.length > 5)
+                  SizedBox(
+                    width: 320,
+                    height: 240,
+                    child: Center(
+                      child: TextButton(
+                        onPressed: () => setState(() => _showAllProducts = true),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppThemeTokens.buttonPrimary,
+                          textStyle: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text("Show more"),
+                            SizedBox(width: 4),
+                            Icon(Icons.keyboard_arrow_down_rounded, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                );
-              }).toList(),
+              ],
             ),
           ),
           Container(height: 1, color: const Color(0xFFE7DCC8)),
@@ -702,20 +734,14 @@ class _HubMainColumnState extends State<_HubMainColumn> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: const [
-                    Text(
-                      'Learning material',
-                      style: TextStyle(
-                        fontFamily: 'Georgia',
-                        color: AppThemeTokens.modalHeader,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 22,
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    _TinyBadge('New'),
-                  ],
+                Text(
+                  'Learning material',
+                  style: TextStyle(
+                    fontFamily: 'Georgia',
+                    color: AppThemeTokens.modalHeader,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 22,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 const Text(
@@ -753,8 +779,10 @@ class _HubMainColumnState extends State<_HubMainColumn> {
                           'Shared by Sarah to help streamline your initial operations.',
                       meta: '8 min read · Seed · Operations',
                       defaultHover: !_hasInteractedLearning,
+                      showNewBadge: true,
                       onInteraction:
                           () => setState(() => _hasInteractedLearning = true),
+                      onTap: () => _showLearningModal(context, 'Setting up efficient banking early'),
                     ),
                     _LearningCard(
                       stripe: const Color(0xFF378ADD),
@@ -765,6 +793,7 @@ class _HubMainColumnState extends State<_HubMainColumn> {
                       meta: 'May 7 · 1:00 PM ET · 45 min',
                       onInteraction:
                           () => setState(() => _hasInteractedLearning = true),
+                      onTap: () => _showLearningModal(context, 'Treasury habits that scale with you'),
                     ),
                     _LearningCard(
                       stripe: const Color(0xFF1D9E75),
@@ -773,6 +802,7 @@ class _HubMainColumnState extends State<_HubMainColumn> {
                       description:
                           'A brief explainer shared by Sarah to clarify treasury basics.',
                       meta: '5 min read · Finance leads',
+                      onTap: () => _showLearningModal(context, 'How early-stage treasury accounts work'),
                     ),
                     _LearningCard(
                       stripe: const Color(0xFF7F77DD),
@@ -781,6 +811,7 @@ class _HubMainColumnState extends State<_HubMainColumn> {
                       description:
                           'Recommended reading by Sarah ahead of your Series A raise.',
                       meta: '10 min read · Series A · Capital structure',
+                      onTap: () => _showLearningModal(context, 'Preparing for your first credit facility'),
                     ),
                   ],
                 );
@@ -1758,6 +1789,7 @@ class _ProductCard extends StatefulWidget {
   final String description;
   final String cta;
   final double? matchScore;
+  final String? matchReasoning;
   final VoidCallback? onTap;
 
   const _ProductCard({
@@ -1768,6 +1800,7 @@ class _ProductCard extends StatefulWidget {
     required this.description,
     required this.cta,
     this.matchScore,
+    this.matchReasoning,
     this.onTap,
     this.defaultHover = false,
     this.onInteraction,
@@ -1782,99 +1815,247 @@ class _ProductCard extends StatefulWidget {
 
 class _ProductCardState extends State<_ProductCard> {
   bool? _localHovered;
+  bool _isMatchHovered = false;
+  bool _showReasoning = false;
+  final _overlayController = OverlayPortalController();
+  
   bool get _isHovered => _localHovered ?? widget.defaultHover;
+
+  void _toggleReasoning() {
+    setState(() {
+      _showReasoning = !_showReasoning;
+      if (_showReasoning) {
+        _overlayController.show();
+      } else {
+        _overlayController.hide();
+      }
+    });
+  }
+
+  void _showOverlay() {
+    if (!_showReasoning) {
+      _overlayController.show();
+    }
+  }
+
+  void _hideOverlay() {
+    if (!_showReasoning) {
+      _overlayController.hide();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final bool isMobile = MediaQuery.of(context).size.width < 768;
+    
     return MouseRegion(
       onEnter: (_) {
         widget.onInteraction?.call();
         setState(() => _localHovered = true);
       },
-      onExit: (_) => setState(() => _localHovered = false),
+      onExit: (_) {
+        setState(() {
+          _localHovered = false;
+          _isMatchHovered = false;
+        });
+        _hideOverlay();
+      },
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: 240,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: _isHovered ? AppThemeTokens.modalHeader : Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: _isHovered ? AppThemeTokens.modalHeader : const Color(0xFFE1D9CB),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 320,
+              height: 240,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: _isHovered ? AppThemeTokens.modalHeader : Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: _isHovered ? AppThemeTokens.modalHeader : const Color(0xFFE1D9CB),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: _isHovered
-                          ? Colors.white.withOpacity(0.12)
-                          : widget.tint.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(widget.icon,
-                        color: _isHovered ? Colors.white : widget.iconColor,
-                        size: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: _isHovered
+                              ? Colors.white.withOpacity(0.12)
+                              : widget.tint.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(widget.icon,
+                            color: _isHovered ? Colors.white : widget.iconColor,
+                            size: 20),
+                      ),
+                      if (widget.matchScore != null)
+                        OverlayPortal(
+                          controller: _overlayController,
+                          overlayChildBuilder: (context) {
+                            return _buildReasoningOverlay(context);
+                          },
+                          child: MouseRegion(
+                            onEnter: (_) {
+                              setState(() => _isMatchHovered = true);
+                              _showOverlay();
+                            },
+                            onExit: (_) {
+                              setState(() => _isMatchHovered = false);
+                              _hideOverlay();
+                            },
+                            child: GestureDetector(
+                              onTap: isMobile ? _toggleReasoning : null,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1D9E75).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '${(widget.matchScore! * 100).toInt()}% match',
+                                  style: const TextStyle(
+                                    color: Color(0xFF1D9E75),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  if (widget.matchScore != null)
-                    Text(
-                      '${(widget.matchScore! * 100).toInt()}% match',
+                  const SizedBox(height: 16),
+                  Text(
+                    widget.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: _isHovered ? Colors.white : const Color(0xFF1A1A18),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: Text(
+                      widget.description,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: _isHovered
-                            ? AppThemeTokens.goldAccent
-                            : const Color(0xFF1D9E75),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: _isHovered ? const Color(0xFFD1D5DB) : const Color(0xFF6F675B),
+                        height: 1.5,
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '${widget.cta} →',
+                    style: TextStyle(
+                      color: _isHovered ? const Color(0xFF93C5FD) : AppThemeTokens.buttonPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Text(
-                widget.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: _isHovered ? Colors.white : const Color(0xFF1A1A18),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: Text(
-                  widget.description,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: _isHovered ? const Color(0xFFD1D5DB) : const Color(0xFF6F675B),
-                    height: 1.5,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReasoningOverlay(BuildContext context) {
+    if (widget.matchReasoning == null) return const SizedBox.shrink();
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // We need the card's position to show the overlay near it
+        final renderBox = this.context.findRenderObject() as RenderBox?;
+        if (renderBox == null) return const SizedBox.shrink();
+        
+        final offset = renderBox.localToGlobal(Offset.zero);
+        
+        return Stack(
+          children: [
+            Positioned(
+              left: offset.dx + 20,
+              top: offset.dy + 50, // Below the match percentage
+              width: 280,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppThemeTokens.modalHeader,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                    border: Border.all(color: Colors.white.withOpacity(0.12), width: 1.5),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.psychology_outlined,
+                            size: 16,
+                            color: AppThemeTokens.goldAccent,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Reasoning',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: AppThemeTokens.goldAccent,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (_showReasoning)
+                            GestureDetector(
+                              onTap: _toggleReasoning,
+                              child: const Icon(Icons.close, color: Colors.white54, size: 14),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        widget.matchReasoning!,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFFE2E8F0),
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                '${widget.cta} →',
-                style: TextStyle(
-                  color: _isHovered ? const Color(0xFF93C5FD) : AppThemeTokens.buttonPrimary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1886,6 +2067,11 @@ class _LearningCard extends StatefulWidget {
   final String meta;
   final String? description;
 
+  final bool defaultHover;
+  final bool showNewBadge;
+  final VoidCallback? onInteraction;
+  final VoidCallback? onTap;
+
   const _LearningCard({
     required this.stripe,
     required this.tag,
@@ -1893,11 +2079,10 @@ class _LearningCard extends StatefulWidget {
     required this.meta,
     this.description,
     this.defaultHover = false,
+    this.showNewBadge = false,
     this.onInteraction,
+    this.onTap,
   });
-
-  final bool defaultHover;
-  final VoidCallback? onInteraction;
 
   @override
   State<_LearningCard> createState() => _LearningCardState();
@@ -1916,16 +2101,21 @@ class _LearningCardState extends State<_LearningCard> {
       },
       onExit: (_) => setState(() => _localHovered = false),
       cursor: SystemMouseCursors.click,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: _isHovered ? const Color(0xFF1F2937) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: _isHovered ? const Color(0xFF1F2937) : const Color(0xFFE1D9CB)),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: IntrinsicHeight(
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              decoration: BoxDecoration(
+                color: _isHovered ? const Color(0xFF1F2937) : Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _isHovered ? const Color(0xFF1F2937) : const Color(0xFFE1D9CB)),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -2004,7 +2194,16 @@ class _LearningCardState extends State<_LearningCard> {
         ),
       ),
     ),
-  );
+    if (widget.showNewBadge)
+      Positioned(
+        top: 12,
+        right: 12,
+        child: _TinyBadge('New'),
+      ),
+  ],
+),
+),
+);
   }
 }
 
@@ -2041,6 +2240,16 @@ class _TinyBadge extends StatelessWidget {
       ),
     );
   }
+
+  void _showLearningModal(BuildContext context, String title) {
+    showDialog(
+      context: context,
+      builder: (_) => _LearningMaterialModal(
+        title: title,
+      ),
+    );
+  }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Profile Modal
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2653,6 +2862,26 @@ class _ProductDetailModal extends StatelessWidget {
                           ],
                         ),
                       ),
+                      if (product.matchScore != null) ...[
+                        const SizedBox(width: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1D9E75).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF1D9E75).withOpacity(0.3)),
+                          ),
+                          child: Text(
+                            '${(product.matchScore! * 100).toInt()}% match',
+                            style: const TextStyle(
+                              color: Color(0xFF34D399),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(width: 8),
                       IconButton(
                         icon: const Icon(Icons.close_rounded,
                             color: Colors.white60, size: 24),
@@ -2678,6 +2907,36 @@ class _ProductDetailModal extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 32),
+                        if (product.matchReasoning != null) ...[
+                          _buildSectionTitle('RECOMMENDATION REASONING'),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0FDFA),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFCCFBF1)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.psychology_outlined, color: Color(0xFF1D9E75), size: 20),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    product.matchReasoning!,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      color: Color(0xFF0F766E),
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                        ],
                         const Text(
                           'OVERVIEW',
                           style: TextStyle(
@@ -2728,6 +2987,11 @@ class _ProductDetailModal extends StatelessWidget {
                           ...product.eligibilityCriteria.entries.map((e) =>
                               _buildBulletPoint('${e.key}: ${e.value}')),
                           const SizedBox(height: 32),
+                        ],
+                        if (product.provider != null) ...[
+                          _buildSectionTitle('PROVIDER'),
+                          const SizedBox(height: 12),
+                          _buildProviderCard(product.provider!),
                         ],
                       ],
                     ),
@@ -2841,6 +3105,285 @@ class _ProductDetailModal extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Learning Material Modal
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _LearningMaterialModal extends StatelessWidget {
+  final String title;
+
+  const _LearningMaterialModal({
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: Container(
+        width: 840,
+        height: 680,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            color: Colors.white,
+            child: Column(
+              children: [
+                // ── Header ─────────────────────────────────────────
+                Container(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 16, 20),
+                  color: AppThemeTokens.modalHeader,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFB99C4C).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: const Icon(Icons.menu_book_rounded, color: Color(0xFFB99C4C), size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'CURATED GUIDE • 8 MIN READ',
+                              style: TextStyle(
+                                color: Colors.white60,
+                                fontSize: 11,
+                                letterSpacing: 1.1,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded,
+                            color: Colors.white60, size: 24),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                // ── Body ───────────────────────────────────────────
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(40),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSection('INTRODUCTION', 
+                          'For early-stage startups, the foundation of your financial operations can dictate your speed of growth. This guide outlines how to establish a robust banking setup that automates manual tasks, ensures compliance, and prepares you for your first institutional funding round.'),
+                        
+                        const SizedBox(height: 32),
+                        
+                        _buildSection('WHY BANKING ARCHITECTURE MATTERS', 
+                          'Many founders treat banking as a utility, but it’s actually your most critical financial infrastructure. A well-designed setup helps you:\n\n• Maintain clean books for future audits\n• Automate vendor payments without manual oversight\n• Safeguard investor capital through multi-layered security\n• Leverage treasury solutions to extend your runway'),
+                        
+                        const SizedBox(height: 40),
+                        
+                        const Text(
+                          'KEY STEPS TO GETTING STARTED',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: AppThemeTokens.modalHeader,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        
+                        _buildStepCard(
+                          '1', 
+                          'Choose the Right Entity Bank Account', 
+                          'Ensure your bank supports C-Corp structures and has specialized startup teams who understand VC-backed growth models.'
+                        ),
+                        _buildStepCard(
+                          '2', 
+                          'Implement Proper Segregation of Duties', 
+                          'Set up secondary approvers for large transfers to prevent fraud and internal errors from day one.'
+                        ),
+                        _buildStepCard(
+                          '3', 
+                          'Link Your Accounting Stack', 
+                          'Connect your bank feeds directly to QuickBooks or Xero to eliminate manual data entry and minimize reconciliation lag.'
+                        ),
+                        
+                        const SizedBox(height: 40),
+                        
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.lightbulb_outline_rounded, color: Color(0xFFB99C4C), size: 20),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'PRO TIP',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFFB99C4C),
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Consider opening a secondary "Reserve" account. Move 80% of your venture capital into this account and only pull into your "Operating" account what is needed for the month\'s burn. This reduces risk and improves interest yield management.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.blueGrey.shade800,
+                                  height: 1.6,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 40),
+                        
+                        const Divider(color: Color(0xFFE2E8F0)),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'Ready to optimize your treasury?\nSchedule a 1:1 consultation with Sarah to review your current setup.',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF475569),
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () {},
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppThemeTokens.buttonPrimary,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Book Consultation', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSection(String title, String content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 12,
+            letterSpacing: 1.2,
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          content,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Color(0xFF1E293B),
+            height: 1.6,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStepCard(String number, String title, String description) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppThemeTokens.modalHeader.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: const TextStyle(
+                  color: AppThemeTokens.modalHeader,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF64748B),
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+
+
 
 class _TeamMember {
   final String name;

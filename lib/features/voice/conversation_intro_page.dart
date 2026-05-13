@@ -452,10 +452,12 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppThemeTokens.buttonPrimary,
                             foregroundColor: Colors.white,
+                            disabledBackgroundColor: const Color(0xFFB3D8E5), // Faded light blue
+                            disabledForegroundColor: Colors.white70,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
-                          child: const Text('I UNDERSTAND'),
+                          child: const Text('GET STARTED'),
                         ),
                       ),
                     ],
@@ -775,6 +777,12 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                             shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                                                             elevation: WidgetStateProperty.all(_canSubmit ? 4 : 0),
                                                             shadowColor: WidgetStateProperty.all(AppThemeTokens.buttonPrimary.withOpacity(0.4)),
+                                                            backgroundColor: WidgetStateProperty.resolveWith((states) {
+                                                              if (states.contains(WidgetState.disabled)) {
+                                                                return const Color(0xFFB3D8E5); // Faded light blue
+                                                              }
+                                                              return AppThemeTokens.buttonPrimary;
+                                                            }),
                                                             textStyle: WidgetStateProperty.all(const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
                                                           ),
                                                     ),
