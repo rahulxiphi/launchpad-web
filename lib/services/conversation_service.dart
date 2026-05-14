@@ -206,6 +206,7 @@ class ProductPublic {
   final String? signupUrl;
   final double? matchScore;
   final String? matchReasoning;
+  final String? paraphrasedMatchReasoning;
   final ProviderPublic? provider;
 
   ProductPublic({
@@ -226,6 +227,7 @@ class ProductPublic {
     this.signupUrl,
     this.matchScore,
     this.matchReasoning,
+    this.paraphrasedMatchReasoning,
     this.provider,
   });
 
@@ -249,6 +251,7 @@ class ProductPublic {
       signupUrl: json['signup_url'] as String?,
       matchScore: (json['match_score'] as num?)?.toDouble(),
       matchReasoning: json['match_reasoning'] as String?,
+      paraphrasedMatchReasoning: json['paraphrased_match_reasoning'] as String?,
       provider: json['provider'] != null
           ? ProviderPublic.fromJson(json['provider'])
           : null,
@@ -293,11 +296,50 @@ class ProspectFullProfile {
 }
 
 
+class MatchReasoningResult {
+  final String productId;
+  final String prospectId;
+  final String rawReasoning;
+  final String paraphrasedReasoning;
+  final double matchScore;
+
+  const MatchReasoningResult({
+    required this.productId,
+    required this.prospectId,
+    required this.rawReasoning,
+    required this.paraphrasedReasoning,
+    required this.matchScore,
+  });
+
+  factory MatchReasoningResult.fromJson(Map<String, dynamic> json) {
+    return MatchReasoningResult(
+      productId: json['product_id'] as String,
+      prospectId: json['prospect_id'] as String,
+      rawReasoning: json['raw_reasoning'] as String? ?? '',
+      paraphrasedReasoning: json['paraphrased_reasoning'] as String? ?? '',
+      matchScore: (json['match_score'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
 class ConversationService {
   final Dio _dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 60),
     receiveTimeout: const Duration(seconds: 60),
   ));
+
+  // Static in-memory cache to share reasoning between different card/modal instances.
+  // Key format: "prospectId_productId" -> { "raw": "...", "result": MatchReasoningResult }
+  static final Map<String, Map<String, dynamic>> _reasoningCache = {};
+
+  static MatchReasoningResult? getCachedReasoning(String prospectId, String productId, String? currentRaw) {
+    final cacheKey = '${prospectId}_$productId';
+    final cachedEntry = _reasoningCache[cacheKey];
+    if (cachedEntry != null && cachedEntry['raw'] == currentRaw) {
+      return cachedEntry['result'] as MatchReasoningResult;
+    }
+    return null;
+  }
 
   /// Creates a pre-auth prospect and returns the prospect_id.
   Future<String> createProspect(String stageBucket, {String? email}) async {
@@ -625,5 +667,37 @@ class ConversationService {
     );
     final data = response.data['products'] as List;
     return data.map((json) => ProductPublic.fromJson(json)).toList();
+  }
+
+  Future<MatchReasoningResult> getMatchReasoning({
+    required String prospectId,
+    required String productId,
+    String? currentRaw,
+  }) async {
+    final cacheKey = '${prospectId}_$productId';
+    
+    // 1. Check cache first with raw reasoning validation
+    final cached = getCachedReasoning(prospectId, productId, currentRaw);
+    if (cached != null) {
+      return cached;
+    }
+
+    final response = await _dio.get(
+      '${ApiConfig.baseUrl}/conversations/match-reasoning',
+      queryParameters: {
+        'prospect_id': prospectId,
+        'product_id': productId,
+      },
+    );
+    
+    final result = MatchReasoningResult.fromJson(response.data as Map<String, dynamic>);
+    
+    // 2. Store in cache for future hovers/modals
+    _reasoningCache[cacheKey] = {
+      'raw': currentRaw ?? result.rawReasoning,
+      'result': result,
+    };
+    
+    return result;
   }
 }

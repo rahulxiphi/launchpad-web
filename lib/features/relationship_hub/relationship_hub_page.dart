@@ -162,6 +162,25 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
     );
   }
 
+  void _showProductModal(BuildContext context, ProductPublic product) {
+    showDialog(
+      context: context,
+      builder: (_) => _ProductDetailModal(
+        product: product,
+        prospectId: widget.prospectId,
+      ),
+    );
+  }
+
+  void _showLearningModal(BuildContext context, String title) {
+    showDialog(
+      context: context,
+      builder: (_) => _LearningMaterialModal(
+        title: title,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 1180;
@@ -200,6 +219,7 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
                                     prospectId: widget.prospectId,
                                     email: _userEmail,
                                     onTapProduct: _showProductModal,
+                                    onTapLearning: _showLearningModal,
                                     products: _products,
                                   )),
                                   SizedBox(
@@ -236,6 +256,7 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
                             priorities: _priorities,
                           ),
                           onTapProduct: _showProductModal,
+                          onTapLearning: _showLearningModal,
                         ),
             ),
           ],
@@ -373,7 +394,10 @@ class _HubMainColumn extends StatefulWidget {
     this.email = '',
     this.trailingPanel,
     this.onTapProduct,
+    this.onTapLearning,
   });
+
+  final void Function(BuildContext context, String title)? onTapLearning;
 
   @override
   State<_HubMainColumn> createState() => _HubMainColumnState();
@@ -695,6 +719,8 @@ class _HubMainColumnState extends State<_HubMainColumn> {
                       cta: 'By ${product.provider?.companyName ?? 'J.P. Morgan'}',
                       matchScore: product.matchScore,
                       matchReasoning: product.matchReasoning,
+                      productId: product.productId,
+                      prospectId: widget.prospectId,
                       onInteraction: () =>
                           setState(() => _hasInteractedProducts = true),
                       onTap: () => widget.onTapProduct?.call(context, product),
@@ -784,7 +810,7 @@ class _HubMainColumnState extends State<_HubMainColumn> {
                       showNewBadge: true,
                       onInteraction:
                           () => setState(() => _hasInteractedLearning = true),
-                      onTap: () => _showLearningModal(context, 'Setting up efficient banking early'),
+                      onTap: () => widget.onTapLearning?.call(context, 'Setting up efficient banking early'),
                     ),
                     _LearningCard(
                       stripe: const Color(0xFF378ADD),
@@ -795,7 +821,7 @@ class _HubMainColumnState extends State<_HubMainColumn> {
                       meta: 'May 7 · 1:00 PM ET · 45 min',
                       onInteraction:
                           () => setState(() => _hasInteractedLearning = true),
-                      onTap: () => _showLearningModal(context, 'Treasury habits that scale with you'),
+                      onTap: () => widget.onTapLearning?.call(context, 'Treasury habits that scale with you'),
                     ),
                     _LearningCard(
                       stripe: const Color(0xFF1D9E75),
@@ -804,7 +830,7 @@ class _HubMainColumnState extends State<_HubMainColumn> {
                       description:
                           'A brief explainer shared by Sarah to clarify treasury basics.',
                       meta: '5 min read · Finance leads',
-                      onTap: () => _showLearningModal(context, 'How early-stage treasury accounts work'),
+                      onTap: () => widget.onTapLearning?.call(context, 'How early-stage treasury accounts work'),
                     ),
                     _LearningCard(
                       stripe: const Color(0xFF7F77DD),
@@ -813,7 +839,7 @@ class _HubMainColumnState extends State<_HubMainColumn> {
                       description:
                           'Recommended reading by Sarah ahead of your Series A raise.',
                       meta: '10 min read · Series A · Capital structure',
-                      onTap: () => _showLearningModal(context, 'Preparing for your first credit facility'),
+                      onTap: () => widget.onTapLearning?.call(context, 'Preparing for your first credit facility'),
                     ),
                   ],
                 );
@@ -1805,6 +1831,8 @@ class _ProductCard extends StatefulWidget {
   final String cta;
   final double? matchScore;
   final String? matchReasoning;
+  final String productId;
+  final String? prospectId;
   final VoidCallback? onTap;
 
   const _ProductCard({
@@ -1816,6 +1844,8 @@ class _ProductCard extends StatefulWidget {
     required this.cta,
     this.matchScore,
     this.matchReasoning,
+    required this.productId,
+    this.prospectId,
     this.onTap,
     this.defaultHover = false,
     this.onInteraction,
@@ -1835,6 +1865,50 @@ class _ProductCardState extends State<_ProductCard> {
   final _overlayController = OverlayPortalController();
   final GlobalKey _cardChipKey = GlobalKey();
   
+  String? _paraphrasedReasoning;
+  bool _isLoadingReasoning = false;
+  final _conversationService = ConversationService();
+
+  Future<void> _fetchParaphrasedReasoning() async {
+    if (widget.prospectId == null) return;
+
+    // 1. Check shared static cache first to see if we already have this for the current raw reasoning
+    final cached = ConversationService.getCachedReasoning(widget.prospectId!, widget.productId, widget.matchReasoning);
+    if (cached != null) {
+      if (mounted) {
+        setState(() {
+          _paraphrasedReasoning = cached.paraphrasedReasoning;
+          _isLoadingReasoning = false;
+        });
+      }
+      return;
+    }
+
+    if (_isLoadingReasoning) return;
+    
+    setState(() => _isLoadingReasoning = true);
+    try {
+      final result = await _conversationService.getMatchReasoning(
+        prospectId: widget.prospectId!,
+        productId: widget.productId,
+        currentRaw: widget.matchReasoning,
+      );
+      if (mounted) {
+        setState(() {
+          _paraphrasedReasoning = result.paraphrasedReasoning;
+          _isLoadingReasoning = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingReasoning = false;
+          _paraphrasedReasoning = widget.matchReasoning; // Fallback
+        });
+      }
+    }
+  }
+  
   bool get _isHovered => _localHovered ?? widget.defaultHover;
 
   void _toggleReasoning() {
@@ -1849,6 +1923,7 @@ class _ProductCardState extends State<_ProductCard> {
   }
 
   void _showOverlay() {
+    _fetchParaphrasedReasoning();
     if (!_showReasoning) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && !_showReasoning) {
@@ -2067,14 +2142,35 @@ class _ProductCardState extends State<_ProductCard> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      Text(
-                        widget.matchReasoning!,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF0F766E),
-                          height: 1.5,
+                      if (_isLoadingReasoning)
+                        const Center(child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1D9E75)),
+                        ))
+                      else if (_paraphrasedReasoning != null)
+                        MarkdownBody(
+                          data: _paraphrasedReasoning!,
+                          styleSheet: MarkdownStyleSheet(
+                            p: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF0F766E),
+                              height: 1.5,
+                            ),
+                            strong: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0F766E),
+                            ),
+                          ),
+                        )
+                      else
+                        Text(
+                          widget.matchReasoning ?? "Reasoning unavailable",
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF0F766E),
+                            height: 1.5,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -2260,23 +2356,6 @@ class _TinyBadge extends StatelessWidget {
   }
 }
 
-  void _showProductModal(BuildContext context, ProductPublic product) {
-    showDialog(
-      context: context,
-      builder: (_) => _ProductDetailModal(
-        product: product,
-      ),
-    );
-  }
-
-  void _showLearningModal(BuildContext context, String title) {
-    showDialog(
-      context: context,
-      builder: (_) => _LearningMaterialModal(
-        title: title,
-      ),
-    );
-  }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Profile Modal
@@ -2824,9 +2903,11 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> with Singl
 
 class _ProductDetailModal extends StatefulWidget {
   final ProductPublic product;
+  final String? prospectId;
 
   _ProductDetailModal({
     required this.product,
+    this.prospectId,
   });
 
   @override
@@ -2836,25 +2917,83 @@ class _ProductDetailModal extends StatefulWidget {
 class _ProductDetailModalState extends State<_ProductDetailModal> {
   final _overlayController = OverlayPortalController();
   final GlobalKey _modalChipKey = GlobalKey();
+  bool _isMatchHovered = false;
+  bool _showReasoning = false;
+
+  String? _paraphrasedReasoning;
+  bool _isLoadingReasoning = false;
+  final _conversationService = ConversationService();
+
+  Future<void> _fetchParaphrasedReasoning() async {
+    if (widget.prospectId == null) return;
+
+    // 1. Check shared static cache first
+    final cached = ConversationService.getCachedReasoning(widget.prospectId!, widget.product.productId, widget.product.matchReasoning);
+    if (cached != null) {
+      if (mounted) {
+        setState(() {
+          _paraphrasedReasoning = cached.paraphrasedReasoning;
+          _isLoadingReasoning = false;
+        });
+      }
+      return;
+    }
+
+    if (_isLoadingReasoning) return;
+    
+    setState(() => _isLoadingReasoning = true);
+    try {
+      final result = await _conversationService.getMatchReasoning(
+        prospectId: widget.prospectId!,
+        productId: widget.product.productId,
+        currentRaw: widget.product.matchReasoning,
+      );
+      if (mounted) {
+        setState(() {
+          _paraphrasedReasoning = result.paraphrasedReasoning;
+          _isLoadingReasoning = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingReasoning = false;
+          _paraphrasedReasoning = widget.product.matchReasoning; // Fallback
+        });
+      }
+    }
+  }
+
+  void _toggleReasoning() {
+    setState(() {
+      _showReasoning = !_showReasoning;
+      if (_showReasoning) {
+        _overlayController.show();
+      } else {
+        _overlayController.hide();
+      }
+    });
+  }
 
   void _showOverlay() {
-    if (_overlayController.isShowing) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _overlayController.show();
-    });
+    _fetchParaphrasedReasoning();
+    if (!_showReasoning) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_showReasoning) {
+          _overlayController.show();
+        }
+      });
+    }
   }
 
   void _hideOverlay() {
-    if (!_overlayController.isShowing) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _overlayController.hide();
-    });
-  }
-
-  void _toggleOverlay() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _overlayController.toggle();
-    });
+    if (!_showReasoning) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_showReasoning) {
+          _overlayController.hide();
+        }
+      });
+    }
   }
 
   IconData _getIconForCategory(String category) {
@@ -2957,10 +3096,17 @@ class _ProductDetailModalState extends State<_ProductDetailModal> {
                             controller: _overlayController,
                             overlayChildBuilder: (context) => _buildReasoningOverlay(context),
                             child: MouseRegion(
-                              onEnter: (_) => _showOverlay(),
-                              onExit: (_) => _hideOverlay(),
+                              cursor: SystemMouseCursors.click,
+                              onEnter: (_) {
+                                setState(() => _isMatchHovered = true);
+                                _showOverlay();
+                              },
+                              onExit: (_) {
+                                setState(() => _isMatchHovered = false);
+                                _hideOverlay();
+                              },
                               child: GestureDetector(
-                                onTap: _toggleOverlay,
+                                onTap: _toggleReasoning,
                                 child: Container(
                                   key: _modalChipKey,
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -3111,47 +3257,92 @@ class _ProductDetailModalState extends State<_ProductDetailModal> {
         return Stack(
           children: [
             Positioned(
-              left: offset.dx - (320 - chipSize.width), // Align right edge with chip right edge roughly
+              left: offset.dx - (280 - chipSize.width),
               top: offset.dy + chipSize.height + 8,
-              width: 320,
+              width: 280,
               child: IgnorePointer(
+                ignoring: _showReasoning ? false : true,
                 child: Material(
-                color: Colors.transparent,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0FDFA),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFCCFBF1), width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.psychology_outlined, color: Color(0xFF1D9E75), size: 18),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          widget.product.matchReasoning!,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF0F766E),
-                            height: 1.5,
-                          ),
+                  color: Colors.transparent,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDFA),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
                         ),
-                      ),
-                    ],
+                      ],
+                      border: Border.all(color: const Color(0xFFCCFBF1), width: 1.5),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.psychology_outlined,
+                              size: 16,
+                              color: Color(0xFF1D9E75),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Reasoning',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF1D9E75),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (_showReasoning)
+                              GestureDetector(
+                                onTap: _toggleReasoning,
+                                child: const Icon(Icons.close, color: Color(0xFF1D9E75), size: 14),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        if (_isLoadingReasoning)
+                          const Center(child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1D9E75)),
+                          ))
+                        else if (_paraphrasedReasoning != null)
+                          MarkdownBody(
+                            data: _paraphrasedReasoning!,
+                            styleSheet: MarkdownStyleSheet(
+                              p: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF0F766E),
+                                height: 1.5,
+                              ),
+                              strong: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0F766E),
+                              ),
+                            ),
+                          )
+                        else
+                          Text(
+                            widget.product.matchReasoning ?? "Reasoning unavailable",
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF0F766E),
+                              height: 1.5,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
           ],
         );
       },
