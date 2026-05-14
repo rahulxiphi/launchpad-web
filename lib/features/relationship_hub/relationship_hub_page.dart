@@ -196,6 +196,11 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
               activeLabel: 'Relationship Hub',
               isHubEnabled: true,
               onProfileTap: () => _showProfileModal(context),
+              onInteractionsTap: () {
+                final pid = widget.prospectId;
+                final path = pid != null ? '/?p=$pid' : '/';
+                context.go(path);
+              },
             ),
             Expanded(
               child: _loading
@@ -882,6 +887,7 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ScrollController _historyScrollController = ScrollController();
+  final FocusNode _focusNode = FocusNode();
   bool _sending = false;
   late final List<_GuideMessage> _messages = [
     _GuideMessage(
@@ -923,6 +929,7 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
     _controller.dispose();
     _scrollController.dispose();
     _historyScrollController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -976,6 +983,8 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
     } finally {
       if (mounted) {
         setState(() => _sending = false);
+        // Keep focus on the input after sending
+        _focusNode.requestFocus();
       }
     }
   }
@@ -1054,6 +1063,28 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
     if (!_historyScrollController.hasClients || _loadingHistory || !_historyHasMore) return;
     if (_historyScrollController.offset <= 50) {
       _loadHistory(loadMore: true);
+    }
+  }
+
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      // Only prefill if input is empty
+      if (_controller.text.isEmpty && !_sending) {
+        try {
+          final lastUserMessage = _messages.lastWhere(
+            (m) => m.isUser,
+          );
+          if (lastUserMessage.text.isNotEmpty) {
+            _controller.text = lastUserMessage.text;
+            // Set cursor at the end
+            _controller.selection = TextSelection.fromPosition(
+              TextPosition(offset: _controller.text.length),
+            );
+          }
+        } catch (_) {
+          // No user messages yet
+        }
+      }
     }
   }
 
@@ -1314,28 +1345,32 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      enabled: !_sending,
-                      onSubmitted: _sendMessage,
-                      textInputAction: TextInputAction.send,
-                      minLines: 1,
-                      maxLines: 4,
-                      style: const TextStyle(
-                        color: Color(0xFF1F2937),
-                        fontSize: 14,
-                      ),
-                      decoration: const InputDecoration(
-                        hintText: 'Ask about your materials…',
-                        hintStyle: TextStyle(color: Color(0xFF8D8578)),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
+                    child: KeyboardListener(
+                      focusNode: _focusNode,
+                      onKeyEvent: _handleKeyEvent,
+                      child: TextField(
+                        controller: _controller,
+                        enabled: !_sending,
+                        onSubmitted: _sendMessage,
+                        textInputAction: TextInputAction.send,
+                        minLines: 1,
+                        maxLines: 4,
+                        style: const TextStyle(
+                          color: Color(0xFF1F2937),
+                          fontSize: 14,
                         ),
-                        isDense: true,
+                        decoration: const InputDecoration(
+                          hintText: 'Ask about your materials…',
+                          hintStyle: TextStyle(color: Color(0xFF8D8578)),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          isDense: true,
+                        ),
                       ),
                     ),
                   ),

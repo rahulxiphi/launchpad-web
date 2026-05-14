@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../services/conversation_service.dart';
 import 'voice_page.dart';
 import 'mode_selection_page.dart';
@@ -319,12 +320,12 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                         );
                       })(),
                       IconButton(
-                        onPressed: () => Navigator.pop(dialogContext),
+                        onPressed: () => context.go('/'),
                         icon: const Icon(
-                          Icons.close_rounded,
-                          color: Colors.white70,
+                          Icons.arrow_back_rounded,
+                          color: Colors.white,
+                          size: 20,
                         ),
-                        tooltip: 'Close',
                       ),
                     ],
                   ),
@@ -446,6 +447,11 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
       _isPostIncorporated = result.incorporated;
       _disclaimerAccepted = true;
     });
+
+    if (result.conversationPhase > 1) {
+      widget.onProspectFound?.call(result);
+      widget.onGoToRelationshipHub();
+    }
   }
 
   Future<void> _startFreshFromLookup() async {
@@ -531,6 +537,11 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
         widget.onProspectFound?.call(hydratedResume);
       }
       widget.onFormFilled?.call();
+      
+      if (hydratedResume != null && hydratedResume.conversationPhase > 1) {
+        widget.onGoToRelationshipHub();
+        return;
+      }
       
       Navigator.of(context).push(
         NoTransitionPageRoute(

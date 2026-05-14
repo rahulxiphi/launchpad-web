@@ -170,12 +170,10 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   Future<void> _handleGoToRelationshipHub() async {
-    final router = GoRouter.of(context);
     final path = _prospectId == null
         ? AppRoutes.relationshipHub
         : '${AppRoutes.relationshipHub}?p=${Uri.encodeComponent(_prospectId!)}';
-    Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
-    router.go(path);
+    context.go(path);
   }
 
   void _handleFormFilled() {

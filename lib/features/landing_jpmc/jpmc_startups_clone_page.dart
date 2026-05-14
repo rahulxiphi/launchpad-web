@@ -113,34 +113,40 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
   }
 
   Future<void> _startSession() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      const stageBucket = 'super_agent';
-      final returnPid = _storedProspectId;
-      
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => AppShell(
-            stageBucket: stageBucket,
-            prospectId: returnPid,
-            startAtModeSelection: returnPid != null,
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _errorMessage = 'Failed to start session: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+    final returnPid = _storedProspectId;
+    if (returnPid != null) {
+      context.go('/?p=$returnPid');
+    } else {
+      context.go('/stages');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppThemeTokens.buttonPrimary),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Resuming your session...',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (_resolvedProspect != null) {
       final resolved = _resolvedProspect!;
       return AppShell(

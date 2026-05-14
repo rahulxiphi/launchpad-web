@@ -511,37 +511,28 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                                 ),
                                           label: const Text(
                                               'GO TO RELATIONSHIP HUB'),
-                                          style: Theme.of(context)
-                                              .elevatedButtonTheme
-                                              .style
-                                              ?.copyWith(
-                                                shape:
-                                                    WidgetStateProperty.all(
-                                                  RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            12),
-                                                  ),
-                                                ),
-                                                elevation:
-                                                    WidgetStateProperty.all(
-                                                  _canSubmit ? 4 : 0,
-                                                ),
-                                                shadowColor:
-                                                    WidgetStateProperty.all(
-                                                  AppThemeTokens.buttonPrimary
-                                                      .withOpacity(0.4),
-                                                ),
-                                                textStyle:
-                                                    WidgetStateProperty.all(
-                                                  const TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight:
-                                                        FontWeight.bold,
-                                                    letterSpacing: 1.0,
-                                                  ),
-                                                ),
-                                              ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                AppThemeTokens.buttonPrimary,
+                                            foregroundColor: Colors.white,
+                                            disabledBackgroundColor:
+                                                const Color(0xFFB3D8E5),
+                                            disabledForegroundColor:
+                                                Colors.white70,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            elevation: _canSubmit ? 4 : 0,
+                                            shadowColor: AppThemeTokens
+                                                .buttonPrimary
+                                                .withOpacity(0.4),
+                                            textStyle: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 1.0,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ],
