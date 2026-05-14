@@ -305,16 +305,19 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                         ),
                       ),
                       const SizedBox(width: 14),
-                      const Expanded(
-                        child: Text(
-                          'Existing record found',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
+                      (() {
+                        final firstName = result.fullName?.trim().split(RegExp(r'\s+')).first ?? '';
+                        return Expanded(
+                          child: Text(
+                            firstName.isNotEmpty ? 'Welcome back, $firstName!' : 'Welcome back!',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      })(),
                       IconButton(
                         onPressed: () => Navigator.pop(dialogContext),
                         icon: const Icon(
@@ -344,10 +347,10 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                       ),
                       const SizedBox(height: 10),
                       const Text(
-                        'We can pre-fill the profile we already have, or you can keep this as a fresh session.',
+                        "Let's continue where you left off.",
                         style: TextStyle(
                           color: Color(0xFF4B5563),
-                          fontSize: 13,
+                          fontSize: 14,
                           height: 1.45,
                         ),
                       ),
