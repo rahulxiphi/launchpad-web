@@ -30,7 +30,6 @@ class ModeSelectionPage extends StatefulWidget {
 class _ModeSelectionPageState extends State<ModeSelectionPage>
     with SingleTickerProviderStateMixin {
   bool _isFetchingToken = false;
-  bool _preferManual = false;
   bool _isVoiceTriggerHovered = false;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -150,9 +149,10 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
 
                 Widget buildContent(double? bodyHeight) {
                   return Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
+                      const SizedBox(height: 80), // Balanced spacing
                       // Central Pulse Button
                       if (_isFetchingToken)
                         const SizedBox(
@@ -197,17 +197,17 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                                           width: 104 +
                                               (92 *
                                                   ((_pulseAnimation
-                                                              .value +
-                                                          (i *
-                                                              0.33)) %
-                                                      1.0)),
+                                                               .value +
+                                                           (i *
+                                                               0.33)) %
+                                                       1.0)),
                                           height: 104 +
                                               (92 *
                                                   ((_pulseAnimation
-                                                              .value +
-                                                          (i *
-                                                              0.33)) %
-                                                      1.0)),
+                                                               .value +
+                                                           (i *
+                                                               0.33)) %
+                                                       1.0)),
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
                                             border: Border.all(
@@ -276,9 +276,15 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                               : const Color(0xFF6B7280),
                         ),
                       ),
-                      const SizedBox(height: 32),
+                      
+                      const SizedBox(height: 12),
+                      _buildOrSeparator(isDark),
+                      const SizedBox(height: 12),
+
+                      // Continue Chat Button
                       SizedBox(
                         width: 280,
+                        height: 52,
                         child: ElevatedButton(
                           onPressed: _isFetchingToken
                               ? null
@@ -289,107 +295,29 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                               ?.copyWith(
                                 padding: WidgetStateProperty.all(
                                   const EdgeInsets.symmetric(
-                                      horizontal: 24, vertical: 18),
+                                      horizontal: 48, vertical: 18),
                                 ),
                                 shape: WidgetStateProperty.all(
                                   RoundedRectangleBorder(
                                     borderRadius:
-                                        BorderRadius.circular(13),
+                                        BorderRadius.circular(28),
                                   ),
                                 ),
                               ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                _isReturnVisit
-                                    ? 'Continue Chat'
-                                    : "Let's Chat",
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.chevron_right_rounded, size: 20),
-                            ],
+                          child: Text(
+                            _isReturnVisit
+                                ? 'Continue Chat'
+                                : "Let's Chat",
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      _buildOrSeparator(isDark),
                     ],
                   );
                 }
-
-                Widget checkboxBanner = Container(
-                  margin: EdgeInsets.symmetric(
-                    horizontal: isMobile ? 24 : 36,
-                    vertical: 16,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFFBEB),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFFEF3C7),
-                      width: 1,
-                    ),
-                  ),
-                  child: _buildCheckbox(
-                    _preferManual,
-                    (val) => setState(
-                        () => _preferManual = val ?? false),
-                    'I prefer to fill in the form manually — I understand this may result in slower matching and less tailored recommendations',
-                    isDark,
-                  ),
-                );
-
-                Widget footer = Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    isMobile ? 24 : 36,
-                    0,
-                    isMobile ? 24 : 36,
-                    32,
-                  ),
-                  child: Row(
-                    children: [
-                      _buildBottomBackButton(context),
-                      const Spacer(),
-                      TextButton.icon(
-                        onPressed: _preferManual
-                            ? _goToManualForm
-                            : null,
-                        icon: Icon(
-                          Icons.description_outlined,
-                          size: 18,
-                          color: _preferManual
-                              ? AppThemeTokens
-                                  .buttonPrimary
-                              : Colors.grey,
-                        ),
-                        label: const Text(
-                          'Fill Manual Form',
-                          style: TextStyle(
-                              fontWeight:
-                                  FontWeight.bold),
-                        ),
-                        style: TextButton.styleFrom(
-                          padding:
-                              const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 14),
-                          foregroundColor:
-                              AppThemeTokens
-                                  .buttonPrimary,
-                          disabledForegroundColor:
-                              Colors.grey,
-                        ),
-                      ),
-                      const Spacer(),
-                      const SizedBox(width: 48), // Balancing back button width
-                    ],
-                  ),
-                );
 
                 return Center(
                   child: Container(
@@ -425,8 +353,10 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                                   padding: const EdgeInsets.symmetric(vertical: 40),
                                   child: buildContent(null),
                                 ),
-                                checkboxBanner,
-                                footer,
+                                Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: _buildBottomBackButton(context),
+                                ),
                               ],
                             ),
                           )
@@ -435,21 +365,40 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                             children: [
                               _buildTopHeader(context, isDark, textTheme),
                               Expanded(
-                                child: LayoutBuilder(
-                                  builder: (context, bodyConstraints) {
-                                    return SingleChildScrollView(
-                                      child: ConstrainedBox(
-                                        constraints: BoxConstraints(
-                                          minHeight: bodyConstraints.maxHeight,
-                                        ),
-                                        child: buildContent(bodyConstraints.maxHeight),
-                                      ),
-                                    );
-                                  },
+                                child: Center(
+                                  child: ScrollConfiguration(
+                                    behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                                    child: SingleChildScrollView(
+                                      padding: EdgeInsets.zero,
+                                      child: buildContent(null),
+                                    ),
+                                  ),
                                 ),
                               ),
-                              checkboxBanner,
-                              footer,
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: _buildBottomBackButton(context),
+                                    ),
+                                    TextButton.icon(
+                                      onPressed: _isFetchingToken ? null : _goToManualForm,
+                                      icon: const Icon(Icons.description_outlined, size: 18),
+                                      label: const Text(
+                                        'Fill Manual Form',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: AppThemeTokens.buttonPrimary,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                   ),
@@ -488,7 +437,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Gets to know your company, then connects you to the right banking team and resources.',
+                  'Nova will get to know your startup — stage, priorities, and financial needs — and route you to the right specialist',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.50),
                     fontSize: 13,
@@ -545,43 +494,26 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
     );
   }
 
-  Widget _buildCheckbox(
-      bool value, ValueChanged<bool?> onChanged, String label, bool isDark) {
-    return GestureDetector(
-      onTap: () => onChanged(!value),
-      behavior: HitTestBehavior.opaque,
+  Widget _buildOrSeparator(bool isDark) {
+    final color = isDark ? Colors.white12 : Colors.black.withOpacity(0.06);
+    return SizedBox(
+      width: 200, // Shorter lines
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: value ? AppThemeTokens.buttonPrimary : Colors.transparent,
-              borderRadius: BorderRadius.circular(5),
-              border: Border.all(
-                color: value
-                    ? AppThemeTokens.buttonPrimary
-                    : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
-                width: 1.5,
-              ),
-            ),
-            child: value
-                ? const Icon(Icons.check, size: 14, color: Colors.white)
-                : null,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
+          Expanded(child: Container(height: 1, color: color)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              label,
+              'OR',
               style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.white70 : const Color(0xFF6B7280),
-                height: 1.4,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+                color: isDark ? Colors.white24 : Colors.black26,
               ),
             ),
           ),
+          Expanded(child: Container(height: 1, color: color)),
         ],
       ),
     );

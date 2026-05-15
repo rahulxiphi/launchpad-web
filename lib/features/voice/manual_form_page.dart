@@ -236,8 +236,10 @@ class _ManualFormPageState extends State<ManualFormPage> {
                                 20,
                               ),
                               child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  const SizedBox(height: 4),
                                 // Stage pills
                                 Text(
                                   'Company stage',

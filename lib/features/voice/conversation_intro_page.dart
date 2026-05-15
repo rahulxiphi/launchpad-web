@@ -29,7 +29,7 @@ const _stageContent = {
   'super_agent': _StageContent(
     heading: 'Nova — Your JPMC AI Advisor',
     description:
-        'Nova will get to know your startup — stage, priorities, and financial needs — then route you to the right specialist and surface personalised JPMC product recommendations.',
+        'Nova will get to know your startup — stage, priorities, and financial needs — and route you to the right specialist',
     topics: [
       'Calibrate your startup stage — from Pre-seed to IPO & Beyond',
       'Identify immediate financial priorities like Fundraising or Treasury',
@@ -474,11 +474,10 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   }
 
   void _handleBack() {
-    final nav = Navigator.of(context);
-    if (nav.canPop()) {
-      nav.pop();
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
     } else {
-      Navigator.of(context, rootNavigator: true).pop();
+      context.go('/');
     }
   }
 
@@ -779,9 +778,10 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                       child: ConstrainedBox(
                                         constraints: BoxConstraints(minHeight: bodyConstraints.maxHeight - 44),
                                         child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment: MainAxisAlignment.start,
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
+                                            const SizedBox(height: 40),
                                             Row(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
@@ -953,45 +953,42 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                 ],
                                               ),
                                             ),
-                                            const SizedBox(height: 24),
-                                            SizedBox(
-                                              width: double.infinity,
+                                            const SizedBox(height: 32),
+                                            Padding(
+                                              padding: const EdgeInsets.only(bottom: 8),
                                               child: Stack(
                                                 alignment: Alignment.center,
                                                 children: [
                                                   Align(
                                                     alignment: Alignment.centerLeft,
-                                                    child:
-                                                        _buildBottomBackButton(context),
+                                                    child: _buildBottomBackButton(context),
                                                   ),
                                                   SizedBox(
                                                     height: 52,
-                                                    width: isMobile ? double.infinity : 360,
-                                                    child: ElevatedButton.icon(
+                                                    width: isMobile ? double.infinity : 320,
+                                                    child: ElevatedButton(
                                                       onPressed: _canSubmit && !_isSavingProfile ? _submitProfileAndContinue : null,
-                                                      icon: _isSavingProfile
-                                                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                                          : Icon(Icons.auto_awesome, size: 18, color: _canSubmit ? AppThemeTokens.goldAccent : Colors.white),
-                                                      label: Text(
-                                                        _isSavingProfile
-                                                            ? "SAVING..."
-                                                            : (_isProfileLocked
-                                                                ? "CONTINUE"
-                                                                : "GET STARTED"),
-                                                      ),
                                                       style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
-                                                            padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 32)),
-                                                            shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                                                            elevation: WidgetStateProperty.all(_canSubmit ? 4 : 0),
-                                                            shadowColor: WidgetStateProperty.all(AppThemeTokens.buttonPrimary.withOpacity(0.4)),
+                                                            padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 48, vertical: 18)),
+                                                            shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(28))),
+                                                            elevation: WidgetStateProperty.all(0),
                                                             backgroundColor: WidgetStateProperty.resolveWith((states) {
                                                               if (states.contains(WidgetState.disabled)) {
-                                                                return const Color(0xFFB3D8E5); // Faded light blue
+                                                                return const Color(0xFFB3D8E5);
                                                               }
                                                               return AppThemeTokens.buttonPrimary;
                                                             }),
-                                                            textStyle: WidgetStateProperty.all(const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                                                            textStyle: WidgetStateProperty.all(const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
                                                           ),
+                                                      child: _isSavingProfile
+                                                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                                          : Text(
+                                                              _isSavingProfile
+                                                                  ? "SAVING..."
+                                                                  : (_isProfileLocked
+                                                                      ? "CONTINUE"
+                                                                      : "GET STARTED"),
+                                                            ),
                                                     ),
                                                   ),
                                                 ],

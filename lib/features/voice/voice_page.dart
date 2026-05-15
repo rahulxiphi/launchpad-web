@@ -824,6 +824,7 @@ class _VoicePageState extends State<VoicePage> with SingleTickerProviderStateMix
     final colorScheme = Theme.of(context).colorScheme;
     final isConnected = _client?.status == ConversationStatus.connected;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMobile = MediaQuery.of(context).size.width < 640;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -854,12 +855,11 @@ class _VoicePageState extends State<VoicePage> with SingleTickerProviderStateMix
               child: Center(
                 child: Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                   child: SizedBox(
-                    height: double.infinity,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 848),
-                      child: Row(
+                    width: isMobile ? double.infinity : 840,
+                    height: isMobile ? null : 680.0,
+                    child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
@@ -987,7 +987,6 @@ class _VoicePageState extends State<VoicePage> with SingleTickerProviderStateMix
                 ),
               ),
             ),
-          ),
         ],
       ),
     );

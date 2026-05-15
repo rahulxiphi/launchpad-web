@@ -62,12 +62,11 @@ GoRouter createRouter({
       GoRoute(
         path: AppRoutes.stageSelector,
         pageBuilder: (context, state) {
-          final invitationCode = state.uri.queryParameters['invite'];
           final returnProspectId = state.uri.queryParameters['p'];
           return NoTransitionPage(
-            child: StageSelectorPage(
-              invitationCode: invitationCode,
-              returnProspectId: returnProspectId,
+            child: AppShell(
+              stageBucket: 'super_agent',
+              prospectId: returnProspectId,
             ),
           );
         },
