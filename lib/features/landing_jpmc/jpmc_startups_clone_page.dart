@@ -115,7 +115,7 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
   Future<void> _startSession() async {
     final returnPid = _storedProspectId;
     if (returnPid != null) {
-      context.go('/?p=$returnPid');
+      context.go('/stages?p=$returnPid');
     } else {
       context.go('/stages');
     }
@@ -200,7 +200,7 @@ class _JpmcStartupsClonePageState extends State<JpmcStartupsClonePage> {
                   companyName: 'Launchpad',
                   founderName: 'Guest',
                   initials: 'G',
-                  activeLabel: 'Dashboard',
+                  activeLabel: 'Home',
                   onInteractionsTap: _startSession,
                   onProfileTap: () => {}, // No profile on landing page before login
                 ),

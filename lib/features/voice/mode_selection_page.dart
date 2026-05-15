@@ -116,8 +116,8 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final textTheme = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -147,334 +147,311 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final isMobile = constraints.maxWidth < 640;
-                return SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: ConstrainedBox(
-                    constraints:
-                        BoxConstraints(minHeight: constraints.maxHeight),
-                    child: Center(
-                      child: Container(
-                        width: isMobile ? double.infinity : 840,
-                        height: isMobile ? null : 680.0,
-                        margin: EdgeInsets.symmetric(
-                          horizontal: isMobile ? 0 : 24,
-                          vertical: isMobile ? 0 : 32,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF1E1E1E)
-                              : Colors.white,
-                          borderRadius:
-                              BorderRadius.circular(isMobile ? 0 : 20),
-                          boxShadow: isMobile
-                              ? null
-                              : [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.22),
-                                    blurRadius: 48,
-                                    offset: const Offset(0, 16),
-                                  )
-                                ],
-                        ),
-                        clipBehavior: Clip.hardEdge,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                          // ── Header bar ──────────────────────────────────
-                          _buildTopHeader(context, isDark, textTheme),
-                          _buildStepHeader(context, isDark, textTheme),
 
-                          // ── Body ────────────────────────────────────────
-                          Expanded(
-                            child: SingleChildScrollView(
-                              padding: EdgeInsets.fromLTRB(
-                                isMobile ? 24 : 36,
-                                16,
-                                isMobile ? 24 : 36,
-                                32,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                // Central Pulse Button
-                                if (_isFetchingToken)
-                                  const SizedBox(
-                                    height: 180,
-                                    child: Center(
-                                      child: CircularProgressIndicator(
-                                          color: AppThemeTokens.buttonPrimary),
-                                    ),
-                                  )
-                                else
-                                  MouseRegion(
-                                    cursor: _isFetchingToken
-                                        ? SystemMouseCursors.basic
-                                        : SystemMouseCursors.click,
-                                    onEnter: (_) => setState(
-                                        () => _isVoiceTriggerHovered = true),
-                                    onExit: (_) => setState(
-                                        () => _isVoiceTriggerHovered = false),
-                                    child: GestureDetector(
-                                      onTap: _isFetchingToken
-                                          ? null
-                                          : () =>
-                                              _startSession(isChatMode: false),
-                                      behavior: HitTestBehavior.opaque,
-                                      child: SizedBox(
-                                        height: 180,
-                                        width: 180,
-                                        child: AnimatedBuilder(
-                                          animation: _pulseAnimation,
-                                          builder: (context, child) {
-                                            final triggerColor =
-                                                _isVoiceTriggerHovered
-                                                    ? AppThemeTokens
-                                                        .buttonPrimaryHover
-                                                    : AppThemeTokens
-                                                        .buttonPrimary;
-                                            return Stack(
-                                              alignment: Alignment.center,
-                                              children: [
-                                                for (int i = 0; i < 3; i++)
-                                                  Container(
-                                                    width: 104 +
-                                                        (92 *
-                                                            ((_pulseAnimation
-                                                                        .value +
-                                                                    (i *
-                                                                        0.33)) %
-                                                                1.0)),
-                                                    height: 104 +
-                                                        (92 *
-                                                            ((_pulseAnimation
-                                                                        .value +
-                                                                    (i *
-                                                                        0.33)) %
-                                                                1.0)),
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      border: Border.all(
-                                                        color: AppThemeTokens
-                                                            .buttonPrimary
-                                                            .withOpacity(0.35 *
-                                                                (1.0 -
-                                                                    ((_pulseAnimation.value +
-                                                                            (i * 0.33)) %
-                                                                        1.0))),
-                                                        width: 1.5,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                AnimatedContainer(
-                                                  duration: const Duration(
-                                                      milliseconds: 140),
-                                                  width: 104,
-                                                  height: 104,
-                                                  decoration: BoxDecoration(
-                                                    color: triggerColor,
-                                                    shape: BoxShape.circle,
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: triggerColor
-                                                            .withOpacity(0.3),
-                                                        blurRadius: 12,
-                                                        offset:
-                                                            const Offset(0, 4),
-                                                      )
-                                                    ],
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.graphic_eq_rounded,
-                                                    color: Colors.white,
-                                                    size: 46,
-                                                  ),
-                                                ),
-                                              ],
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  _isReturnVisit
-                                      ? 'Tap the Orb to continue conversation'
-                                      : 'Tap the Orb to start conversation',
-                                  style: textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: isDark
-                                        ? Colors.white
-                                        : AppThemeTokens.brandInk,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  _isReturnVisit
-                                      ? 'Continue where Nova left off'
-                                      : '~10 min · Nova asks, you answer',
-                                  style: textTheme.bodySmall?.copyWith(
-                                    color: isDark
-                                        ? Colors.white54
-                                        : const Color(0xFF6B7280),
-                                  ),
-                                ),
-                                const SizedBox(height: 40),
-
-                                // Checkbox for Manual form
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: isDark
-                                        ? const Color(0xFF2C261A)
-                                        : const Color(0xFFFDF8E1),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: isDark
-                                            ? const Color(0xFF423C2B)
-                                            : const Color(0xFFF0E6C5)),
-                                  ),
-                                  child: _buildCheckbox(
-                                    _preferManual,
-                                    (val) => setState(
-                                        () => _preferManual = val ?? false),
-                                    'I prefer to fill in the form manually — I understand this may result in slower matching and less tailored recommendations',
-                                    isDark,
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
-
-                                // Footer row
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: Stack(
+                Widget buildContent(double? bodyHeight) {
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Central Pulse Button
+                      if (_isFetchingToken)
+                        const SizedBox(
+                          height: 180,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                                color: AppThemeTokens.buttonPrimary),
+                          ),
+                        )
+                      else
+                        MouseRegion(
+                          cursor: _isFetchingToken
+                              ? SystemMouseCursors.basic
+                              : SystemMouseCursors.click,
+                          onEnter: (_) => setState(
+                              () => _isVoiceTriggerHovered = true),
+                          onExit: (_) => setState(
+                              () => _isVoiceTriggerHovered = false),
+                          child: GestureDetector(
+                            onTap: _isFetchingToken
+                                ? null
+                                : () =>
+                                    _startSession(isChatMode: false),
+                            behavior: HitTestBehavior.opaque,
+                            child: SizedBox(
+                              height: 180,
+                              width: 180,
+                              child: AnimatedBuilder(
+                                animation: _pulseAnimation,
+                                builder: (context, child) {
+                                  final triggerColor =
+                                      _isVoiceTriggerHovered
+                                          ? AppThemeTokens
+                                              .buttonPrimaryHover
+                                          : AppThemeTokens
+                                              .buttonPrimary;
+                                  return Stack(
                                     alignment: Alignment.center,
                                     children: [
-                                      Align(
-                                        alignment: Alignment.centerLeft,
-                                        child:
-                                            _buildBottomBackButton(context),
-                                      ),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          TextButton.icon(
-                                            onPressed: _preferManual
-                                                ? _goToManualForm
-                                                : null,
-                                            icon: Icon(
-                                              Icons.description_outlined,
-                                              size: 18,
-                                              color: _preferManual
-                                                  ? AppThemeTokens
-                                                      .buttonPrimary
-                                                  : Colors.grey,
-                                            ),
-                                            label: const Text(
-                                              'Fill Manual Form',
-                                              style: TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.bold),
-                                            ),
-                                            style: TextButton.styleFrom(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 14),
-                                              foregroundColor:
-                                                  AppThemeTokens
-                                                      .buttonPrimary,
-                                              disabledForegroundColor:
-                                                  Colors.grey,
+                                      for (int i = 0; i < 3; i++)
+                                        Container(
+                                          width: 104 +
+                                              (92 *
+                                                  ((_pulseAnimation
+                                                              .value +
+                                                          (i *
+                                                              0.33)) %
+                                                      1.0)),
+                                          height: 104 +
+                                              (92 *
+                                                  ((_pulseAnimation
+                                                              .value +
+                                                          (i *
+                                                              0.33)) %
+                                                      1.0)),
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: AppThemeTokens
+                                                  .buttonPrimary
+                                                  .withOpacity(0.35 *
+                                                      (1.0 -
+                                                          ((_pulseAnimation.value +
+                                                                  (i * 0.33)) %
+                                                              1.0))),
+                                              width: 1.5,
                                             ),
                                           ),
-                                          const SizedBox(width: 22),
-                                          Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Container(
-                                                height: 12,
-                                                width: 1,
-                                                color: isDark
-                                                    ? Colors.white24
-                                                    : Colors.grey.shade300,
-                                              ),
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 4),
-                                                child: Text(
-                                                  'OR',
-                                                  style: textTheme.labelSmall
-                                                      ?.copyWith(
-                                                    color: isDark
-                                                        ? Colors.white38
-                                                        : Colors.grey.shade500,
-                                                    fontWeight:
-                                                        FontWeight.bold,
-                                                    fontSize: 10,
-                                                    letterSpacing: 0.5,
-                                                  ),
-                                                ),
-                                              ),
-                                              Container(
-                                                height: 12,
-                                                width: 1,
-                                                color: isDark
-                                                    ? Colors.white24
-                                                    : Colors.grey.shade300,
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(width: 32),
-                                          ElevatedButton(
-                                            onPressed: _isFetchingToken
-                                                ? null
-                                                : () => _startSession(
-                                                    isChatMode: true),
-                                            style: Theme.of(context)
-                                                .elevatedButtonTheme
-                                                .style
-                                                ?.copyWith(
-                                                  padding:
-                                                      WidgetStateProperty.all(
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 24,
-                                                        vertical: 18),
-                                                  ),
-                                                  shape:
-                                                      WidgetStateProperty.all(
-                                                    RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius
-                                                              .circular(13),
-                                                    ),
-                                                  ),
-                                                ),
-                                            child: Text(
-                                              _isReturnVisit
-                                                  ? 'Continue Chat'
-                                                  : "Let's Chat",
-                                              style: const TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.bold),
-                                            ),
-                                          ),
-                                        ],
+                                        ),
+                                      AnimatedContainer(
+                                        duration: const Duration(
+                                            milliseconds: 140),
+                                        width: 104,
+                                        height: 104,
+                                        decoration: BoxDecoration(
+                                          color: triggerColor,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: triggerColor
+                                                  .withOpacity(0.3),
+                                              blurRadius: 12,
+                                              offset:
+                                                  const Offset(0, 4),
+                                            )
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.graphic_eq_rounded,
+                                          color: Colors.white,
+                                          size: 46,
+                                        ),
                                       ),
                                     ],
-                                  ),
-                                ),
-                              ],
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ),
-                          ],
+                      const SizedBox(height: 16),
+                      Text(
+                        _isReturnVisit
+                            ? 'Tap the Orb to continue conversation'
+                            : 'Tap the Orb to start conversation',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: isDark
+                              ? Colors.white
+                              : AppThemeTokens.brandInk,
                         ),
                       ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _isReturnVisit
+                            ? 'Continue where Nova left off'
+                            : '~10 min · Nova asks, you answer',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: isDark
+                              ? Colors.white54
+                              : const Color(0xFF6B7280),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      SizedBox(
+                        width: 280,
+                        child: ElevatedButton(
+                          onPressed: _isFetchingToken
+                              ? null
+                              : () => _startSession(isChatMode: true),
+                          style: Theme.of(context)
+                              .elevatedButtonTheme
+                              .style
+                              ?.copyWith(
+                                padding: WidgetStateProperty.all(
+                                  const EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 18),
+                                ),
+                                shape: WidgetStateProperty.all(
+                                  RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(13),
+                                  ),
+                                ),
+                              ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _isReturnVisit
+                                    ? 'Continue Chat'
+                                    : "Let's Chat",
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.chevron_right_rounded, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                Widget checkboxBanner = Container(
+                  margin: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 24 : 36,
+                    vertical: 16,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFBEB),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFFEF3C7),
+                      width: 1,
                     ),
+                  ),
+                  child: _buildCheckbox(
+                    _preferManual,
+                    (val) => setState(
+                        () => _preferManual = val ?? false),
+                    'I prefer to fill in the form manually — I understand this may result in slower matching and less tailored recommendations',
+                    isDark,
+                  ),
+                );
+
+                Widget footer = Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    isMobile ? 24 : 36,
+                    0,
+                    isMobile ? 24 : 36,
+                    32,
+                  ),
+                  child: Row(
+                    children: [
+                      _buildBottomBackButton(context),
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: _preferManual
+                            ? _goToManualForm
+                            : null,
+                        icon: Icon(
+                          Icons.description_outlined,
+                          size: 18,
+                          color: _preferManual
+                              ? AppThemeTokens
+                                  .buttonPrimary
+                              : Colors.grey,
+                        ),
+                        label: const Text(
+                          'Fill Manual Form',
+                          style: TextStyle(
+                              fontWeight:
+                                  FontWeight.bold),
+                        ),
+                        style: TextButton.styleFrom(
+                          padding:
+                              const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 14),
+                          foregroundColor:
+                              AppThemeTokens
+                                  .buttonPrimary,
+                          disabledForegroundColor:
+                              Colors.grey,
+                        ),
+                      ),
+                      const Spacer(),
+                      const SizedBox(width: 48), // Balancing back button width
+                    ],
+                  ),
+                );
+
+                return Center(
+                  child: Container(
+                    width: isMobile ? double.infinity : 840,
+                    height: isMobile ? null : 680.0,
+                    margin: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 0 : 24,
+                      vertical: isMobile ? 0 : 32,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF1E1E1E)
+                          : Colors.white,
+                      borderRadius:
+                          BorderRadius.circular(isMobile ? 0 : 20),
+                      boxShadow: isMobile
+                          ? null
+                          : [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.22),
+                                blurRadius: 48,
+                                offset: const Offset(0, 16),
+                              )
+                            ],
+                    ),
+                    clipBehavior: Clip.hardEdge,
+                    child: isMobile
+                        ? SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                _buildTopHeader(context, isDark, textTheme),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 40),
+                                  child: buildContent(null),
+                                ),
+                                checkboxBanner,
+                                footer,
+                              ],
+                            ),
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _buildTopHeader(context, isDark, textTheme),
+                              Expanded(
+                                child: LayoutBuilder(
+                                  builder: (context, bodyConstraints) {
+                                    return SingleChildScrollView(
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          minHeight: bodyConstraints.maxHeight,
+                                        ),
+                                        child: buildContent(bodyConstraints.maxHeight),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              checkboxBanner,
+                              footer,
+                            ],
+                          ),
                   ),
                 );
               },
@@ -568,74 +545,13 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
     );
   }
 
-  Widget _buildStepHeader(
-      BuildContext context, bool isDark, TextTheme textTheme) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(36, 24, 36, 12),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'WHAT WE\'LL COVER',
-            style: textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: AppThemeTokens.goldAccent,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildCoverItem(context, isDark, textTheme,
-              'Your startup stage, business model, and key priorities'),
-          _buildCoverItem(context, isDark, textTheme,
-              'Banking, payments, treasury, and credit options for your stage'),
-          _buildCoverItem(context, isDark, textTheme,
-              'Personalised JPMC product recommendations and next steps'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCoverItem(
-      BuildContext context, bool isDark, TextTheme textTheme, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 6, right: 10),
-            width: 4,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              text,
-              style: textTheme.bodySmall?.copyWith(
-                color: isDark ? Colors.white70 : const Color(0xFF374151),
-                height: 1.4,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildCheckbox(
       bool value, ValueChanged<bool?> onChanged, String label, bool isDark) {
     return GestureDetector(
       onTap: () => onChanged(!value),
       behavior: HitTestBehavior.opaque,
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(

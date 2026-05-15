@@ -69,14 +69,9 @@ class HubNavBar extends StatelessWidget {
             spacing: 8,
             children: [
               NavPill(
-                label: 'Dashboard',
-                active: activeLabel == 'Dashboard',
+                label: 'Home',
+                active: activeLabel == 'Home' || activeLabel == 'Dashboard',
                 onTap: () => context.go('/'),
-              ),
-              NavPill(
-                label: 'Interactions',
-                active: activeLabel == 'Interactions',
-                onTap: onInteractionsTap,
               ),
               NavPill(
                 label: 'Relationship Hub',
@@ -90,6 +85,11 @@ class HubNavBar extends StatelessWidget {
                     context.go('/relationship-hub');
                   }
                 } : null,
+              ),
+              NavPill(
+                label: '✨Nova',
+                active: activeLabel == '✨Nova' || activeLabel == 'Nova' || activeLabel == 'Interactions',
+                onTap: onInteractionsTap,
               ),
             ],
           ),

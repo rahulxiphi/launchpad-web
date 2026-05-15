@@ -122,15 +122,11 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
       final returnPid = _storedProspectId;
 
       if (!mounted) return;
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => AppShell(
-            stageBucket: stageBucket,
-            prospectId: returnPid,
-            startAtModeSelection: returnPid != null,
-          ),
-        ),
-      );
+      if (returnPid != null) {
+        context.go('/stages?p=$returnPid');
+      } else {
+        context.go('/stages');
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _errorMessage = 'Failed to start session: $e');
@@ -190,7 +186,7 @@ class _JpmcLandingPageState extends State<JpmcLandingPage> {
                   companyName: 'Launchpad',
                   founderName: 'Guest',
                   initials: 'G',
-                  activeLabel: 'Dashboard',
+                  activeLabel: 'Home',
                   onInteractionsTap: _startSession,
                   onProfileTap: () => {}, // No profile on landing page before login
                 ),

@@ -908,7 +908,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                       );
                                                     }).toList(),
                                                   ),
-                                                  const SizedBox(height: 16),
+                                                  const SizedBox(height: 8),
                                                   Container(
                                                     width: double.infinity,
                                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -937,10 +937,10 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
                                                                 child: Container(
                                                                   margin: const EdgeInsets.symmetric(horizontal: 4),
                                                                   decoration: BoxDecoration(
-                                                                    border: Border(bottom: BorderSide(color: isDark ? Colors.white : Colors.black, width: 1.2)),
+                                                                    border: Border(bottom: BorderSide(color: isDark ? Colors.white70 : const Color(0xFF6B7280), width: 1.0)),
                                                                   ),
                                                                   padding: const EdgeInsets.only(bottom: 1),
-                                                                  child: Text('Disclaimer', style: TextStyle(fontSize: 12, color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
+                                                                  child: Text('Disclaimer', style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : const Color(0xFF6B7280))),
                                                                 ),
                                                               ),
                                                             ),
