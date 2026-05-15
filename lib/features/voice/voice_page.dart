@@ -66,7 +66,11 @@ class VoicePage extends StatefulWidget {
   State<VoicePage> createState() => _VoicePageState();
 }
 
-class _VoicePageState extends State<VoicePage> {
+class _VoicePageState extends State<VoicePage> with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+  bool _isVoiceTriggerHovered = false;
+
   ConversationClient? _client;
   final ConversationService _conversationService = ConversationService();
   final List<_TranscriptEntry> _transcript = [];
@@ -109,6 +113,16 @@ class _VoicePageState extends State<VoicePage> {
   @override
   void initState() {
     super.initState();
+    
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: false);
+
+    _pulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
+    );
+
     
     _isChatMode = widget.initialMode == 'chat';
 
@@ -552,7 +566,9 @@ class _VoicePageState extends State<VoicePage> {
   @override
   void dispose() {
     _isDisposing = true;
+    _pulseController.dispose();
     _client?.dispose();
+
     _scrollController.dispose();
     super.dispose();
   }
@@ -882,48 +898,56 @@ class _VoicePageState extends State<VoicePage> {
                             isChatMode: _isChatMode,
                           ),
                           Expanded(
-                            child: _transcript.isEmpty
-                                ? Center(
-                                    child: Text(
-                                      _client?.status ==
-                                              ConversationStatus.connecting
-                                          ? 'Connecting to $_agentName…'
-                                          : _isRecoveringSession
-                                              ? 'Reconnecting to $_agentName…'
-                                              : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.',
-                                      textAlign: TextAlign.center,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            color:
-                                                colorScheme.onSurfaceVariant,
-                                            height: 1.6,
-                                          ),
-                                    ),
-                                  )
-                                : ListView.builder(
-                                    controller: _scrollController,
-                                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                                    itemCount: _transcript.length,
-                                    itemBuilder: (context, index) {
-                                      final entry = _transcript[index];
-                                      final prevEntry = index > 0 ? _transcript[index - 1] : null;
-                                      final nextEntry = index < _transcript.length - 1 ? _transcript[index + 1] : null;
-                                      final isPrevSame = prevEntry != null && prevEntry.isUser == entry.isUser;
-                                      final isNextSame = nextEntry != null && nextEntry.isUser == entry.isUser;
-                                      
-                                      return VoiceBubbleRow(
-                                        isUser: entry.isUser,
-                                        text: entry.text,
-                                        isTentative: entry.isTentative,
-                                        isPrevSame: isPrevSame,
-                                        isNextSame: isNextSame,
-                                        agentInitial: _agentName.isNotEmpty
-                                            ? _agentName[0].toUpperCase()
-                                            : 'A',
-                                      );
-                                    },
+                            child: _isChatMode
+                                ? (_transcript.isEmpty
+                                    ? Center(
+                                        child: Text(
+                                          _client?.status ==
+                                                  ConversationStatus.connecting
+                                              ? 'Connecting to $_agentName…'
+                                              : _isRecoveringSession
+                                                  ? 'Reconnecting to $_agentName…'
+                                                  : '$_agentName will start speaking shortly.\nBegin talking when you\'re ready.',
+                                          textAlign: TextAlign.center,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                color:
+                                                    colorScheme.onSurfaceVariant,
+                                                height: 1.6,
+                                              ),
+                                        ),
+                                      )
+                                    : ListView.builder(
+                                        controller: _scrollController,
+                                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                                        itemCount: _transcript.length,
+                                        itemBuilder: (context, index) {
+                                          final entry = _transcript[index];
+                                          final prevEntry = index > 0 ? _transcript[index - 1] : null;
+                                          final nextEntry = index < _transcript.length - 1 ? _transcript[index + 1] : null;
+                                          final isPrevSame = prevEntry != null && prevEntry.isUser == entry.isUser;
+                                          final isNextSame = nextEntry != null && nextEntry.isUser == entry.isUser;
+                                          
+                                          return VoiceBubbleRow(
+                                            isUser: entry.isUser,
+                                            text: entry.text,
+                                            isTentative: entry.isTentative,
+                                            isPrevSame: isPrevSame,
+                                            isNextSame: isNextSame,
+                                            agentInitial: _agentName.isNotEmpty
+                                                ? _agentName[0].toUpperCase()
+                                                : 'A',
+                                          );
+                                        },
+                                      ))
+                                : Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      _buildVoiceOrb(),
+                                      _buildOrbStatus(),
+                                    ],
                                   ),
                           ),
                                   if (_conversationEnded) _buildClassificationSummary(),
@@ -965,6 +989,90 @@ class _VoicePageState extends State<VoicePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildVoiceOrb() {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isVoiceTriggerHovered = true),
+      onExit: (_) => setState(() => _isVoiceTriggerHovered = false),
+      child: SizedBox(
+        height: 180,
+        width: 180,
+        child: AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            final triggerColor = _isVoiceTriggerHovered
+                ? AppThemeTokens.buttonPrimaryHover
+                : AppThemeTokens.buttonPrimary;
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                if (_client?.isSpeaking ?? false)
+                  for (int i = 0; i < 3; i++)
+                    Container(
+                      width: 104 + (92 * ((_pulseAnimation.value + (i * 0.33)) % 1.0)),
+                      height: 104 + (92 * ((_pulseAnimation.value + (i * 0.33)) % 1.0)),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppThemeTokens.buttonPrimary.withOpacity(0.35 *
+                              (1.0 - ((_pulseAnimation.value + (i * 0.33)) % 1.0))),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 140),
+                      width: 104,
+                      height: 104,
+                      decoration: BoxDecoration(
+                        color: triggerColor,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: triggerColor.withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.graphic_eq_rounded,
+                        color: Colors.white,
+                        size: 46,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrbStatus() {
+    if (_isChatMode) return const SizedBox.shrink();
+    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final text = (_client?.isSpeaking ?? false) ? 'Speaking...' : 'Listening...';
+    
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: isDark ? Colors.white70 : const Color(0xFF6B7280),
+          fontSize: 16,
+          fontWeight: FontWeight.w400,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }

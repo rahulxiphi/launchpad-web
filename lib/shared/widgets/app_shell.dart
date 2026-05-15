@@ -6,6 +6,7 @@ import '../../core/auth/auth_provider.dart';
 import '../../router/app_router.dart';
 import '../../features/voice/conversation_intro_page.dart';
 import '../../features/voice/mode_selection_page.dart';
+import '../../features/voice/voice_page.dart';
 import '../../services/conversation_service.dart';
 import 'no_transition_page_route.dart';
 import 'hub_nav_bar.dart';
@@ -23,6 +24,7 @@ class AppShell extends ConsumerStatefulWidget {
   final String? prospectId;
   final Map<String, dynamic> dynamicVariables;
   final bool startAtModeSelection;
+  final String? initialConversationMode; // 'voice' or 'chat'
 
   const AppShell({
     super.key,
@@ -30,6 +32,7 @@ class AppShell extends ConsumerStatefulWidget {
     this.prospectId,
     this.dynamicVariables = const {},
     this.startAtModeSelection = false,
+    this.initialConversationMode,
   });
 
   @override
@@ -47,6 +50,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   bool _isHydratingReturnProspect = false;
   bool _isInitializing = false;
   bool _isHubEnabled = false;
+  bool _isInitializingVoiceForHub = false;
   String? _initError;
 
   @override
@@ -58,7 +62,11 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (_prospectId == null) {
       _initLazyProspect();
     } else {
-      _hydrateReturnProspect();
+      _hydrateReturnProspect().then((_) {
+        if (widget.initialConversationMode != null) {
+          _startConversationFromHubIfNeeded();
+        }
+      });
     }
   }
 
@@ -169,6 +177,49 @@ class _AppShellState extends ConsumerState<AppShell> {
     );
   }
 
+  Future<void> _startConversationFromHubIfNeeded() async {
+    final mode = widget.initialConversationMode;
+    if (mode == null || _prospectId == null) return;
+    
+    setState(() => _isInitializingVoiceForHub = true);
+    try {
+      final isChatMode = mode == 'chat';
+      final tokenResult = await _service.getVoiceToken(
+        widget.stageBucket,
+        prospectId: _prospectId!,
+      );
+
+      final Map<String, dynamic> vars = {
+        'companyName': _resolvedDynamicVariables['companyName'],
+        'userName': _resolvedDynamicVariables['userName'],
+        'initial_mode': mode,
+      };
+      vars.addAll(tokenResult.dynamicVariables);
+
+      if (!mounted) return;
+      
+      _innerNavKey.currentState?.push(
+        NoTransitionPageRoute(
+          builder: (_) => VoicePage(
+            conversationToken: tokenResult.conversationToken,
+            stageBucket: widget.stageBucket,
+            prospectId: _prospectId,
+            dynamicVariables: vars,
+            onStartNew: _handleStartNew,
+            onGoToRelationshipHub: _handleGoToRelationshipHub,
+            initialMode: mode,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('AppShell: Failed to start conversation from Hub: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isInitializingVoiceForHub = false);
+      }
+    }
+  }
+
   Future<void> _handleGoToRelationshipHub() async {
     final path = _prospectId == null
         ? AppRoutes.relationshipHub
@@ -178,6 +229,9 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   void _handleFormFilled() {
     setState(() => _isHubEnabled = true);
+    if (widget.initialConversationMode != null) {
+      _startConversationFromHubIfNeeded();
+    }
   }
 
   void _handleProspectFound(ProspectInitResult prospect) {
@@ -269,7 +323,9 @@ class _AppShellState extends ConsumerState<AppShell> {
             onProfileTap: _handleProfileTap,
           ),
         ),
-        body: Navigator(
+        body: _isInitializingVoiceForHub
+            ? const Center(child: CircularProgressIndicator())
+            : Navigator(
           key: _innerNavKey,
           onGenerateInitialRoutes: (navigator, initialRoute) {
             final introRoute = NoTransitionPageRoute(
@@ -284,7 +340,8 @@ class _AppShellState extends ConsumerState<AppShell> {
               ),
             );
 
-            final showModeSelection = widget.startAtModeSelection || _isHubEnabled;
+            final skipModeSelection = widget.initialConversationMode != null;
+            final showModeSelection = (widget.startAtModeSelection || _isHubEnabled) && !skipModeSelection;
 
             if (!showModeSelection) {
               return [introRoute];

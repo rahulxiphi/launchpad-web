@@ -2448,45 +2448,14 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> with Singl
 
   Future<void> _startSession({required bool isChatMode}) async {
     if (widget.prospectId == null) return;
-    setState(() => _isFetchingToken = true);
-    try {
-      // In the hub, we might need a specific stage or use the current bucket
-      final stage = widget.stageBucket ?? 'super_agent';
-      final tokenResult = await _service.getVoiceToken(
-        stage,
-        prospectId: widget.prospectId!,
-      );
-
-      final Map<String, dynamic> vars = {
-        'companyName': widget.companyName,
-        'userName': widget.founderName,
-        'initial_mode': isChatMode ? 'chat' : 'voice',
-      };
-      vars.addAll(tokenResult.dynamicVariables);
-
-      if (!mounted) return;
-      Navigator.of(context).pop(); // Close modal
-      
-      Navigator.of(context).push(
-        NoTransitionPageRoute(
-          builder: (_) => VoicePage(
-            conversationToken: tokenResult.conversationToken,
-            stageBucket: stage,
-            prospectId: widget.prospectId,
-            dynamicVariables: vars,
-            initialMode: isChatMode ? 'chat' : 'voice',
-            onStartNew: () async => GoRouter.of(context).go('/'),
-            onGoToRelationshipHub: () async => GoRouter.of(context).go('/relationship-hub?p=${widget.prospectId}'),
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to start session: $e')),
-      );
-      setState(() => _isFetchingToken = false);
-    }
+    
+    // 1. Close the profile modal
+    Navigator.of(context).pop();
+    
+    // 2. Go to voice page screen and run voice mode conversation
+    final mode = isChatMode ? 'chat' : 'voice';
+    final path = '/p=${Uri.encodeComponent(widget.prospectId!)}?mode=$mode';
+    context.go(path);
   }
 
   Future<void> _loadProfile() async {

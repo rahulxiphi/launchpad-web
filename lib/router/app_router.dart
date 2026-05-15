@@ -89,11 +89,13 @@ GoRouter createRouter({
         path: '/p=:prospectId',
         pageBuilder: (context, state) {
           final prospectId = state.pathParameters['prospectId'];
+          final mode = state.uri.queryParameters['mode'];
           return NoTransitionPage(
             child: AppShell(
               stageBucket: 'super_agent',
               prospectId: prospectId,
               startAtModeSelection: true,
+              initialConversationMode: mode,
             ),
           );
         },

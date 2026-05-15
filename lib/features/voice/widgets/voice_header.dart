@@ -89,31 +89,6 @@ class VoiceHeader extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF0EAD8),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: isDark ? Colors.grey.shade700 : const Color(0xFFD4C9AD),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _PulseDot(active: isSpeaking, colorScheme: colorScheme),
-                const SizedBox(width: 6),
-                Text(
-                  statusText,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.grey.shade300 : const Color(0xFF6f675b),
-                  ),
-                ),
-              ],
-            ),
-          ),
           if (isEnded) ...[
             const SizedBox(width: 10),
             GestureDetector(
