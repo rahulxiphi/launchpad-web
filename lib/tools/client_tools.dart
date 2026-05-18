@@ -205,14 +205,11 @@ class CaptureStartupStageTool implements ClientTool {
         onStageCaptured!(resp.data['conversation_phase']);
       }
 
-      return ClientToolResult.success({
-        'conversation_phase': resp.data['conversation_phase'],
-        'confirmed_stage_bucket': resp.data['confirmed_stage_bucket'],
-        'status': 'captured',
-      });
+      // expects_response=false on ElevenLabs side — return null so SDK sends no result message
+      return null;
     } catch (e) {
       print('[tool] capture_startup_stage failed: $e');
-      return ClientToolResult.failure('Failed to capture startup stage: $e');
+      return null;
     }
   }
 }
@@ -250,16 +247,11 @@ class AdvancePhaseTool implements ClientTool {
         onPhaseAdvanced!(resp.data['new_phase']);
       }
 
-      final result = {
-        'new_phase': resp.data['new_phase'],
-        'top_product_signals': resp.data['top_product_signals'],
-      };
-      
-      print('[chips][tool] advance_phase returning success: $result');
-      return ClientToolResult.success(jsonEncode(result));
+      // expects_response=false on ElevenLabs side — return null so SDK sends no result message
+      return null;
     } catch (e) {
       print('[chips][tool] advance_phase failed: $e');
-      return ClientToolResult.failure('Failed to advance phase: $e');
+      return null;
     }
   }
 }
@@ -281,6 +273,9 @@ class RecordHandoffTool implements ClientTool {
         'product_interests': parameters['product_interests'] is List
             ? parameters['product_interests']
             : <String>[],
+        if (parameters['team_name'] != null) 'team_name': parameters['team_name'],
+        if (parameters['recommendations'] is List)
+          'recommendations': parameters['recommendations'],
         if (parameters['notes'] != null) 'notes': parameters['notes'],
       };
 
@@ -289,13 +284,13 @@ class RecordHandoffTool implements ClientTool {
         data: body,
       );
 
-      return ClientToolResult.success(jsonEncode({
-        'handoff_id': resp.data['handoff_id'],
-        'assigned_manager_type': resp.data['assigned_manager_type'],
-        'status': resp.data['status'],
-      }));
+      print('[tool] record_handoff response: ${resp.data}');
+
+      // expects_response=false on ElevenLabs side — return null so SDK sends no result message
+      return null;
     } catch (e) {
-      return ClientToolResult.failure('Failed to record handoff: $e');
+      print('[tool] record_handoff failed: $e');
+      return null;
     }
   }
 }
