@@ -165,7 +165,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       NoTransitionPageRoute(
         builder: (_) => ConversationIntroPage(
           stageBucket: widget.stageBucket,
-          prospectId: freshProspectId,
+          prospectId: null,
           dynamicVariables: const {},
           onStartNew: _handleStartNew,
           onFormFilled: _handleFormFilled,
@@ -331,7 +331,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             final introRoute = NoTransitionPageRoute(
               builder: (_) => ConversationIntroPage(
                 stageBucket: widget.stageBucket,
-                prospectId: _prospectId,
+                prospectId: widget.prospectId,
                 dynamicVariables: _resolvedDynamicVariables,
                 onStartNew: _handleStartNew,
                 onFormFilled: _handleFormFilled,
@@ -365,7 +365,7 @@ class _AppShellState extends ConsumerState<AppShell> {
               settings: settings,
               builder: (_) => ConversationIntroPage(
                 stageBucket: widget.stageBucket,
-                prospectId: _prospectId,
+                prospectId: widget.prospectId,
                 dynamicVariables: _resolvedDynamicVariables,
                 onStartNew: _handleStartNew,
                 onFormFilled: _handleFormFilled,
