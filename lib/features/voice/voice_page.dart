@@ -143,10 +143,6 @@ class _VoicePageState extends State<VoicePage> with SingleTickerProviderStateMix
         'capture_need': CaptureNeedTool(prospectId: widget.prospectId),
         'search_products': SearchProductsTool(prospectId: widget.prospectId),
         'record_off_ramp': RecordOffRampTool(prospectId: widget.prospectId),
-        'search_product_catalog': SearchProductCatalogTool(
-          prospectId: widget.prospectId,
-          stageBucket: widget.stageBucket,
-        ),
         'capture_startup_stage': CaptureStartupStageTool(
           prospectId: widget.prospectId,
           onStageCaptured: (newPhase) {
