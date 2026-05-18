@@ -87,8 +87,8 @@ class HubNavBar extends StatelessWidget {
                 } : null,
               ),
               NavPill(
-                label: '✨Nova',
-                active: activeLabel == '✨Nova' || activeLabel == 'Nova' || activeLabel == 'Interactions',
+                label: 'Nova',
+                active: activeLabel == 'Nova' || activeLabel == 'Nova' || activeLabel == 'Interactions',
                 onTap: onInteractionsTap,
               ),
             ],

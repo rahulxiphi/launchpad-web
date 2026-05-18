@@ -319,88 +319,94 @@ class _ModeSelectionPageState extends State<ModeSelectionPage>
                   );
                 }
 
-                return Center(
-                  child: Container(
-                    width: isMobile ? double.infinity : 840,
-                    height: isMobile ? null : 680.0,
-                    margin: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 0 : 24,
-                      vertical: isMobile ? 0 : 32,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF1E1E1E)
-                          : Colors.white,
-                      borderRadius:
-                          BorderRadius.circular(isMobile ? 0 : 20),
-                      boxShadow: isMobile
-                          ? null
-                          : [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.22),
-                                blurRadius: 48,
-                                offset: const Offset(0, 16),
-                              )
-                            ],
-                    ),
-                    clipBehavior: Clip.hardEdge,
-                    child: isMobile
-                        ? SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                _buildTopHeader(context, isDark, textTheme),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 40),
-                                  child: buildContent(null),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(24),
-                                  child: _buildBottomBackButton(context),
-                                ),
-                              ],
-                            ),
-                          )
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _buildTopHeader(context, isDark, textTheme),
-                              Expanded(
-                                child: Center(
-                                  child: ScrollConfiguration(
-                                    behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-                                    child: SingleChildScrollView(
-                                      padding: EdgeInsets.zero,
+                return SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Center(
+                      child: Container(
+                        width: isMobile ? double.infinity : 840,
+                        height: isMobile ? null : 680.0,
+                        margin: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 0 : 24,
+                          vertical: isMobile ? 0 : 32,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF1E1E1E)
+                              : Colors.white,
+                          borderRadius:
+                              BorderRadius.circular(isMobile ? 0 : 20),
+                          boxShadow: isMobile
+                              ? null
+                              : [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.22),
+                                    blurRadius: 48,
+                                    offset: const Offset(0, 16),
+                                  )
+                                ],
+                        ),
+                        clipBehavior: Clip.hardEdge,
+                        child: isMobile
+                            ? SingleChildScrollView(
+                                child: Column(
+                                  children: [
+                                    _buildTopHeader(context, isDark, textTheme),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 40),
                                       child: buildContent(null),
                                     ),
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerLeft,
+                                    Padding(
+                                      padding: const EdgeInsets.all(24),
                                       child: _buildBottomBackButton(context),
-                                    ),
-                                    TextButton.icon(
-                                      onPressed: _isFetchingToken ? null : _goToManualForm,
-                                      icon: const Icon(Icons.description_outlined, size: 18),
-                                      label: const Text(
-                                        'Fill Manual Form',
-                                        style: TextStyle(fontWeight: FontWeight.bold),
-                                      ),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: AppThemeTokens.buttonPrimary,
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      ),
                                     ),
                                   ],
                                 ),
+                              )
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _buildTopHeader(context, isDark, textTheme),
+                                  Expanded(
+                                    child: Center(
+                                      child: ScrollConfiguration(
+                                        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                                        child: SingleChildScrollView(
+                                          padding: EdgeInsets.zero,
+                                          child: buildContent(null),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: _buildBottomBackButton(context),
+                                        ),
+                                        TextButton.icon(
+                                          onPressed: _isFetchingToken ? null : _goToManualForm,
+                                          icon: const Icon(Icons.description_outlined, size: 18),
+                                          label: const Text(
+                                            'Fill Manual Form',
+                                            style: TextStyle(fontWeight: FontWeight.bold),
+                                          ),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: AppThemeTokens.buttonPrimary,
+                                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                      ),
+                    ),
                   ),
                 );
               },

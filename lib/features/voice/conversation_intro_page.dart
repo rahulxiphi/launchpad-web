@@ -173,7 +173,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
   bool get _isReadOnly =>
       widget.dynamicVariables['lock_profile_fields'] == true;
 
-  bool get _isProfileLocked => _isReadOnly || _pendingResumeProspect != null;
+  bool get _isProfileLocked => _isReadOnly || _pendingResumeProspect != null || widget.prospectId != null;
 
   @override
   void initState() {
@@ -188,7 +188,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
     _isPostIncorporated =
         widget.dynamicVariables['isPostIncorporated'] == true;
     _preferManual = widget.dynamicVariables['preferManual'] == true;
-    _disclaimerAccepted = _isReadOnly;
+    _disclaimerAccepted = _isReadOnly || widget.prospectId != null;
     _emailController.addListener(_onEmailChanged);
     _companyController.addListener(_onFormChanged);
   }
@@ -498,21 +498,23 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
 
     setState(() => _isSavingProfile = true);
     try {
-      final bool isResuming = pendingResume != null;
-      await _service.updateProspectProfile(
-        prospectId,
-        email: _emailController.text.trim(),
-        fullName: _nameController.text.trim().isEmpty
-            ? null
-            : _nameController.text.trim(),
-        phoneNumber: _phoneController.text.trim().isEmpty
-            ? null
-            : _phoneController.text.trim(),
-        companyName: _companyController.text.trim().isEmpty
-            ? null
-            : _companyController.text.trim(),
-        incorporated: _isPostIncorporated,
-      );
+      final bool isResuming = pendingResume != null || widget.prospectId != null;
+      if (!_isProfileLocked) {
+        await _service.updateProspectProfile(
+          prospectId,
+          email: _emailController.text.trim(),
+          fullName: _nameController.text.trim().isEmpty
+              ? null
+              : _nameController.text.trim(),
+          phoneNumber: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
+          companyName: _companyController.text.trim().isEmpty
+              ? null
+              : _companyController.text.trim(),
+          incorporated: _isPostIncorporated,
+        );
+      }
 
       final hydratedResume =
           isResuming ? await _service.getProspect(prospectId) : null;
@@ -537,10 +539,7 @@ class _ConversationIntroPageState extends State<ConversationIntroPage> {
       }
       widget.onFormFilled?.call();
       
-      if (hydratedResume != null && hydratedResume.conversationPhase > 1) {
-        widget.onGoToRelationshipHub();
-        return;
-      }
+
       
       Navigator.of(context).push(
         NoTransitionPageRoute(

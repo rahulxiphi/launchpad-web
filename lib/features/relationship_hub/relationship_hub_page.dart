@@ -48,7 +48,7 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
   bool _loadingProducts = false;
 
   static const _defaultCompany = 'Launchpad';
-  static const _defaultFounder = 'Aditya Kumar';
+  static const _defaultFounder = 'Profile';
 
   @override
   void initState() {
@@ -139,6 +139,7 @@ class _RelationshipHubPageState extends State<RelationshipHubPage> {
 
   String get _initials {
     final source = _founderName.trim().isNotEmpty ? _founderName : _companyName;
+    if (source == 'Profile') return 'U';
     final parts = source
         .split(RegExp(r'\s+'))
         .where((part) => part.isNotEmpty)
@@ -1017,7 +1018,7 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
 
       final newMessages = result.messages.map((m) {
         final isUser = m.type == 'human';
-        return _GuideMessage(isUser: isUser, text: m.content);
+        return _GuideMessage(isUser: isUser, text: m.content, isMarkdown: true);
       }).toList();
 
       if (loadMore) {
@@ -1246,76 +1247,81 @@ class _AiGuidePanelState extends State<_AiGuidePanel> {
           }
           return false;
         },
-        child: SingleChildScrollView(
-          controller: _historyScrollController,
-          padding: const EdgeInsets.all(16),
-          child: _historyMessages.isEmpty && _loadingHistory
-              ? const Center(
-                  child: Padding(
+        child: _historyMessages.isEmpty && _loadingHistory
+            ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                ),
+              )
+            : _historyMessages.isEmpty && !_loadingHistory
+                ? const Padding(
                     padding: EdgeInsets.all(32),
-                    child: CircularProgressIndicator(strokeWidth: 2.5),
-                  ),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_loadingHistory)
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 12),
-                        child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+                    child: Center(
+                      child: Text(
+                        'No chat history yet.',
+                        style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
                       ),
-                    if (_historyMessages.isEmpty && !_loadingHistory)
-                      const Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Center(
-                          child: Text(
-                            'No chat history yet.',
-                            style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
-                          ),
-                        ),
-                      )
-                    else
-                      ...List.generate(_historyMessages.length, (i) {
-                        final msg = _historyMessages[i];
-                        final isPrevSame = i > 0 && _historyMessages[i - 1].isUser == msg.isUser;
-                        final isNextSame = i < _historyMessages.length - 1 && _historyMessages[i + 1].isUser == msg.isUser;
-                        return Padding(
-                          padding: EdgeInsets.only(top: isPrevSame ? 2 : 10, bottom: 1),
-                          child: _GuideMessageBubble(
-                            message: msg,
-                            isPrevSame: isPrevSame,
-                            isNextSame: isNextSame,
-                          ),
-                        );
-                      }),
-                    if (_historyHasMore && !_loadingHistory)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Center(
-                          child: GestureDetector(
-                            onTap: () => _loadHistory(loadMore: true),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: const Color(0xFFE1D9CB)),
-                              ),
-                              child: const Text(
-                                'Load more',
-                                style: TextStyle(
-                                  color: Color(0xFF6B7280),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _historyScrollController,
+                    padding: const EdgeInsets.all(16),
+                    reverse: true,
+                    itemCount: _historyMessages.length +
+                        ((_loadingHistory || _historyHasMore) ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == _historyMessages.length) {
+                        if (_loadingHistory) {
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: 12),
+                            child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+                          );
+                        }
+                        if (_historyHasMore) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Center(
+                              child: GestureDetector(
+                                onTap: () => _loadHistory(loadMore: true),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(color: const Color(0xFFE1D9CB)),
+                                  ),
+                                  child: const Text(
+                                    'Load more',
+                                    style: TextStyle(
+                                      color: Color(0xFF6B7280),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      }
+
+                      final i = _historyMessages.length - 1 - index;
+                      final msg = _historyMessages[i];
+                      final isPrevSame = i > 0 && _historyMessages[i - 1].isUser == msg.isUser;
+                      final isNextSame = i < _historyMessages.length - 1 && _historyMessages[i + 1].isUser == msg.isUser;
+
+                      return Padding(
+                        padding: EdgeInsets.only(top: isPrevSame ? 2 : 10, bottom: 1),
+                        child: _GuideMessageBubble(
+                          message: msg,
+                          isPrevSame: isPrevSame,
+                          isNextSame: isNextSame,
                         ),
-                      ),
-                  ],
-                ),
-        ),
+                      );
+                    },
+                  ),
       ),
     );
   }
@@ -2476,12 +2482,13 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> with Singl
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 640;
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: Container(
-        width: 840,
-        height: 680,
+        width: isMobile ? double.infinity : 840,
+        height: isMobile ? null : 680.0,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Column(
@@ -2557,27 +2564,36 @@ class _ProspectProfileModalState extends State<_ProspectProfileModal> with Singl
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Expanded(
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // ── Left: Details Form ──────────────────────
-                                    Expanded(
-                                      flex: 5,
-                                      child: SingleChildScrollView(
-                                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                                        child: _buildDetailsList(),
+                                child: isMobile
+                                    ? SingleChildScrollView(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Column(
+                                          children: [
+                                            _buildDetailsList(),
+                                            const SizedBox(height: 24),
+                                            _buildVoiceInteractionArea(),
+                                          ],
+                                        ),
+                                      )
+                                    : Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            flex: 5,
+                                            child: SingleChildScrollView(
+                                              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                                              child: _buildDetailsList(),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 4,
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(top: 16),
+                                              child: _buildVoiceInteractionArea(),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                    // ── Right: Voice/Chat Orb ───────────────────
-                                    Expanded(
-                                      flex: 4,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(top: 16),
-                                        child: _buildVoiceInteractionArea(),
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ),
                               // ── Bottom: Team Members (Full Width) ────────
                               _buildTeamSection(),
@@ -3017,13 +3033,14 @@ class _ProductDetailModalState extends State<_ProductDetailModal> {
   Widget build(BuildContext context) {
     final product = widget.product;
     final icon = _getIconForCategory(product.category);
+    final isMobile = MediaQuery.of(context).size.width < 640;
 
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: Container(
-        width: 840,
-        height: 680,
+        width: isMobile ? double.infinity : 840,
+        height: isMobile ? null : 680.0,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Container(
@@ -3485,12 +3502,13 @@ class _LearningMaterialModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 640;
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: Container(
-        width: 840,
-        height: 680,
+        width: isMobile ? double.infinity : 840,
+        height: isMobile ? null : 680.0,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Container(
